@@ -1,11 +1,16 @@
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from llm_design_bench.registry import make
 from llm_design_bench.types import CandidateBatch
 
 DATA_RECIPES = Path(__file__).resolve().parents[2] / "data-recipes"
+pytestmark = pytest.mark.skipif(
+    not (DATA_RECIPES / "opt_algos" / "benchmarks.py").is_file(),
+    reason="requires a sibling checkout of namkoong-lab/data-recipes",
+)
 
 
 def test_data_recipes_logged_dataset_contract() -> None:
