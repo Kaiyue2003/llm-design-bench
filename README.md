@@ -1,0 +1,196 @@
+# LLM Design Bench
+
+`llm-design-bench` is a reproducible Python benchmark for offline design
+optimization. It brings two experimental settings under one API:
+
+- LLM pre-training data-mixture optimization through the simulator and logged
+  runs from [`namkoong-lab/data-recipes`](https://github.com/namkoong-lab/data-recipes).
+- Continuous black-box optimization over 47 synthetic functions organized by
+  the SFU test-problem categories and backed, where available, by
+  [`bayeso-benchmarks`](https://github.com/jungtaekkim/bayeso-benchmarks).
+
+All tasks expose a maximization utility. For loss-minimization problems the
+package uses `utility = -objective`, so a larger utility is always better.
+
+## What Is Included
+
+| Suite | Designs | Logged dataset | Methods |
+| --- | --- | --- | --- |
+| Data mixture | Five-domain simplex plus model scale and training steps | Published `data-recipes` runs | Best Logged, random search, Sobol, Offline MLP, COM, BDI |
+| Synthetic BBO | Box-bounded continuous vectors | Seeded uniform samples over each function's bounds | Best Logged, COM, BDI |
+
+The synthetic suite covers Many Local Minima, Bowl-Shaped, Plate-Shaped,
+Valley-Shaped, Steep Ridges/Drops, and Other test problems. COM is a
+conservative objective-model implementation. BDI is a lightweight adaptation
+that uses differentiable RBF kernel regression instead of the original legacy
+JAX/Neural Tangents runtime; see [Method Notes](docs/METHODS.md) for the exact
+mechanisms and limitations.
+
+## Installation
+
+Install directly from GitHub:
+
+```bash
+pip install "llm-design-bench @ git+https://github.com/Kaiyue2003/llm-design-bench.git"
+```
+
+Or clone the repository for development:
+
+```bash
+git clone https://github.com/Kaiyue2003/llm-design-bench.git
+cd llm-design-bench
+python -m pip install -e ".[dev]"
+python -m pytest -q
+```
+
+Python 3.11 and 3.12 are supported. PyTorch is installed because the MLP, COM,
+and BDI implementations optimize differentiable surrogate models.
+
+## Quickstart
+
+Run all 47 synthetic tasks with the reference configuration:
+
+```bash
+llm-design-bench-synthetic \
+  --logged-samples 256 \
+  --recommendations 64 \
+  --epochs 100 \
+  --particle-steps 100 \
+  --bdi-steps 100 \
+  --seed 38
+```
+
+Run a small reproducibility check first:
+
+```bash
+llm-design-bench-synthetic \
+  --function ackley \
+  --function booth \
+  --logged-samples 64 \
+  --recommendations 8 \
+  --epochs 10 \
+  --particle-steps 10 \
+  --bdi-steps 10 \
+  --results-dir results/smoke
+```
+
+The main synthetic outputs are:
+
+- `results/synthetic_bo_results.csv`
+- `results/synthetic_bo_summary.png`
+- `results/synthetic_categories/`
+- `results/synthetic_categories_top1/`
+
+The normalized best-utility score is
+
+```text
+(generated best utility - logged minimum utility)
+-------------------------------------------------
+ (logged maximum utility - logged minimum utility)
+```
+
+Higher is better. `1.0` matches the maximum utility in the logged dataset;
+values above `1.0` mean that the optimizer generated a candidate better than
+every logged observation. The score is not clipped and does not claim that the
+global optimum has been reached.
+
+## Data-Mixture Benchmark
+
+The package does not redistribute the upstream simulator checkpoints or logged
+runs. Clone `data-recipes` next to this repository, or set
+`DATA_RECIPES_ROOT`:
+
+```bash
+git clone https://github.com/namkoong-lab/data-recipes.git
+git clone https://github.com/Kaiyue2003/llm-design-bench.git
+cd llm-design-bench
+python -m pip install -e ".[dev]"
+```
+
+Run the online-style random/Sobol baselines:
+
+```bash
+llm-design-bench \
+  --data-recipes-root ../data-recipes \
+  --queries 256 \
+  --reference-queries 2048 \
+  --recommendations 128 \
+  --seed 38
+```
+
+Run the logged-data-only MLP, COM, and BDI benchmark:
+
+```bash
+llm-design-bench-offline \
+  --data-recipes-root ../data-recipes \
+  --reference-queries 2048 \
+  --recommendations 128 \
+  --epochs 100 \
+  --particle-steps 100 \
+  --bdi-steps 100 \
+  --train-min-percentile 0 \
+  --train-max-percentile 40 \
+  --seed 38
+```
+
+The default offline split exposes only logged observations between the 0th and
+40th utility percentiles to the optimizers. Metric normalization still uses
+the full logged dataset. Pass `--train-max-percentile 100` to expose all logged
+observations.
+
+## Python API
+
+```python
+from llm_design_bench import make
+from llm_design_bench.optimizers import BackwardDistillationOptimizer
+
+task = make("synthetic-ackley", logged_samples=256, seed=38)
+optimizer = BackwardDistillationOptimizer(
+    recommendations=64,
+    seed=38,
+    steps=100,
+)
+trace = optimizer.optimize(task)
+
+print("best utility:", trace.recommendation_utility.max())
+print("best objective:", -trace.recommendation_utility.max())
+```
+
+See [synthetic_quickstart.py](examples/synthetic_quickstart.py) and
+[data_recipes_quickstart.py](examples/data_recipes_quickstart.py) for runnable
+examples.
+
+## Reproducing Results
+
+The exact commands, expected files, seed policy, and comparison procedure are
+documented in [REPRODUCING.md](docs/REPRODUCING.md). Compact reference outputs
+are committed under [`reference_results/`](reference_results/) so that a fresh
+run can be checked without relying on screenshots alone.
+
+CSV utility columns follow two conventions:
+
+- `raw_*_utility`: utility on the original maximization scale.
+- `refnorm_*_score`: utility min-max normalized against the logged reference.
+
+Generated files go to `results/`, which is intentionally ignored by Git.
+
+## Development
+
+Using `pip`:
+
+```bash
+python -m pip install -e ".[dev]"
+python -m pytest -q
+python -m build
+python -m twine check dist/*
+```
+
+Using `uv`:
+
+```bash
+uv sync
+uv run pytest -q
+```
+
+Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). This project
+is released under the [MIT License](LICENSE).
