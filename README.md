@@ -138,6 +138,25 @@ The default offline split exposes only logged observations between the 0th and
 the full logged dataset. Pass `--train-max-percentile 100` to expose all logged
 observations.
 
+For the fixed-1B ablation, keep the target fidelity unchanged and filter the
+visible logged data to 1B runs:
+
+```bash
+llm-design-bench-offline \
+  --data-recipes-root ../data-recipes \
+  --logged-model-scale 1000 \
+  --reference-queries 2048 \
+  --recommendations 128 \
+  --epochs 100 \
+  --particle-steps 100 \
+  --bdi-steps 100 \
+  --train-min-percentile 0 \
+  --train-max-percentile 40 \
+  --seed 38
+```
+
+The Python registry also exposes this setting as `make("data-recipes-1b")`.
+
 ## Python API
 
 ```python

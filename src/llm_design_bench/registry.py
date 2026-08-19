@@ -13,6 +13,10 @@ TaskFactory = Callable[..., Task]
 _TASKS: dict[str, TaskFactory] = {
     "data-recipes": DataRecipesTask,
     "data-recipes-stack-exchange": DataRecipesTask,
+    "data-recipes-1b": lambda **kwargs: DataRecipesTask(
+        logged_model_scale=1000,
+        **kwargs,
+    ),
 }
 _TASKS.update(
     {

@@ -84,6 +84,24 @@ llm-design-bench-offline \
   --results-dir results/data_recipes_offline
 ```
 
+To reproduce the fixed-1B ablation, add `--logged-model-scale 1000` and write
+to a separate output directory:
+
+```bash
+llm-design-bench-offline \
+  --data-recipes-root ../data-recipes \
+  --logged-model-scale 1000 \
+  --reference-queries 2048 \
+  --recommendations 128 \
+  --epochs 100 \
+  --particle-steps 100 \
+  --bdi-steps 100 \
+  --train-min-percentile 0 \
+  --train-max-percentile 40 \
+  --seed 38 \
+  --results-dir results/data_recipes_1b_offline
+```
+
 The `data-recipes` task loads logged runs from
 `results/data_mixing_runs.pkl` in the upstream checkout and evaluates
 candidates through its simulator checkpoint. Because that checkpoint is
