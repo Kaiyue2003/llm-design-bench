@@ -1,0 +1,11 @@
+bayeso-benchmarks>=0.2.0
+matplotlib>=3.8
+numpy>=1.26
+pandas>=2.2
+plotly>=5.20
+pydantic>=2.0
+scikit-learn>=1.4
+scipy>=1.11
+seaborn>=0.13
+torch>=2.2
+typer>=0.12

@@ -1,0 +1,13 @@
+category,category_display_name,optimizer,rank,task,display_name,normalized_best_utility
+many_local_minima,Many Local Minima,coms,1,schaffer2,Schaffer N. 2,1.4697717138953208
+many_local_minima,Many Local Minima,bdi,1,ackley,Ackley,1.3701872826385384
+bowl_shaped,Bowl-Shaped,coms,1,sum_different_powers,Sum of Different Powers,1.002545392937033
+bowl_shaped,Bowl-Shaped,bdi,1,sum_different_powers,Sum of Different Powers,1.002201738200595
+plate_shaped,Plate-Shaped,coms,1,power_sum,Power Sum,0.9999770578706716
+plate_shaped,Plate-Shaped,bdi,1,matyas,Matyas,1.0002488118813635
+valley_shaped,Valley-Shaped,coms,1,rosenbrock,Rosenbrock,1.0001291519633293
+valley_shaped,Valley-Shaped,bdi,1,rosenbrock,Rosenbrock,1.0000637369307048
+steep_ridges_drops,Steep Ridges/Drops,coms,1,michalewicz,Michalewicz,1.200702053341624
+steep_ridges_drops,Steep Ridges/Drops,bdi,1,michalewicz,Michalewicz,1.069156834563936
+other,Other,coms,1,hartmann6,Hartmann 6-D,1.1397972204681563
+other,Other,bdi,1,shekel,Shekel,1.5026646264572163

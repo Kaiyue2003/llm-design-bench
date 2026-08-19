@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this benchmark, please cite this software."
+title: "LLM Design Bench"
+type: software
+authors:
+  - family-names: "Ma"
+    given-names: "Kaiyue"
+version: 0.1.0
+date-released: 2026-08-04
+license: MIT
+repository-code: "https://github.com/Kaiyue2003/llm-design-bench"
+keywords:
+  - offline optimization
+  - data mixture optimization
+  - black-box optimization
+  - large language models

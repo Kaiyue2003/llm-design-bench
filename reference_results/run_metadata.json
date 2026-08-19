@@ -1,0 +1,40 @@
+{
+  "package_version": "0.1.0",
+  "recorded_on": "2026-08-04",
+  "environment": {
+    "python": "3.11.15",
+    "torch": "2.12.0+cpu",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "scipy": "1.17.1",
+    "scikit_learn": "1.8.0",
+    "matplotlib": "3.10.9",
+    "bayeso_benchmarks": "0.2.0"
+  },
+  "data_recipes_commit": "37269969a0957448d51622e0c083977bc5d260e8",
+  "synthetic": {
+    "functions": "all defaults",
+    "logged_samples": 256,
+    "recommendations": 64,
+    "epochs": 100,
+    "particle_steps": 100,
+    "bdi_steps": 100,
+    "seed": 38
+  },
+  "data_recipes_baselines": {
+    "queries": 256,
+    "reference_queries": 2048,
+    "recommendations": 128,
+    "seed": 38
+  },
+  "data_recipes_offline": {
+    "reference_queries": 2048,
+    "recommendations": 128,
+    "epochs": 100,
+    "particle_steps": 100,
+    "bdi_steps": 100,
+    "train_min_percentile": 0.0,
+    "train_max_percentile": 40.0,
+    "seed": 38
+  }
+}
