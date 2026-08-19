@@ -61,14 +61,19 @@ class DataRecipesTask:
         self,
         data_recipes_root: str | Path | None = None,
         metric_index: int = 4,
+        logged_model_scale: float | None = None,
         device: str = "cpu",
         simplex_tolerance: float = 1e-6,
     ) -> None:
         if metric_index < 0 or metric_index >= len(METRICS):
             raise ValueError(f"metric_index must be between 0 and {len(METRICS) - 1}")
+        if logged_model_scale is not None and logged_model_scale not in MODEL_SCALE_LABELS:
+            allowed = ", ".join(str(scale) for scale in MODEL_SCALE_LABELS)
+            raise ValueError(f"logged_model_scale must be one of: {allowed}")
         self.root = self._resolve_root(data_recipes_root)
         self.metric_index = metric_index
         self.metric = METRICS[metric_index]
+        self.logged_model_scale = logged_model_scale
         self.device = device
         self.simplex_tolerance = simplex_tolerance
         self._benchmark = None
@@ -109,11 +114,19 @@ class DataRecipesTask:
             history = row["history"]
             if history.empty or self.metric.history_column not in history:
                 continue
+            row_model_scale = label_to_scale[row["group"]]
+            if self.logged_model_scale is not None and row_model_scale != self.logged_model_scale:
+                continue
             final = history.iloc[-1]
             mixtures.append(np.asarray(row["token_probabilities"], dtype=float))
-            model_scales.append(label_to_scale[row["group"]])
+            model_scales.append(row_model_scale)
             training_steps.append(float(final["_step"]))
             utilities.append(self._to_utility(float(final[self.metric.history_column])))
+
+        if not mixtures:
+            raise ValueError(
+                "no logged data matched the selected metric and model-scale filter"
+            )
 
         batch = CandidateBatch(
             mixtures=np.vstack(mixtures),
