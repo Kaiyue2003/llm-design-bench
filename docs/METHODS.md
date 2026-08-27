@@ -28,7 +28,9 @@ penalty around an overestimation limit. Final candidates are optimized through
 the conservative surrogate from top logged starting points.
 
 This is a compact PyTorch implementation of the COM idea, not a byte-for-byte
-port of the original Design-Bench code.
+port of the original
+[`design-baselines`](https://github.com/brandontrabucco/design-baselines)
+implementation.
 
 ## BDI
 
@@ -44,7 +46,8 @@ The RBF length scale defaults to the median non-zero pairwise distance in the
 logged feature set. This preserves a differentiable forward/backward
 distillation mechanism while avoiding the original JAX, Neural Tangents, and
 Design-Bench dependencies. It should therefore be described as a BDI
-adaptation when reporting results.
+adaptation when reporting results. The reference implementation is the
+authors' [`GGchen1997/BDI`](https://github.com/GGchen1997/BDI) repository.
 
 ## Reference-normalized utility
 

@@ -94,6 +94,31 @@ values above `1.0` mean that the optimizer generated a candidate better than
 every logged observation. The score is not clipped and does not claim that the
 global optimum has been reached.
 
+## Seeded Publication Table
+
+Run the compact data-mixture and selected synthetic suite across the eight
+publication seeds:
+
+```bash
+llm-design-bench-publication \
+  --data-recipes-root ../data-recipes \
+  --seed 38 --seed 39 --seed 40 --seed 41 \
+  --seed 42 --seed 43 --seed 44 --seed 45 \
+  --recommendations 128 \
+  --results-dir results/publication
+```
+
+The command checkpoints raw per-seed rows and emits mean +/- sample standard
+deviation summaries, a seed manifest, environment metadata, a GitHub Markdown
+table, and an Overleaf-ready LaTeX table. The committed reference table and
+its raw inputs are in
+[`reference_results/publication/`](reference_results/publication/).
+
+The synthetic publication subset is the union of the prior single-seed COM
+and BDI category winners. This makes the compact table useful for method
+inspection, but performance claims over the full synthetic suite must use all
+47 tasks instead of this selected subset.
+
 ## Data-Mixture Benchmark
 
 The package does not redistribute the upstream simulator checkpoints or logged

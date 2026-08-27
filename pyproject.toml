@@ -54,6 +54,7 @@ dev = [
 [project.scripts]
 llm-design-bench = "llm_design_bench:main"
 llm-design-bench-offline = "llm_design_bench.offline_cli:main"
+llm-design-bench-publication = "llm_design_bench.publication_cli:main"
 llm-design-bench-synthetic = "llm_design_bench.synthetic_cli:main"
 
 [build-system]

@@ -89,7 +89,48 @@ The `data-recipes` task loads logged runs from
 candidates through its simulator checkpoint. Because that checkpoint is
 loaded as a trusted local artifact, use only an upstream checkout you trust.
 
-## 4. Verify the package
+## 4. Seeded publication benchmark
+
+The compact publication table uses the following predeclared trial seeds:
+
+```text
+38, 39, 40, 41, 42, 43, 44, 45
+```
+
+For synthetic tasks, the logged-dataset seed and optimizer seed both equal the
+trial seed. The Data Recipes logged dataset is fixed, while COM and BDI use the
+trial seed. All methods return `K=128` recommendations. Results are aggregated
+as mean +/- sample standard deviation (`ddof=1`), not standard error.
+
+Run:
+
+```bash
+llm-design-bench-publication \
+  --data-recipes-root ../data-recipes \
+  --seed 38 --seed 39 --seed 40 --seed 41 \
+  --seed 42 --seed 43 --seed 44 --seed 45 \
+  --logged-samples 256 \
+  --recommendations 128 \
+  --epochs 100 \
+  --particle-steps 100 \
+  --bdi-steps 100 \
+  --train-min-percentile 0 \
+  --train-max-percentile 40 \
+  --results-dir results/publication
+```
+
+The runner is resumable. It rejects an existing `raw_runs.csv` when its
+configuration fingerprint differs, preventing accidental aggregation across
+incompatible runs. Compare all files against
+`reference_results/publication/`, especially `raw_runs.csv`,
+`seed_manifest.csv`, and `run_metadata.json`.
+
+The default synthetic list is fixed in
+`PUBLICATION_SYNTHETIC_FUNCTIONS`. It is the union of the prior exploratory
+COM and BDI winner in each category, so this compact result is descriptive and
+performance-selected. Use Section 2 for an unbiased all-task sweep.
+
+## 5. Verify the package
 
 ```bash
 python -m pytest -q

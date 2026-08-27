@@ -22,7 +22,14 @@ class BestLoggedOptimizer:
             if len(selected) == self.recommendations:
                 break
 
-        recommendations = task.at_target_fidelity(np.vstack(selected))
+        if not selected:
+            raise ValueError("logged dataset does not contain any designs")
+        while len(selected) < self.recommendations:
+            selected.extend(selected[: self.recommendations - len(selected)])
+
+        recommendations = task.at_target_fidelity(
+            np.vstack(selected[: self.recommendations])
+        )
         utility = task.predict(recommendations)
         empty = CandidateBatch(
             mixtures=np.empty((0, task.mixture_dim)),
