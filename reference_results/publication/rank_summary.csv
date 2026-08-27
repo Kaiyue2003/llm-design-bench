@@ -1,0 +1,4 @@
+optimizer,mean_rank,median_rank,tasks
+best_logged,2.1,2.5,10
+coms,1.9,2.0,10
+bdi,2.0,2.0,10

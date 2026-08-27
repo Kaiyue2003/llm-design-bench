@@ -1,0 +1,63 @@
+{
+  "bdi_steps": 100,
+  "code_git_commit": "8cc1f2466140648f7edad810e2ce8b5d75f5111a",
+  "code_git_dirty": false,
+  "config_fingerprint": "37c4cda71c6478d0",
+  "created_at_utc": "2026-08-27T14:35:54.392779+00:00",
+  "data_mixture_metric": "stack_exchange_cross_entropy",
+  "data_mixture_metric_index": 4,
+  "data_recipes_git_commit": "37269969a0957448d51622e0c083977bc5d260e8",
+  "data_recipes_git_dirty": false,
+  "dependency_versions": {
+    "bayeso-benchmarks": "0.2.0",
+    "llm-design-bench": "0.1.0",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "scikit-learn": "1.8.0",
+    "torch": "2.12.0"
+  },
+  "deterministic_algorithms": true,
+  "epochs": 100,
+  "include_data_mixture": true,
+  "logged_samples": 256,
+  "method_provenance": {
+    "bdi": "https://github.com/GGchen1997/BDI",
+    "coms": "https://github.com/brandontrabucco/design-baselines"
+  },
+  "methods": [
+    "best_logged",
+    "coms",
+    "bdi"
+  ],
+  "particle_steps": 100,
+  "platform": "Windows-10-10.0.26200-SP0",
+  "python": "3.11.15",
+  "recommendations": 128,
+  "seeds": [
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45
+  ],
+  "selection_policy": "union of the prior single-seed top COM and top BDI task in each synthetic category",
+  "synthetic_functions": [
+    "ackley",
+    "schaffer2",
+    "sum_different_powers",
+    "matyas",
+    "power_sum",
+    "rosenbrock",
+    "michalewicz",
+    "hartmann6",
+    "shekel"
+  ],
+  "torch_threads": 1,
+  "train_max_percentile": 40.0,
+  "train_min_percentile": 0.0,
+  "trial_count": 8,
+  "uncertainty": "sample_standard_deviation_ddof_1"
+}

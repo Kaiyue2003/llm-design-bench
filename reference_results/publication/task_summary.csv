@@ -1,0 +1,31 @@
+suite,task,display_name,category,category_display_name,optimizer,mean_score,std_score,mean_raw_max_utility,std_raw_max_utility,trials,task_rank
+data_mixture,data_recipes_stack_exchange,LLM-DM,data_mixture,Data Mixture,best_logged,0.995158626899416,0.0,-0.8339020373736177,0.0,8,2.0
+data_mixture,data_recipes_stack_exchange,LLM-DM,data_mixture,Data Mixture,coms,0.9917377937858043,0.006668862732473677,-0.8435153795444675,0.018741066052769005,8,3.0
+data_mixture,data_recipes_stack_exchange,LLM-DM,data_mixture,Data Mixture,bdi,1.0025793337436093,0.0,-0.8130481132932711,0.0,8,1.0
+synthetic,ackley,Ackley,many_local_minima,Many Local Minima,best_logged,1.0,0.0,-6.905933812160987,2.6887335368996736,8,3.0
+synthetic,ackley,Ackley,many_local_minima,Many Local Minima,coms,1.1082443232050971,0.1450338801976931,-5.437910678852171,2.5123600599044655,8,2.0
+synthetic,ackley,Ackley,many_local_minima,Many Local Minima,bdi,1.2193630650170442,0.27138783426000834,-4.135504445988446,1.4962086157354892,8,1.0
+synthetic,schaffer2,Schaffer N. 2,many_local_minima,Many Local Minima,best_logged,1.0,0.0,-0.17777481269031653,0.1252169347822248,8,1.0
+synthetic,schaffer2,Schaffer N. 2,many_local_minima,Many Local Minima,coms,0.8454725209138452,0.1975953148439301,-0.2540443936748219,0.21346924747852933,8,2.0
+synthetic,schaffer2,Schaffer N. 2,many_local_minima,Many Local Minima,bdi,0.5330711411701059,0.09186685926621001,-0.4860033247709623,0.012784554817018842,8,3.0
+synthetic,sum_different_powers,Sum of Different Powers,bowl_shaped,Bowl-Shaped,best_logged,1.0,0.0,-0.002240235732710275,0.0034062968867809643,8,3.0
+synthetic,sum_different_powers,Sum of Different Powers,bowl_shaped,Bowl-Shaped,coms,1.0006826935525892,0.002276649909484352,-0.0010480662088754786,0.002071034179939754,8,2.0
+synthetic,sum_different_powers,Sum of Different Powers,bowl_shaped,Bowl-Shaped,bdi,1.000692698544718,0.0020592805819179367,-0.0009434205761900874,0.0007287631863225566,8,1.0
+synthetic,matyas,Matyas,plate_shaped,Plate-Shaped,best_logged,1.0,0.0,-0.048847549322918765,0.04183866108429754,8,1.0
+synthetic,matyas,Matyas,plate_shaped,Plate-Shaped,coms,0.9998246335452587,0.0006553159643238407,-0.06497570591124939,0.061759144528188155,8,2.0
+synthetic,matyas,Matyas,plate_shaped,Plate-Shaped,bdi,0.9980157825335477,0.002729634520609452,-0.21472394248522275,0.20206406685907066,8,3.0
+synthetic,power_sum,Power Sum,plate_shaped,Plate-Shaped,best_logged,1.0,0.0,-5.669011197074501,3.2515944537657417,8,1.0
+synthetic,power_sum,Power Sum,plate_shaped,Plate-Shaped,coms,0.9998987720611734,0.00018012457111515691,-42.541214875028764,59.64353069272381,8,2.0
+synthetic,power_sum,Power Sum,plate_shaped,Plate-Shaped,bdi,0.9988074114394894,0.0011211243031105725,-394.18114764146094,334.244132209392,8,3.0
+synthetic,rosenbrock,Rosenbrock,valley_shaped,Valley-Shaped,best_logged,1.0,0.0,-0.1917542540557941,0.09455679777778538,8,1.0
+synthetic,rosenbrock,Rosenbrock,valley_shaped,Valley-Shaped,coms,0.9999292284801667,0.0001438739322716151,-0.3938549855560334,0.4631172233259771,8,2.0
+synthetic,rosenbrock,Rosenbrock,valley_shaped,Valley-Shaped,bdi,0.9999200495365391,0.00033651644358220637,-0.4231725806158248,0.9619760866281756,8,3.0
+synthetic,michalewicz,Michalewicz,steep_ridges_drops,Steep Ridges/Drops,best_logged,1.0,0.0,1.5678749430374659,0.14909078840526635,8,3.0
+synthetic,michalewicz,Michalewicz,steep_ridges_drops,Steep Ridges/Drops,coms,1.0818864247029363,0.10413400655636813,1.687378775131862,0.12891436315506827,8,1.0
+synthetic,michalewicz,Michalewicz,steep_ridges_drops,Steep Ridges/Drops,bdi,1.0169790326538695,0.18439146716142696,1.5977848874741258,0.31697976011647355,8,2.0
+synthetic,hartmann6,Hartmann 6-D,other,Other,best_logged,1.0,0.0,2.2409155840979547,0.33807552993143575,8,3.0
+synthetic,hartmann6,Hartmann 6-D,other,Other,coms,1.273536649280171,0.1771632922945863,2.808772535100837,0.20176104267426645,8,2.0
+synthetic,hartmann6,Hartmann 6-D,other,Other,bdi,1.3083254540069942,0.20521202442316686,2.8795896703663364,0.20216077653443826,8,1.0
+synthetic,shekel,Shekel,other,Other,best_logged,1.0,0.0,1.3815023073556563,0.5516631527460031,8,3.0
+synthetic,shekel,Shekel,other,Other,coms,1.7619409951602052,0.749592390064444,2.1953156227601105,0.7753091968734254,8,1.0
+synthetic,shekel,Shekel,other,Other,bdi,1.4836720192568686,0.6490587869095875,1.8675348689965876,0.6854612136256572,8,2.0

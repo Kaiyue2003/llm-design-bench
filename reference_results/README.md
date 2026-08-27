@@ -8,6 +8,9 @@ committing every generated plot.
   CSV summaries and plots.
 - `synthetic/` contains the full 47-task CSV, the best task per method/category
   table, and the vertical overview plot.
+- `publication/` contains the eight-seed Best Logged/COM/BDI raw runs,
+  aggregate summaries, explicit seed manifest, GitHub table, and Overleaf-ready
+  LaTeX table for the data-mixture and selected synthetic tasks.
 
 The source of truth for commands and caveats is
 [`docs/REPRODUCING.md`](../docs/REPRODUCING.md). Small floating-point differences
