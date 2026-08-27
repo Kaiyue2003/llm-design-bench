@@ -350,6 +350,11 @@ def render_markdown_report(
                 f"- Data-mixture training visibility: utility percentiles "
                 f"[{metadata['train_min_percentile']:.0f}, {metadata['train_max_percentile']:.0f}]."
             ),
+            (
+                "- `D(best)` is the best optimizer-visible logged utility. LLM-DM logged runs retain "
+                "their recorded model scale and training step, while method recommendations are "
+                "evaluated at the target 1B/19,500-step fidelity."
+            ),
             f"- Synthetic functions: `{functions}`.",
             "- Uncertainty: sample standard deviation, not standard error.",
             f"- Candidate count: `K={metadata['recommendations']}` for every method and trial.",
@@ -470,6 +475,8 @@ def render_latex_table(
             "\\bigl(u_{\\max}^{\\mathcal{D}}-u_{\\min}^{\\mathcal{D}}\\bigr)$. "
             "Scores above one indicate improvement over the logged maximum. "
             f"Seeds: {seed_text}. "
+            "For LLM-DM, $\\mathcal{D}$ (best) uses the recorded logged fidelity, whereas method "
+            "recommendations are evaluated at the target 1B/19,500-step fidelity. "
             "The synthetic subset is performance-selected from the prior exploratory sweep; "
             "the table is descriptive rather than an unbiased all-task comparison. "
             "COM and BDI are native PyTorch implementations; BDI uses the repository's RBF-kernel adaptation.",

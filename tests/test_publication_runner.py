@@ -57,7 +57,9 @@ def test_publication_runner_writes_seeded_reports_and_resumes(tmp_path) -> None:
     assert "COM" in markdown
     assert "BDI" in markdown
     assert "AntMorphology" not in markdown
+    assert "target 1B/19,500-step fidelity" in markdown
     assert "\\begin{sidewaystable*}" in latex
+    assert "target 1B/19,500-step fidelity" in latex
     assert "\\mathbf" in latex
     assert "\\underline" in latex
 
