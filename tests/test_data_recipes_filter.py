@@ -64,4 +64,3 @@ def test_data_recipes_1b_alias_filters_logged_data(tmp_path) -> None:
 
     assert task.logged_x.mixtures.shape == (2, 5)
     assert np.all(task.logged_x.model_scales == 1000)
-
