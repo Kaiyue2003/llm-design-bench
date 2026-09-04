@@ -195,6 +195,10 @@ Generated files go to `results/`, which is intentionally ignored by Git.
 
 ## Development
 
+The stable offline-method data boundary, candidate rules, seed policy, and
+implementation-provenance requirements are defined in
+[`docs/BENCHMARK_PROTOCOL.md`](docs/BENCHMARK_PROTOCOL.md).
+
 Using `pip`:
 
 ```bash
