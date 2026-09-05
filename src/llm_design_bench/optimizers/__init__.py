@@ -7,10 +7,19 @@ from llm_design_bench.optimizers.base import (
     MethodMetadata,
     OfflineBBOMethod,
 )
-from llm_design_bench.optimizers.best_logged import BestLoggedOptimizer
+from llm_design_bench.optimizers.best_logged import (
+    BestLoggedMethod,
+    BestLoggedOptimizer,
+)
 from llm_design_bench.optimizers.coms import ConservativeObjectiveModelOptimizer
-from llm_design_bench.optimizers.mlp_surrogate import OfflineMLPOptimizer
-from llm_design_bench.optimizers.random_search import DirichletRandomSearch
+from llm_design_bench.optimizers.mlp_surrogate import (
+    OfflineMLPMethod,
+    OfflineMLPOptimizer,
+)
+from llm_design_bench.optimizers.random_search import (
+    DirichletRandomSearch,
+    RandomSearchMethod,
+)
 from llm_design_bench.optimizers.registry import (
     get_method_capabilities,
     get_method_metadata,
@@ -19,10 +28,11 @@ from llm_design_bench.optimizers.registry import (
     method_names,
     register_method,
 )
-from llm_design_bench.optimizers.sobol_search import SobolSearch
+from llm_design_bench.optimizers.sobol_search import SobolSearch, SobolSearchMethod
 
 __all__ = [
     "BackwardDistillationOptimizer",
+    "BestLoggedMethod",
     "BestLoggedOptimizer",
     "ConservativeObjectiveModelOptimizer",
     "DirichletRandomSearch",
@@ -31,9 +41,12 @@ __all__ = [
     "MethodCapabilities",
     "MethodFamily",
     "MethodMetadata",
+    "OfflineMLPMethod",
     "OfflineMLPOptimizer",
     "OfflineBBOMethod",
+    "RandomSearchMethod",
     "SobolSearch",
+    "SobolSearchMethod",
     "get_method_capabilities",
     "get_method_metadata",
     "list_methods",
