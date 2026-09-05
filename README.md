@@ -200,6 +200,26 @@ print("best utility:", trace.recommendation_utility.max())
 print("best objective:", -trace.recommendation_utility.max())
 ```
 
+The oracle-separated method API currently registers `best_logged`,
+`random_search`, `sobol`, and `offline_mlp`:
+
+```python
+from llm_design_bench.optimizers import make_method
+from llm_design_bench.problem import OfflineProblem, RunContext
+
+problem = OfflineProblem.from_task(task)
+method = make_method("offline_mlp", epochs=100, particle_steps=100)
+result = method.run(
+    problem,
+    RunContext(method_seed=38, candidate_budget=128),
+)
+
+# Only the evaluator may send result.candidates to task.predict(...).
+```
+
+The legacy optimizer API remains available for the existing CLI and reference
+result workflows.
+
 See [synthetic_quickstart.py](examples/synthetic_quickstart.py) and
 [data_recipes_quickstart.py](examples/data_recipes_quickstart.py) for runnable
 examples.
