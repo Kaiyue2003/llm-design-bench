@@ -14,6 +14,10 @@ app = typer.Typer(add_completion=False)
 @app.command()
 def benchmark(
     data_recipes_root: Path | None = typer.Option(None, help="Path to the data-recipes clone."),
+    logged_model_scale: float | None = typer.Option(
+        None,
+        help="Optional model scale filter for logged data, e.g. 1000 for the 1B-only ablation.",
+    ),
     reference_queries: int = typer.Option(2048, min=1, help="Queries for regret reference."),
     recommendations: int = typer.Option(128, min=1, help="Final candidate batch size."),
     epochs: int = typer.Option(100, min=1, help="MLP and COM training epochs."),
@@ -34,7 +38,11 @@ def benchmark(
     seed: int = typer.Option(38, help="Random seed."),
     results_dir: Path = typer.Option(Path("results"), help="Output directory."),
 ) -> None:
-    task = make("data-recipes", data_recipes_root=data_recipes_root)
+    task = make(
+        "data-recipes",
+        data_recipes_root=data_recipes_root,
+        logged_model_scale=logged_model_scale,
+    )
     frame = run_offline_benchmarks(
         task,
         OfflineBenchmarkConfig(
