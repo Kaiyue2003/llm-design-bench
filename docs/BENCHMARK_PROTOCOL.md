@@ -177,3 +177,12 @@ The unified method runner writes two machine-readable files:
 
 The runner creates a fresh method instance for every seed. It evaluates no
 candidate when method training or proposal fails.
+
+Multi-task experiments use `BenchmarkTaskSpec` and `BenchmarkTrial` to feed the
+same seed-level evaluator boundary into this runner, then write one unified
+report. The complete versioned column contract, report artifacts, and legacy-v1
+conversion rules are documented in [RESULT_SCHEMA.md](RESULT_SCHEMA.md).
+
+The historical `publication_runner` is a compatibility path for reproducing
+the frozen three-method publication-v1 files. New method comparisons must use
+the unified runner and report path.

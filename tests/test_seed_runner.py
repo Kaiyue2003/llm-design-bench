@@ -164,10 +164,16 @@ def test_seed_runner_writes_per_seed_and_summary_results(tmp_path) -> None:
     assert set(result.per_seed["normalization_reference_id"]) == {
         "toy-target-reference"
     }
+    assert set(result.per_seed["schema_version"]) == {1}
+    assert set(result.per_seed["result_source"]) == {"unified_runner"}
+    assert set(result.per_seed["method_display_name"]) == {"Seed Runner Random"}
+    assert set(result.per_seed["d_best_utility"]) == {-1.0}
     assert (tmp_path / "method_seed_results.csv").is_file()
     assert (tmp_path / "method_seed_summary.csv").is_file()
     summary = json.loads(result.per_seed.loc[0, "training_summary_json"])
     assert summary["tag"] == "created"
+    resolved_config = json.loads(result.per_seed.loc[0, "method_config_json"])
+    assert resolved_config == {"tag": "created"}
 
     row = result.per_seed.iloc[0]
     expected = (row["raw_max_utility"] + 2.0) / 2.0

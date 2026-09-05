@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 import math
 import random
@@ -24,6 +25,7 @@ from llm_design_bench.spaces import BoxSpace, SimplexSpace
 
 
 DEFAULT_METHOD_SEEDS = tuple(range(38, 46))
+RESULT_SCHEMA_VERSION = 1
 
 _SCORE_COLUMNS = (
     "raw_max_utility",
@@ -113,6 +115,7 @@ def run_method_seed_benchmark(
     *,
     reference_utility: np.ndarray,
     config: SeedBenchmarkConfig = SeedBenchmarkConfig(),
+    write_results: bool = True,
 ) -> SeedBenchmarkResult:
     """Run registered methods across paired seeds, then evaluate candidates.
 
@@ -151,6 +154,9 @@ def run_method_seed_benchmark(
             try:
                 _seed_everything(seed)
                 method = make_method(spec.method_id, **spec.kwargs)
+                row["method_config_json"] = _json_dumps(
+                    _resolved_method_config(method, spec.kwargs)
+                )
                 context = RunContext(
                     method_seed=seed,
                     candidate_budget=config.candidate_budget,
@@ -204,9 +210,10 @@ def run_method_seed_benchmark(
 
     per_seed = pd.DataFrame(rows)
     summary = summarize_seed_results(per_seed)
-    config.results_dir.mkdir(parents=True, exist_ok=True)
-    per_seed.to_csv(config.results_dir / "method_seed_results.csv", index=False)
-    summary.to_csv(config.results_dir / "method_seed_summary.csv", index=False)
+    if write_results:
+        config.results_dir.mkdir(parents=True, exist_ok=True)
+        per_seed.to_csv(config.results_dir / "method_seed_results.csv", index=False)
+        summary.to_csv(config.results_dir / "method_seed_summary.csv", index=False)
     return SeedBenchmarkResult(per_seed=per_seed, summary=summary)
 
 
@@ -223,22 +230,56 @@ def summarize_seed_results(per_seed: pd.DataFrame) -> pd.DataFrame:
         raise KeyError(f"missing seed-result columns: {missing}")
 
     rows: list[dict[str, Any]] = []
-    groups = per_seed.groupby(["experiment_id", "run_id"], sort=False)
-    for (experiment_id, run_id), group in groups:
+    group_columns = ["experiment_id"]
+    group_columns.extend(
+        column
+        for column in (
+            "suite",
+            "task_id",
+            "task_display_name",
+            "category",
+            "category_display_name",
+        )
+        if column in per_seed.columns
+    )
+    group_columns.append("run_id")
+    groups = per_seed.groupby(group_columns, sort=False, dropna=False)
+    for _, group in groups:
         first = group.iloc[0]
         successful = group[group["status"] == "success"]
         row: dict[str, Any] = {
-            "experiment_id": experiment_id,
-            "run_id": run_id,
-            "method_id": first["method_id"],
-            "display_name": first.get("display_name", first["method_id"]),
-            "family": first.get("family"),
-            "implementation_kind": first.get("implementation_kind"),
-            "requested_runs": int(len(group)),
-            "successful_runs": int(len(successful)),
-            "failed_runs": int(len(group) - len(successful)),
-            "candidate_budget": int(first.get("candidate_budget", 0)),
+            column: first[column] for column in group_columns
         }
+        row.update(
+            {
+                "method_id": first["method_id"],
+                "method_display_name": first.get(
+                    "method_display_name",
+                    first.get("display_name", first["method_id"]),
+                ),
+                "display_name": first.get(
+                    "method_display_name",
+                    first.get("display_name", first["method_id"]),
+                ),
+                "family": first.get("family"),
+                "implementation_kind": first.get("implementation_kind"),
+                "adaptations_json": first.get("adaptations_json"),
+                "source_url": first.get("source_url"),
+                "source_commit": first.get("source_commit"),
+                "requested_method_config_json": first.get(
+                    "requested_method_config_json"
+                ),
+                "method_config_json": first.get("method_config_json"),
+                "package_commit": first.get("package_commit"),
+                "normalization_reference_id": first.get(
+                    "normalization_reference_id"
+                ),
+                "requested_runs": int(len(group)),
+                "successful_runs": int(len(successful)),
+                "failed_runs": int(len(group) - len(successful)),
+                "candidate_budget": int(first.get("candidate_budget", 0)),
+            }
+        )
         for metric in _SUMMARY_METRICS:
             values = pd.to_numeric(
                 successful[metric] if metric in successful else pd.Series(dtype=float),
@@ -319,17 +360,22 @@ def _base_row(
     reference_high: float,
 ) -> dict[str, Any]:
     row: dict[str, Any] = {
+        "schema_version": RESULT_SCHEMA_VERSION,
+        "result_source": "unified_runner",
         "run_id": spec.run_id,
         "experiment_id": config.experiment_id,
         "method_id": spec.method_id,
+        "method_display_name": metadata.display_name,
         "display_name": metadata.display_name,
         "family": metadata.family.value,
         "implementation_kind": metadata.implementation_kind.value,
         "adaptations_json": _json_dumps(metadata.adaptations),
         "source_url": metadata.source_url,
         "source_commit": metadata.source_commit,
+        "requested_method_config_json": _json_dumps(spec.kwargs),
         "method_config_json": _json_dumps(spec.kwargs),
         "package_commit": config.package_commit,
+        "task_id": problem.metadata.task_name,
         "task_name": problem.metadata.task_name,
         "objective_name": problem.metadata.objective_name,
         "problem_metadata_json": _json_dumps(problem.metadata.extra),
@@ -344,6 +390,7 @@ def _base_row(
         "reference_min_utility": reference_low,
         "reference_max_utility": reference_high,
         "normalization_reference_id": config.normalization_reference_id,
+        "d_best_utility": float(problem.train_utility.max().detach().cpu()),
         "device": str(config.device),
         "dtype": str(config.dtype),
         "status": "failed",
@@ -360,6 +407,11 @@ def _base_row(
         "candidate_novelty": float("nan"),
     }
     row.update({column: float("nan") for column in _SCORE_COLUMNS})
+    row["refnorm_d_best_score"] = reference_normalize(
+        row["d_best_utility"],
+        reference_low=reference_low,
+        reference_high=reference_high,
+    )
     return row
 
 
@@ -386,16 +438,6 @@ def _candidate_scores(
     reference_low: float,
     reference_high: float,
 ) -> dict[str, float]:
-    width = reference_high - reference_low
-    minimum_width = 1e-12 * max(
-        1.0,
-        abs(reference_low),
-        abs(reference_high),
-    )
-
-    def normalize(value: float) -> float:
-        return 0.0 if width <= minimum_width else (value - reference_low) / width
-
     maximum = float(np.max(utilities))
     median = float(np.median(utilities))
     mean = float(np.mean(utilities))
@@ -403,10 +445,37 @@ def _candidate_scores(
         "raw_max_utility": maximum,
         "raw_median_utility": median,
         "raw_mean_utility": mean,
-        "refnorm_max_score": normalize(maximum),
-        "refnorm_median_score": normalize(median),
-        "refnorm_mean_score": normalize(mean),
+        "refnorm_max_score": reference_normalize(
+            maximum,
+            reference_low=reference_low,
+            reference_high=reference_high,
+        ),
+        "refnorm_median_score": reference_normalize(
+            median,
+            reference_low=reference_low,
+            reference_high=reference_high,
+        ),
+        "refnorm_mean_score": reference_normalize(
+            mean,
+            reference_low=reference_low,
+            reference_high=reference_high,
+        ),
     }
+
+
+def reference_normalize(
+    value: float,
+    *,
+    reference_low: float,
+    reference_high: float,
+) -> float:
+    width = reference_high - reference_low
+    minimum_width = 1e-12 * max(
+        1.0,
+        abs(reference_low),
+        abs(reference_high),
+    )
+    return 0.0 if width <= minimum_width else (value - reference_low) / width
 
 
 def _candidate_diagnostics(
@@ -453,3 +522,27 @@ def _normalized_designs(
 
 def _json_dumps(value: Any) -> str:
     return json.dumps(value, sort_keys=True, default=str, separators=(",", ":"))
+
+
+def _resolved_method_config(
+    method,
+    requested: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Capture constructor defaults without serializing learned model state."""
+
+    resolved = dict(requested)
+    try:
+        signature = inspect.signature(type(method).__init__)
+    except (TypeError, ValueError):
+        return resolved
+    for name, parameter in signature.parameters.items():
+        if name == "self" or parameter.kind in {
+            inspect.Parameter.VAR_POSITIONAL,
+            inspect.Parameter.VAR_KEYWORD,
+        }:
+            continue
+        if hasattr(method, name):
+            resolved[name] = getattr(method, name)
+        elif parameter.default is not inspect.Parameter.empty:
+            resolved.setdefault(name, parameter.default)
+    return resolved

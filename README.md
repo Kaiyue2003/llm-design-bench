@@ -182,6 +182,25 @@ llm-design-bench-offline \
 
 The Python registry also exposes this setting as `make("data-recipes-1b")`.
 
+Run registered methods through the versioned, oracle-separated suite runner:
+
+```bash
+llm-design-bench-suite \
+  --data-mixture \
+  --data-recipes-root ../data-recipes \
+  --method best_logged \
+  --method random_search \
+  --method sobol \
+  --method offline_mlp \
+  --seed 38 --seed 39 --seed 40 --seed 41 \
+  --seed 42 --seed 43 --seed 44 --seed 45 \
+  --candidate-budget 128 \
+  --results-dir results/unified_data_mixture
+```
+
+Add `--fixed-1b` for the ablation. Both modes use the same unfiltered
+data-recipes normalization reference and the same 1B/19,500-step target.
+
 ## Python API
 
 ```python
@@ -219,6 +238,13 @@ result = method.run(
 
 The legacy optimizer API remains available for the existing CLI and reference
 result workflows.
+
+New multi-task experiments compose `BenchmarkTaskSpec` trial factories with
+the same seed runner, producing a single versioned result schema with raw
+per-seed rows, mean/sample-SD/SE summaries, failures, runtime, candidate
+diagnostics, provenance, Markdown, and LaTeX. The exact columns and legacy-v1
+conversion command are documented in the
+[unified result schema](docs/RESULT_SCHEMA.md).
 
 The frozen three-method result set has a machine-checked
 [publication v1 audit](docs/RESULTS_AUDIT.md). The planned PyTorch integration

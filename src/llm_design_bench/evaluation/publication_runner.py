@@ -1,3 +1,10 @@
+"""Legacy publication-v1 runner retained for exact artifact compatibility.
+
+New method comparisons use ``evaluation.seed_runner`` together with
+``evaluation.unified_report``. This module intentionally keeps the historical
+three-method schema and sample-SD tables reproducible.
+"""
+
 from __future__ import annotations
 
 import hashlib

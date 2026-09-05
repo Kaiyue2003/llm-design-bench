@@ -148,7 +148,29 @@ The default synthetic list is fixed in
 COM and BDI winner in each category, so this compact result is descriptive and
 performance-selected. Use Section 2 for an unbiased all-task sweep.
 
-## 5. Verify the package
+## 5. Convert or rebuild unified reports
+
+The publication-v1 directory is immutable. Convert it into the unified schema
+in a new directory with:
+
+```bash
+llm-design-bench-report from-legacy \
+  --publication-dir reference_results/publication \
+  --results-dir results/publication_v1_unified
+```
+
+Rebuild summaries and human-readable tables from a unified raw file with:
+
+```bash
+llm-design-bench-report from-unified \
+  --input-csv results/experiment/method_seed_results.csv \
+  --results-dir results/experiment_report
+```
+
+The generated summary includes both sample standard deviation and standard
+error. The Markdown and LaTeX tables display standard error.
+
+## 6. Verify the package
 
 ```bash
 python -m pytest -q

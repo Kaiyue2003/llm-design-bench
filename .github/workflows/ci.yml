@@ -30,6 +30,8 @@ jobs:
         run: |
           llm-design-bench --help
           llm-design-bench-offline --help
+          llm-design-bench-report --help
+          llm-design-bench-suite --help
           llm-design-bench-synthetic --help
 
   package:
