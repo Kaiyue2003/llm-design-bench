@@ -220,6 +220,12 @@ result = method.run(
 The legacy optimizer API remains available for the existing CLI and reference
 result workflows.
 
+The frozen three-method result set has a machine-checked
+[publication v1 audit](docs/RESULTS_AUDIT.md). The planned PyTorch integration
+of all 24 methods compared by the SPADE paper is tracked in the
+[method catalog](docs/METHOD_CATALOG.md); catalog membership does not imply
+that a method is already implemented.
+
 See [synthetic_quickstart.py](examples/synthetic_quickstart.py) and
 [data_recipes_quickstart.py](examples/data_recipes_quickstart.py) for runnable
 examples.
