@@ -73,6 +73,22 @@ _METHOD_CONFIGS = (
             "particle_steps": 2,
         },
     ),
+    (
+        "coms",
+        {
+            "hidden_size": 16,
+            "epochs": 2,
+            "batch_size": 2,
+            "adversarial_steps": 2,
+            "particle_steps": 2,
+        },
+    ),
+    (
+        "bdi",
+        {
+            "steps": 2,
+        },
+    ),
 )
 
 
@@ -95,9 +111,14 @@ def test_builtin_method_returns_valid_candidate_batch(
 
 
 def test_builtin_methods_are_registered() -> None:
-    assert {"best_logged", "random_search", "sobol", "offline_mlp"}.issubset(
-        method_names()
-    )
+    assert {
+        "best_logged",
+        "random_search",
+        "sobol",
+        "offline_mlp",
+        "coms",
+        "bdi",
+    }.issubset(method_names())
 
 
 def test_best_logged_preserves_utility_order_and_removes_duplicates() -> None:
@@ -119,7 +140,10 @@ def test_best_logged_preserves_utility_order_and_removes_duplicates() -> None:
     assert result.training_summary["unique_logged_designs_used"] == 3
 
 
-@pytest.mark.parametrize("method_id", ["random_search", "sobol", "offline_mlp"])
+@pytest.mark.parametrize(
+    "method_id",
+    ["random_search", "sobol", "offline_mlp", "coms", "bdi"],
+)
 def test_stochastic_methods_are_reproducible(method_id) -> None:
     kwargs = dict(_METHOD_CONFIGS)[method_id]
     context = RunContext(method_seed=41, candidate_budget=7)
@@ -163,6 +187,26 @@ def test_offline_mlp_does_not_mutate_global_torch_rng() -> None:
     assert torch.equal(torch.rand(4), expected)
 
 
+def test_coms_does_not_mutate_global_torch_rng() -> None:
+    torch.manual_seed(1234)
+    expected = torch.rand(4)
+    torch.manual_seed(1234)
+
+    make_method(
+        "coms",
+        hidden_size=8,
+        epochs=1,
+        batch_size=2,
+        adversarial_steps=1,
+        particle_steps=1,
+    ).run(
+        _simplex_problem(),
+        RunContext(method_seed=38, candidate_budget=5),
+    )
+
+    assert torch.equal(torch.rand(4), expected)
+
+
 @pytest.mark.parametrize(
     "kwargs",
     [
@@ -177,6 +221,36 @@ def test_offline_mlp_does_not_mutate_global_torch_rng() -> None:
 def test_offline_mlp_rejects_invalid_hyperparameters(kwargs) -> None:
     with pytest.raises(ValueError):
         make_method("offline_mlp", **kwargs)
+
+
+@pytest.mark.parametrize(
+    "method_id,kwargs",
+    [
+        ("coms", {"alpha": 0.0}),
+        ("coms", {"adversarial_steps": 0}),
+        ("coms", {"overestimation_limit": float("nan")}),
+        ("bdi", {"steps": 0}),
+        ("bdi", {"lengthscale": 0.0}),
+        ("bdi", {"ridge": 0.0}),
+        ("bdi", {"forward_weight": -1.0}),
+        ("bdi", {"forward_weight": 0.0, "distillation_weight": 0.0}),
+    ],
+)
+def test_adaptations_reject_invalid_hyperparameters(method_id, kwargs) -> None:
+    with pytest.raises(ValueError):
+        make_method(method_id, **kwargs)
+
+
+def test_adaptation_metadata_is_explicit() -> None:
+    coms = make_method("coms").metadata
+    bdi = make_method("bdi").metadata
+
+    assert coms.display_name == "COMs adaptation"
+    assert coms.implementation_kind.value == "lightweight_adaptation"
+    assert "compact_pytorch_reimplementation" in coms.adaptations
+    assert bdi.display_name == "BDI adaptation"
+    assert bdi.implementation_kind.value == "lightweight_adaptation"
+    assert "rbf_kernel_replaces_infinite_width_ntk" in bdi.adaptations
 
 
 class _CountingEvaluator:
@@ -214,6 +288,17 @@ def test_seed_runner_evaluates_builtin_candidates_only_after_return(tmp_path) ->
                 "particle_steps": 1,
             },
         ),
+        MethodSpec(
+            "coms",
+            {
+                "hidden_size": 8,
+                "epochs": 1,
+                "batch_size": 2,
+                "adversarial_steps": 1,
+                "particle_steps": 1,
+            },
+        ),
+        MethodSpec("bdi", {"steps": 1}),
     ]
     result = run_method_seed_benchmark(
         evaluator,
@@ -234,4 +319,6 @@ def test_seed_runner_evaluates_builtin_candidates_only_after_return(tmp_path) ->
         "random_search",
         "sobol",
         "offline_mlp",
+        "coms",
+        "bdi",
     }

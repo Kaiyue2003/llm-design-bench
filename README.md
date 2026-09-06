@@ -16,15 +16,15 @@ package uses `utility = -objective`, so a larger utility is always better.
 
 | Suite | Designs | Logged dataset | Methods |
 | --- | --- | --- | --- |
-| Data mixture | Five-domain simplex plus model scale and training steps | Published `data-recipes` runs | Best Logged, random search, Sobol, Offline MLP, COM, BDI |
-| Synthetic BBO | Box-bounded continuous vectors | Seeded uniform samples over each function's bounds | Best Logged, COM, BDI |
+| Data mixture | Five-domain simplex plus model scale and training steps | Published `data-recipes` runs | Best Logged, Random Search, Sobol, Offline MLP, COMs adaptation, BDI adaptation |
+| Synthetic BBO | Box-bounded continuous vectors | Seeded uniform samples over each function's bounds | Best Logged, Random Search, Sobol, Offline MLP, COMs adaptation, BDI adaptation |
 
 The synthetic suite covers Many Local Minima, Bowl-Shaped, Plate-Shaped,
-Valley-Shaped, Steep Ridges/Drops, and Other test problems. COM is a
-conservative objective-model implementation. BDI is a lightweight adaptation
-that uses differentiable RBF kernel regression instead of the original legacy
-JAX/Neural Tangents runtime; see [Method Notes](docs/METHODS.md) for the exact
-mechanisms and limitations.
+Valley-Shaped, Steep Ridges/Drops, and Other test problems. COMs is a compact
+PyTorch adaptation of conservative objective modeling. BDI is a lightweight
+adaptation that uses differentiable RBF kernel regression instead of the
+original legacy JAX/Neural Tangents runtime; see
+[Method Notes](docs/METHODS.md) for the exact mechanisms and limitations.
 
 ## Installation
 
@@ -192,6 +192,8 @@ llm-design-bench-suite \
   --method random_search \
   --method sobol \
   --method offline_mlp \
+  --method coms \
+  --method bdi \
   --seed 38 --seed 39 --seed 40 --seed 41 \
   --seed 42 --seed 43 --seed 44 --seed 45 \
   --candidate-budget 128 \
@@ -200,6 +202,9 @@ llm-design-bench-suite \
 
 Add `--fixed-1b` for the ablation. Both modes use the same unfiltered
 data-recipes normalization reference and the same 1B/19,500-step target.
+When `--method` is omitted, the suite runs these six registered methods.
+The result labels remain **COMs adaptation** and **BDI adaptation**; neither is
+presented as an exact reproduction of the cited implementation.
 
 ## Python API
 

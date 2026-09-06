@@ -27,8 +27,9 @@ original component is labeled an adaptation, not a faithful reproduction.
 ## Status vocabulary
 
 - `integrated_unified`: available through the strict oracle-separated registry.
-- `legacy_adaptation`: runnable only through the legacy path and/or replaces a
-  material part of the published method.
+- `integrated_adaptation`: available through the strict unified registry but
+  replaces a material part of the published method.
+- `legacy_adaptation`: runnable only through the legacy path.
 - `planned_official_adapter`: verified official PyTorch core exists, but the
   benchmark adapter has not been written.
 - `planned`: not implemented; its primary code/config source must be audited
@@ -44,11 +45,11 @@ original component is labeled an adaptation, not a faithful reproduction.
 | `standard_ga` | Standard GA | Forward | planned | Deterministic MLP + gradient ascent; distinct from generic `offline_mlp` results |
 | `ga_on_gp` | GA on GP | Forward | planned | GPyTorch predictive mean + design ascent |
 | `mc_dropout` | MC-Dropout | Forward | planned | Dropout surrogate + Monte Carlo risk-aware acquisition |
-| `coms` | COMs | Forward | legacy adaptation | Migrate to unified API; retain adaptation label until parity audit passes |
+| `coms` | COMs | Forward | integrated adaptation | Unified compact PyTorch adaptation; retain adaptation label until parity audit passes |
 | `roma` | RoMA | Forward | planned | Robust local smoothness/model-adaptation port |
 | `ict` | ICT | Forward | planned | Importance-aware co-teaching and pseudo-label exchange |
 | `tri_mentoring` | Tri-Mentoring | Forward | planned | Three-surrogate mentoring with pairwise filtering |
-| `bdi` | BDI | Forward | legacy adaptation | Migrate RBF version as `BDI adaptation`; faithful port is a separate result ID |
+| `bdi` | BDI | Forward | integrated adaptation | Unified RBF version as `BDI adaptation`; faithful port requires a separate result ID |
 | `ltr` | LTR | Forward | planned | Learning-to-rank surrogate and paper-aligned search |
 | `match_opt` | MATCH-OPT | Forward | planned | Surrogate/data-support gradient matching |
 | `pgs` | PGS | Forward | planned | Policy-guided, perturbation-smoothed gradient search |
@@ -68,9 +69,10 @@ generative baselines, and SPADE, for 24 paper methods total.
 
 ## Existing project controls
 
-The unified registry currently contains `best_logged`, `random_search`,
-`sobol`, and `offline_mlp`. They remain useful controls, but they should not be
-silently renamed to a paper method:
+The unified registry currently contains the controls `best_logged`,
+`random_search`, `sobol`, and `offline_mlp`, plus the explicitly labeled
+`coms` and `bdi` adaptations. The controls should not be silently renamed to a
+paper method:
 
 - `offline_mlp` can share components with Standard GA, but a result is called
   Standard GA only after its architecture, preprocessing, initialization, and
@@ -104,8 +106,9 @@ URL empty rather than guessing one.
 
 1. **Low-risk controls and classical methods:** Standard GA, CMA-ES,
    REINFORCE, BO-qEI, GA on GP, and MC-Dropout.
-2. **Forward offline methods:** unified COMs/BDI adaptations, then RoMA, ICT,
-   Tri-Mentoring, LTR, MATCH-OPT, and PGS.
+2. **Forward offline methods:** RoMA, ICT, Tri-Mentoring, LTR, MATCH-OPT, and
+   PGS; the unified COMs/BDI adaptations are now available as comparison
+   points.
 3. **SPADE:** integrate the verified official PyTorch core early enough to
    establish the target paper method, but do not claim exact table reproduction.
 4. **Inverse generative methods:** CbAS, MINs, DDOM, GABO, GTG, RGD, BONET,
@@ -113,4 +116,3 @@ URL empty rather than guessing one.
 
 Each method enters the final eight-seed table only after interface, no-oracle,
 reproducibility, design-space validity, smoke-run, and provenance tests pass.
-

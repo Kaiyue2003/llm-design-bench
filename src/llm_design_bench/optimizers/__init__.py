@@ -1,4 +1,7 @@
-from llm_design_bench.optimizers.bdi import BackwardDistillationOptimizer
+from llm_design_bench.optimizers.bdi import (
+    BackwardDistillationMethod,
+    BackwardDistillationOptimizer,
+)
 from llm_design_bench.optimizers.base import (
     FitThenProposeMethod,
     ImplementationKind,
@@ -11,7 +14,10 @@ from llm_design_bench.optimizers.best_logged import (
     BestLoggedMethod,
     BestLoggedOptimizer,
 )
-from llm_design_bench.optimizers.coms import ConservativeObjectiveModelOptimizer
+from llm_design_bench.optimizers.coms import (
+    ConservativeObjectiveModelMethod,
+    ConservativeObjectiveModelOptimizer,
+)
 from llm_design_bench.optimizers.mlp_surrogate import (
     OfflineMLPMethod,
     OfflineMLPOptimizer,
@@ -31,9 +37,11 @@ from llm_design_bench.optimizers.registry import (
 from llm_design_bench.optimizers.sobol_search import SobolSearch, SobolSearchMethod
 
 __all__ = [
+    "BackwardDistillationMethod",
     "BackwardDistillationOptimizer",
     "BestLoggedMethod",
     "BestLoggedOptimizer",
+    "ConservativeObjectiveModelMethod",
     "ConservativeObjectiveModelOptimizer",
     "DirichletRandomSearch",
     "FitThenProposeMethod",

@@ -83,7 +83,15 @@ def benchmark(
             "select at least one --function or enable --data-mixture"
         )
     selected_methods = tuple(
-        method or ["best_logged", "random_search", "sobol", "offline_mlp"]
+        method
+        or [
+            "best_logged",
+            "random_search",
+            "sobol",
+            "offline_mlp",
+            "coms",
+            "bdi",
+        ]
     )
     run_metadata = {"synthetic_logged_samples": logged_samples}
     if include_data_mixture:

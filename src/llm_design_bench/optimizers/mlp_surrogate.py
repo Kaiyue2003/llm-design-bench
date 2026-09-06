@@ -21,9 +21,8 @@ from llm_design_bench.optimizers.offline_utils import (
     unique_top_mixtures,
 )
 from llm_design_bench.optimizers.registry import register_method
-from llm_design_bench.optimizers.torch_utils import select_top_unique_designs
+from llm_design_bench.optimizers.torch_utils import initialize_candidate_designs
 from llm_design_bench.problem import OfflineProblem, RunContext
-from llm_design_bench.spaces import SimplexSpace
 
 
 class OfflineMLPOptimizer:
@@ -214,26 +213,12 @@ class OfflineMLPMethod(FitThenProposeMethod):
         generator: torch.Generator,
     ) -> torch.Tensor:
         model, feature_mean, feature_std = self._fitted_state()
-        logged_initial = select_top_unique_designs(
-            problem.train_designs,
-            problem.train_utility,
-            context.candidate_budget,
-        )
-        missing = context.candidate_budget - len(logged_initial)
-        if missing:
-            sampled = problem.design_space.sample(
-                missing,
-                generator=generator,
-                device=context.device,
-                dtype=context.dtype,
-            )
-            initial_designs = torch.cat([logged_initial, sampled], dim=0)
-        else:
-            initial_designs = logged_initial
-
-        initial_designs = _move_to_design_space_interior(
-            initial_designs,
+        initial_designs, logged_count, random_count = initialize_candidate_designs(
             problem,
+            candidate_budget=context.candidate_budget,
+            generator=generator,
+            device=context.device,
+            dtype=context.dtype,
         )
         parameters = torch.nn.Parameter(
             problem.design_space.to_unconstrained(initial_designs).detach()
@@ -261,8 +246,8 @@ class OfflineMLPMethod(FitThenProposeMethod):
         self._diagnostics = {
             "search": "gradient_ascent",
             "particle_steps": self.particle_steps,
-            "logged_initializations": len(logged_initial),
-            "random_initializations": missing,
+            "logged_initializations": logged_count,
+            "random_initializations": random_count,
             "predicted_standardized_utility_mean": float(
                 final_prediction.mean().cpu()
             ),
@@ -285,17 +270,6 @@ class OfflineMLPMethod(FitThenProposeMethod):
         ):
             raise RuntimeError("fit must complete before propose")
         return self._model, self._feature_mean, self._feature_std
-
-
-def _move_to_design_space_interior(
-    designs: torch.Tensor,
-    problem: OfflineProblem,
-) -> torch.Tensor:
-    if not isinstance(problem.design_space, SimplexSpace):
-        return designs
-    epsilon = max(float(torch.finfo(designs.dtype).eps), 1e-8)
-    interior = designs.clamp_min(epsilon)
-    return interior / interior.sum(dim=1, keepdim=True)
 
 
 def _validate_positive_integer(name: str, value: int) -> None:

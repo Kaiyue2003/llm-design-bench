@@ -125,6 +125,7 @@ llm-design-bench-suite \
   --data-recipes-root ../data-recipes \
   --method best_logged --method random_search \
   --method sobol --method offline_mlp \
+  --method coms --method bdi \
   --seed 38 --seed 39 --seed 40 --seed 41 \
   --seed 42 --seed 43 --seed 44 --seed 45 \
   --candidate-budget 128 \

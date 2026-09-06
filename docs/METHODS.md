@@ -32,6 +32,12 @@ port of the original
 [`design-baselines`](https://github.com/brandontrabucco/design-baselines)
 implementation.
 
+The registered `coms` method receives only `OfflineProblem`, standardizes the
+logged design/fidelity features and utility, and returns unevaluated
+candidates. Oracle evaluation is performed later by the benchmark runner. The
+legacy `ConservativeObjectiveModelOptimizer` remains only for reproducing old
+result paths.
+
 ## BDI
 
 The BDI adaptation first fits RBF kernel ridge regression to standardized
@@ -48,6 +54,11 @@ distillation mechanism while avoiding the original JAX, Neural Tangents, and
 Design-Bench dependencies. It should therefore be described as a BDI
 adaptation when reporting results. The reference implementation is the
 authors' [`GGchen1997/BDI`](https://github.com/GGchen1997/BDI) repository.
+
+The registered `bdi` method uses the same oracle-separated contract and
+supports both simplex and box spaces. It records the RBF substitution in
+method provenance. The legacy `BackwardDistillationOptimizer` remains only
+for reproducing old result paths.
 
 ## Reference-normalized utility
 

@@ -34,8 +34,8 @@ def test_catalog_separates_controls_and_marks_current_adaptations() -> None:
 
     assert set(controls) == {"best_logged", "random_search", "sobol", "offline_mlp"}
     assert all(control["status"] == "integrated_unified" for control in controls.values())
-    assert methods["coms"]["status"] == "legacy_adaptation"
-    assert methods["bdi"]["status"] == "legacy_adaptation"
+    assert methods["coms"]["status"] == "integrated_adaptation"
+    assert methods["bdi"]["status"] == "integrated_adaptation"
     assert methods["spade"]["status"] == "planned_official_adapter"
     assert methods["spade"]["source_code"] == "https://github.com/HarryYoung2018/spade"
 
