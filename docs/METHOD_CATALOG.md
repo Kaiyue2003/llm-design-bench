@@ -37,12 +37,12 @@ original component is labeled an adaptation, not a faithful reproduction.
 
 ## Paper method matrix
 
-| ID | Method | Family | Current state | Planned PyTorch integration |
+| ID | Method | Family | Current state | PyTorch integration |
 | --- | --- | --- | --- | --- |
-| `cma_es` | CMA-ES | Standard | planned | Native population implementation after paper-protocol audit |
-| `reinforce` | REINFORCE | Standard | planned | Simplex-aware `torch.distributions` policy gradient |
+| `cma_es` | CMA-ES adaptation | Standard | integrated adaptation | Full-covariance PyTorch CMA-ES over a frozen probabilistic ensemble |
+| `reinforce` | REINFORCE adaptation | Standard | integrated adaptation | Fixed-variance Gaussian policy with frozen-surrogate rewards |
 | `bo_qei` | BO-qEI | Standard | planned | BoTorch/GPyTorch qEI |
-| `standard_ga` | Standard GA | Forward | planned | Deterministic MLP + gradient ascent; distinct from generic `offline_mlp` results |
+| `standard_ga` | Standard GA adaptation | Forward | integrated adaptation | Probabilistic MLP mean + plain gradient ascent under a distinct result ID |
 | `ga_on_gp` | GA on GP | Forward | planned | GPyTorch predictive mean + design ascent |
 | `mc_dropout` | MC-Dropout | Forward | planned | Dropout surrogate + Monte Carlo risk-aware acquisition |
 | `coms` | COMs | Forward | integrated adaptation | Unified compact PyTorch adaptation; retain adaptation label until parity audit passes |
@@ -70,9 +70,9 @@ generative baselines, and SPADE, for 24 paper methods total.
 ## Existing project controls
 
 The unified registry currently contains the controls `best_logged`,
-`random_search`, `sobol`, and `offline_mlp`, plus the explicitly labeled
-`coms` and `bdi` adaptations. The controls should not be silently renamed to a
-paper method:
+`random_search`, `sobol`, and `offline_mlp`. Standard GA, CMA-ES, REINFORCE,
+COMs, and BDI are separately registered and explicitly labeled adaptations.
+The controls should not be silently renamed to a paper method:
 
 - `offline_mlp` can share components with Standard GA, but a result is called
   Standard GA only after its architecture, preprocessing, initialization, and
@@ -86,6 +86,10 @@ paper method:
 
 - COMs currently means a compact native PyTorch adaptation based on
   [`design-baselines`](https://github.com/brandontrabucco/design-baselines).
+- Standard GA, CMA-ES, and REINFORCE are PyTorch adaptations audited against
+  Design-Baselines commit `785dbcfa58107bfcc426257a1c2e69d7f71c3c27`.
+  See the [baseline source audit](BASELINE_SOURCE_AUDIT.md) for retained
+  mechanisms, defaults, and deliberate differences.
 - BDI currently means the RBF-kernel adaptation. The cited source is the
   [official BDI repository](https://github.com/GGchen1997/BDI), whose
   JAX/Neural Tangents mechanism has not yet been faithfully ported.
@@ -104,8 +108,9 @@ URL empty rather than guessing one.
 
 ## Recommended implementation waves
 
-1. **Low-risk controls and classical methods:** Standard GA, CMA-ES,
-   REINFORCE, BO-qEI, GA on GP, and MC-Dropout.
+1. **Low-risk controls and classical methods:** Standard GA, CMA-ES, and
+   REINFORCE are integrated adaptations; BO-qEI, GA on GP, and MC-Dropout
+   remain next in this wave.
 2. **Forward offline methods:** RoMA, ICT, Tri-Mentoring, LTR, MATCH-OPT, and
    PGS; the unified COMs/BDI adaptations are now available as comparison
    points.

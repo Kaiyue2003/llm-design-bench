@@ -18,6 +18,46 @@ unconstrained parameters with Adam. A softmax maps parameters to simplex
 mixtures; a sigmoid and the task bounds map parameters to continuous synthetic
 designs.
 
+## Standard GA
+
+The registered `standard_ga` method is the paper-facing gradient-ascent
+baseline. It trains one probabilistic MLP, treats its mean prediction as the
+deterministic search objective, starts from high-utility logged designs, and
+uses plain gradient-ascent updates. This differs from the native `offline_mlp`
+control, which trains an MSE surrogate and uses Adam for candidate search.
+
+It is reported as **Standard GA adaptation** because the original TensorFlow
+implementation is replaced, constrained coordinates are introduced, and the
+surrogate additionally receives model-scale and training-step context.
+
+## CMA-ES
+
+The registered `cma_es` method trains five bootstrapped Gaussian MLPs by
+default, freezes them, and runs one independent full-covariance CMA-ES search
+per requested candidate. Search starts from the best unique logged designs;
+random feasible starts fill the candidate budget when there are too few unique
+logs. Only the ensemble's standardized mean prediction is optimized.
+
+The CMA population lives in unconstrained coordinates. Softmax maps it to the
+data-mixture simplex, while scaled sigmoid maps it to box tasks. The resulting
+**CMA-ES adaptation** is fully PyTorch-native and does not depend on `pycma`.
+
+## REINFORCE
+
+The registered `reinforce` method fits the same frozen probabilistic ensemble,
+then learns the mean of a fixed-variance Gaussian policy with the score-function
+estimator. Each update standardizes the surrogate rewards within its sampled
+batch. Final policy samples are mapped through the task design space and only
+then returned for evaluator-owned oracle evaluation.
+
+This is reported as **REINFORCE adaptation**: TensorFlow is replaced by
+PyTorch, fidelity context is appended to surrogate inputs, and policy samples
+are constrained through the common simplex/box mapping.
+
+Source provenance and the boundary on paper-parity claims for all three new
+methods are recorded in the
+[standard baseline source audit](BASELINE_SOURCE_AUDIT.md).
+
 ## COM
 
 The Conservative Objective Model fits the same MLP while constructing

@@ -18,6 +18,7 @@ from llm_design_bench.optimizers.coms import (
     ConservativeObjectiveModelMethod,
     ConservativeObjectiveModelOptimizer,
 )
+from llm_design_bench.optimizers.cma_es import CMAEvolutionStrategyMethod
 from llm_design_bench.optimizers.mlp_surrogate import (
     OfflineMLPMethod,
     OfflineMLPOptimizer,
@@ -26,6 +27,7 @@ from llm_design_bench.optimizers.random_search import (
     DirichletRandomSearch,
     RandomSearchMethod,
 )
+from llm_design_bench.optimizers.reinforce import ReinforceMethod
 from llm_design_bench.optimizers.registry import (
     get_method_capabilities,
     get_method_metadata,
@@ -35,6 +37,7 @@ from llm_design_bench.optimizers.registry import (
     register_method,
 )
 from llm_design_bench.optimizers.sobol_search import SobolSearch, SobolSearchMethod
+from llm_design_bench.optimizers.standard_ga import StandardGradientAscentMethod
 
 __all__ = [
     "BackwardDistillationMethod",
@@ -43,6 +46,7 @@ __all__ = [
     "BestLoggedOptimizer",
     "ConservativeObjectiveModelMethod",
     "ConservativeObjectiveModelOptimizer",
+    "CMAEvolutionStrategyMethod",
     "DirichletRandomSearch",
     "FitThenProposeMethod",
     "ImplementationKind",
@@ -53,8 +57,10 @@ __all__ = [
     "OfflineMLPOptimizer",
     "OfflineBBOMethod",
     "RandomSearchMethod",
+    "ReinforceMethod",
     "SobolSearch",
     "SobolSearchMethod",
+    "StandardGradientAscentMethod",
     "get_method_capabilities",
     "get_method_metadata",
     "list_methods",

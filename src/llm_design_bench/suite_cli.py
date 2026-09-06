@@ -89,6 +89,9 @@ def benchmark(
             "random_search",
             "sobol",
             "offline_mlp",
+            "standard_ga",
+            "cma_es",
+            "reinforce",
             "coms",
             "bdi",
         ]

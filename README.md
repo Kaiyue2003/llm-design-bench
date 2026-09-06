@@ -16,14 +16,14 @@ package uses `utility = -objective`, so a larger utility is always better.
 
 | Suite | Designs | Logged dataset | Methods |
 | --- | --- | --- | --- |
-| Data mixture | Five-domain simplex plus model scale and training steps | Published `data-recipes` runs | Best Logged, Random Search, Sobol, Offline MLP, COMs adaptation, BDI adaptation |
-| Synthetic BBO | Box-bounded continuous vectors | Seeded uniform samples over each function's bounds | Best Logged, Random Search, Sobol, Offline MLP, COMs adaptation, BDI adaptation |
+| Data mixture | Five-domain simplex plus model scale and training steps | Published `data-recipes` runs | Best Logged, Random Search, Sobol, Offline MLP, Standard GA adaptation, CMA-ES adaptation, REINFORCE adaptation, COMs adaptation, BDI adaptation |
+| Synthetic BBO | Box-bounded continuous vectors | Seeded uniform samples over each function's bounds | Best Logged, Random Search, Sobol, Offline MLP, Standard GA adaptation, CMA-ES adaptation, REINFORCE adaptation, COMs adaptation, BDI adaptation |
 
 The synthetic suite covers Many Local Minima, Bowl-Shaped, Plate-Shaped,
-Valley-Shaped, Steep Ridges/Drops, and Other test problems. COMs is a compact
-PyTorch adaptation of conservative objective modeling. BDI is a lightweight
-adaptation that uses differentiable RBF kernel regression instead of the
-original legacy JAX/Neural Tangents runtime; see
+Valley-Shaped, Steep Ridges/Drops, and Other test problems. The three standard
+additions and COMs are PyTorch adaptations. BDI is a lightweight adaptation
+that uses differentiable RBF kernel regression instead of the original legacy
+JAX/Neural Tangents runtime; see
 [Method Notes](docs/METHODS.md) for the exact mechanisms and limitations.
 
 ## Installation
@@ -192,6 +192,9 @@ llm-design-bench-suite \
   --method random_search \
   --method sobol \
   --method offline_mlp \
+  --method standard_ga \
+  --method cma_es \
+  --method reinforce \
   --method coms \
   --method bdi \
   --seed 38 --seed 39 --seed 40 --seed 41 \
@@ -202,9 +205,12 @@ llm-design-bench-suite \
 
 Add `--fixed-1b` for the ablation. Both modes use the same unfiltered
 data-recipes normalization reference and the same 1B/19,500-step target.
-When `--method` is omitted, the suite runs these six registered methods.
-The result labels remain **COMs adaptation** and **BDI adaptation**; neither is
-presented as an exact reproduction of the cited implementation.
+When `--method` is omitted, the suite runs these nine registered methods.
+The result labels remain **Standard GA adaptation**, **CMA-ES adaptation**,
+**REINFORCE adaptation**, **COMs adaptation**, and **BDI adaptation**; none is
+presented as an exact reproduction of the cited implementation. The source
+audit for the three standard additions is in
+[`docs/BASELINE_SOURCE_AUDIT.md`](docs/BASELINE_SOURCE_AUDIT.md).
 
 ## Python API
 
@@ -225,7 +231,8 @@ print("best objective:", -trace.recommendation_utility.max())
 ```
 
 The oracle-separated method API currently registers `best_logged`,
-`random_search`, `sobol`, and `offline_mlp`:
+`random_search`, `sobol`, `offline_mlp`, `standard_ga`, `cma_es`, `reinforce`,
+`coms`, and `bdi`:
 
 ```python
 from llm_design_bench.optimizers import make_method

@@ -74,6 +74,37 @@ _METHOD_CONFIGS = (
         },
     ),
     (
+        "standard_ga",
+        {
+            "hidden_size": 16,
+            "surrogate_epochs": 2,
+            "batch_size": 2,
+            "solver_steps": 2,
+        },
+    ),
+    (
+        "cma_es",
+        {
+            "generations": 2,
+            "population_size": 4,
+            "ensemble_size": 2,
+            "hidden_size": 16,
+            "surrogate_epochs": 2,
+            "batch_size": 2,
+        },
+    ),
+    (
+        "reinforce",
+        {
+            "iterations": 2,
+            "reinforce_batch_size": 8,
+            "ensemble_size": 2,
+            "hidden_size": 16,
+            "surrogate_epochs": 2,
+            "batch_size": 2,
+        },
+    ),
+    (
         "coms",
         {
             "hidden_size": 16,
@@ -116,6 +147,9 @@ def test_builtin_methods_are_registered() -> None:
         "random_search",
         "sobol",
         "offline_mlp",
+        "standard_ga",
+        "cma_es",
+        "reinforce",
         "coms",
         "bdi",
     }.issubset(method_names())
@@ -142,7 +176,16 @@ def test_best_logged_preserves_utility_order_and_removes_duplicates() -> None:
 
 @pytest.mark.parametrize(
     "method_id",
-    ["random_search", "sobol", "offline_mlp", "coms", "bdi"],
+    [
+        "random_search",
+        "sobol",
+        "offline_mlp",
+        "standard_ga",
+        "cma_es",
+        "reinforce",
+        "coms",
+        "bdi",
+    ],
 )
 def test_stochastic_methods_are_reproducible(method_id) -> None:
     kwargs = dict(_METHOD_CONFIGS)[method_id]
@@ -207,6 +250,20 @@ def test_coms_does_not_mutate_global_torch_rng() -> None:
     assert torch.equal(torch.rand(4), expected)
 
 
+@pytest.mark.parametrize("method_id", ["standard_ga", "cma_es", "reinforce"])
+def test_probabilistic_baselines_do_not_mutate_global_torch_rng(method_id) -> None:
+    torch.manual_seed(1234)
+    expected = torch.rand(4)
+    torch.manual_seed(1234)
+
+    make_method(method_id, **dict(_METHOD_CONFIGS)[method_id]).run(
+        _simplex_problem(),
+        RunContext(method_seed=38, candidate_budget=5),
+    )
+
+    assert torch.equal(torch.rand(4), expected)
+
+
 @pytest.mark.parametrize(
     "kwargs",
     [
@@ -241,6 +298,31 @@ def test_adaptations_reject_invalid_hyperparameters(method_id, kwargs) -> None:
         make_method(method_id, **kwargs)
 
 
+@pytest.mark.parametrize(
+    "method_id,kwargs",
+    [
+        ("standard_ga", {"surrogate_epochs": 0}),
+        ("standard_ga", {"solver_steps": 0}),
+        ("standard_ga", {"solver_learning_rate": 0.0}),
+        ("standard_ga", {"initial_min_std": 0.2, "initial_max_std": 0.1}),
+        ("cma_es", {"generations": 0}),
+        ("cma_es", {"population_size": 1}),
+        ("cma_es", {"sigma": 0.0}),
+        ("cma_es", {"initial_min_std": 0.2, "initial_max_std": 0.1}),
+        ("reinforce", {"iterations": 0}),
+        ("reinforce", {"reinforce_batch_size": 0}),
+        ("reinforce", {"exploration_std": float("nan")}),
+        ("reinforce", {"initial_min_std": 0.2, "initial_max_std": 0.1}),
+    ],
+)
+def test_standard_baselines_reject_invalid_hyperparameters(
+    method_id,
+    kwargs,
+) -> None:
+    with pytest.raises(ValueError):
+        make_method(method_id, **kwargs)
+
+
 def test_adaptation_metadata_is_explicit() -> None:
     coms = make_method("coms").metadata
     bdi = make_method("bdi").metadata
@@ -251,6 +333,19 @@ def test_adaptation_metadata_is_explicit() -> None:
     assert bdi.display_name == "BDI adaptation"
     assert bdi.implementation_kind.value == "lightweight_adaptation"
     assert "rbf_kernel_replaces_infinite_width_ntk" in bdi.adaptations
+
+    standard_ga = make_method("standard_ga").metadata
+    cma_es = make_method("cma_es").metadata
+    reinforce = make_method("reinforce").metadata
+    assert standard_ga.display_name == "Standard GA adaptation"
+    assert cma_es.source_commit == reinforce.source_commit
+    assert cma_es.display_name == "CMA-ES adaptation"
+    assert reinforce.display_name == "REINFORCE adaptation"
+    assert {
+        standard_ga.implementation_kind.value,
+        cma_es.implementation_kind.value,
+        reinforce.implementation_kind.value,
+    } == {"multi_fidelity_adaptation"}
 
 
 class _CountingEvaluator:
@@ -289,6 +384,37 @@ def test_seed_runner_evaluates_builtin_candidates_only_after_return(tmp_path) ->
             },
         ),
         MethodSpec(
+            "standard_ga",
+            {
+                "hidden_size": 8,
+                "surrogate_epochs": 1,
+                "batch_size": 2,
+                "solver_steps": 1,
+            },
+        ),
+        MethodSpec(
+            "cma_es",
+            {
+                "generations": 1,
+                "population_size": 4,
+                "ensemble_size": 2,
+                "hidden_size": 8,
+                "surrogate_epochs": 1,
+                "batch_size": 2,
+            },
+        ),
+        MethodSpec(
+            "reinforce",
+            {
+                "iterations": 1,
+                "reinforce_batch_size": 8,
+                "ensemble_size": 2,
+                "hidden_size": 8,
+                "surrogate_epochs": 1,
+                "batch_size": 2,
+            },
+        ),
+        MethodSpec(
             "coms",
             {
                 "hidden_size": 8,
@@ -319,6 +445,9 @@ def test_seed_runner_evaluates_builtin_candidates_only_after_return(tmp_path) ->
         "random_search",
         "sobol",
         "offline_mlp",
+        "standard_ga",
+        "cma_es",
+        "reinforce",
         "coms",
         "bdi",
     }
