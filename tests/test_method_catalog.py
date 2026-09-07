@@ -41,6 +41,10 @@ def test_catalog_separates_controls_and_marks_current_adaptations() -> None:
         assert methods[method_id]["source_commit"] == (
             "785dbcfa58107bfcc426257a1c2e69d7f71c3c27"
         )
+    for method_id in ("bo_qei", "ga_on_gp", "mc_dropout"):
+        assert methods[method_id]["status"] == "integrated_adaptation"
+        assert methods[method_id]["display_name"].endswith("adaptation")
+        assert methods[method_id]["source_code"]
     assert methods["spade"]["status"] == "planned_official_adapter"
     assert methods["spade"]["source_code"] == "https://github.com/HarryYoung2018/spade"
 

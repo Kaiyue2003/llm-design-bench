@@ -81,6 +81,43 @@ def initialize_candidate_designs(
     return designs, len(logged), random_count
 
 
+def initialize_mixed_candidate_designs(
+    problem,
+    *,
+    candidate_budget: int,
+    random_fraction: float,
+    generator: torch.Generator,
+    device: torch.device,
+    dtype: torch.dtype,
+) -> tuple[torch.Tensor, int, int]:
+    """Mix strong logged starts with random starts for deterministic surrogates."""
+
+    if not 0.0 <= random_fraction < 1.0:
+        raise ValueError("random_fraction must be in [0, 1)")
+    requested_random = int(round(candidate_budget * random_fraction))
+    if random_fraction > 0.0 and candidate_budget > 1:
+        requested_random = max(1, requested_random)
+    logged_target = max(1, candidate_budget - requested_random)
+    logged = select_top_unique_designs(
+        problem.train_designs,
+        problem.train_utility,
+        logged_target,
+    )
+    random_count = candidate_budget - len(logged)
+    if random_count:
+        sampled = problem.design_space.sample(
+            random_count,
+            generator=generator,
+            device=device,
+            dtype=dtype,
+        )
+        designs = torch.cat([logged, sampled], dim=0)
+    else:
+        designs = logged
+    designs = move_designs_to_interior(designs, problem.design_space)
+    return designs, len(logged), random_count
+
+
 def move_designs_to_interior(designs: torch.Tensor, design_space) -> torch.Tensor:
     """Keep simplex logits trainable when logged components contain zeros."""
 

@@ -14,11 +14,14 @@ from llm_design_bench.optimizers.best_logged import (
     BestLoggedMethod,
     BestLoggedOptimizer,
 )
+from llm_design_bench.optimizers.bo_qei import BayesianOptimizationQEiMethod
 from llm_design_bench.optimizers.coms import (
     ConservativeObjectiveModelMethod,
     ConservativeObjectiveModelOptimizer,
 )
 from llm_design_bench.optimizers.cma_es import CMAEvolutionStrategyMethod
+from llm_design_bench.optimizers.ga_on_gp import GradientAscentOnGPMethod
+from llm_design_bench.optimizers.mc_dropout import MCDropoutMethod
 from llm_design_bench.optimizers.mlp_surrogate import (
     OfflineMLPMethod,
     OfflineMLPOptimizer,
@@ -44,15 +47,18 @@ __all__ = [
     "BackwardDistillationOptimizer",
     "BestLoggedMethod",
     "BestLoggedOptimizer",
+    "BayesianOptimizationQEiMethod",
     "ConservativeObjectiveModelMethod",
     "ConservativeObjectiveModelOptimizer",
     "CMAEvolutionStrategyMethod",
     "DirichletRandomSearch",
     "FitThenProposeMethod",
+    "GradientAscentOnGPMethod",
     "ImplementationKind",
     "MethodCapabilities",
     "MethodFamily",
     "MethodMetadata",
+    "MCDropoutMethod",
     "OfflineMLPMethod",
     "OfflineMLPOptimizer",
     "OfflineBBOMethod",

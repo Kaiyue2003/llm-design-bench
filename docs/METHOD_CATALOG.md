@@ -41,10 +41,10 @@ original component is labeled an adaptation, not a faithful reproduction.
 | --- | --- | --- | --- | --- |
 | `cma_es` | CMA-ES adaptation | Standard | integrated adaptation | Full-covariance PyTorch CMA-ES over a frozen probabilistic ensemble |
 | `reinforce` | REINFORCE adaptation | Standard | integrated adaptation | Fixed-variance Gaussian policy with frozen-surrogate rewards |
-| `bo_qei` | BO-qEI | Standard | planned | BoTorch/GPyTorch qEI |
+| `bo_qei` | BO-qEI adaptation | Standard | integrated adaptation | Native exact RBF GP + joint Monte Carlo qEI |
 | `standard_ga` | Standard GA adaptation | Forward | integrated adaptation | Probabilistic MLP mean + plain gradient ascent under a distinct result ID |
-| `ga_on_gp` | GA on GP | Forward | planned | GPyTorch predictive mean + design ascent |
-| `mc_dropout` | MC-Dropout | Forward | planned | Dropout surrogate + Monte Carlo risk-aware acquisition |
+| `ga_on_gp` | GA on GP adaptation | Forward | integrated adaptation | Native exact RBF GP predictive mean + design ascent |
+| `mc_dropout` | MC-Dropout adaptation | Forward | integrated adaptation | Dropout surrogate + Monte Carlo lower-confidence-bound search |
 | `coms` | COMs | Forward | integrated adaptation | Unified compact PyTorch adaptation; retain adaptation label until parity audit passes |
 | `roma` | RoMA | Forward | planned | Robust local smoothness/model-adaptation port |
 | `ict` | ICT | Forward | planned | Importance-aware co-teaching and pseudo-label exchange |
@@ -71,7 +71,8 @@ generative baselines, and SPADE, for 24 paper methods total.
 
 The unified registry currently contains the controls `best_logged`,
 `random_search`, `sobol`, and `offline_mlp`. Standard GA, CMA-ES, REINFORCE,
-COMs, and BDI are separately registered and explicitly labeled adaptations.
+BO-qEI, GA on GP, MC-Dropout, COMs, and BDI are separately registered and
+explicitly labeled adaptations.
 The controls should not be silently renamed to a paper method:
 
 - `offline_mlp` can share components with Standard GA, but a result is called
@@ -90,6 +91,11 @@ The controls should not be silently renamed to a paper method:
   Design-Baselines commit `785dbcfa58107bfcc426257a1c2e69d7f71c3c27`.
   See the [baseline source audit](BASELINE_SOURCE_AUDIT.md) for retained
   mechanisms, defaults, and deliberate differences.
+- BO-qEI, GA on GP, and MC-Dropout are native PyTorch adaptations. The GP
+  methods share an exact ARD-RBF surrogate; BO-qEI optimizes joint Monte Carlo
+  expected improvement, while GA on GP optimizes posterior mean. MC-Dropout
+  optimizes a lower confidence bound estimated with inference-time dropout.
+  See the [GP and uncertainty source audit](GP_UNCERTAINTY_BASELINE_AUDIT.md).
 - BDI currently means the RBF-kernel adaptation. The cited source is the
   [official BDI repository](https://github.com/GGchen1997/BDI), whose
   JAX/Neural Tangents mechanism has not yet been faithfully ported.
@@ -108,9 +114,8 @@ URL empty rather than guessing one.
 
 ## Recommended implementation waves
 
-1. **Low-risk controls and classical methods:** Standard GA, CMA-ES, and
-   REINFORCE are integrated adaptations; BO-qEI, GA on GP, and MC-Dropout
-   remain next in this wave.
+1. **Low-risk controls and classical methods:** Standard GA, CMA-ES,
+   REINFORCE, BO-qEI, GA on GP, and MC-Dropout are integrated adaptations.
 2. **Forward offline methods:** RoMA, ICT, Tri-Mentoring, LTR, MATCH-OPT, and
    PGS; the unified COMs/BDI adaptations are now available as comparison
    points.

@@ -105,6 +105,31 @@ _METHOD_CONFIGS = (
         },
     ),
     (
+        "bo_qei",
+        {
+            "gp_training_steps": 2,
+            "acquisition_steps": 2,
+            "mc_samples": 8,
+        },
+    ),
+    (
+        "ga_on_gp",
+        {
+            "gp_training_steps": 2,
+            "solver_steps": 2,
+        },
+    ),
+    (
+        "mc_dropout",
+        {
+            "hidden_size": 16,
+            "epochs": 2,
+            "batch_size": 2,
+            "mc_samples": 4,
+            "particle_steps": 2,
+        },
+    ),
+    (
         "coms",
         {
             "hidden_size": 16,
@@ -150,6 +175,9 @@ def test_builtin_methods_are_registered() -> None:
         "standard_ga",
         "cma_es",
         "reinforce",
+        "bo_qei",
+        "ga_on_gp",
+        "mc_dropout",
         "coms",
         "bdi",
     }.issubset(method_names())
@@ -183,6 +211,9 @@ def test_best_logged_preserves_utility_order_and_removes_duplicates() -> None:
         "standard_ga",
         "cma_es",
         "reinforce",
+        "bo_qei",
+        "ga_on_gp",
+        "mc_dropout",
         "coms",
         "bdi",
     ],
@@ -206,6 +237,21 @@ def test_sampling_seed_changes_candidates(method_id) -> None:
     second = make_method(method_id).run(
         _simplex_problem(),
         RunContext(method_seed=39, candidate_budget=7),
+    )
+
+    assert not torch.equal(first.candidates, second.candidates)
+
+
+@pytest.mark.parametrize("method_id", ["bo_qei", "ga_on_gp", "mc_dropout"])
+def test_gp_and_uncertainty_seed_changes_candidates(method_id) -> None:
+    kwargs = dict(_METHOD_CONFIGS)[method_id]
+    first = make_method(method_id, **kwargs).run(
+        _simplex_problem(),
+        RunContext(method_seed=38, candidate_budget=6),
+    )
+    second = make_method(method_id, **kwargs).run(
+        _simplex_problem(),
+        RunContext(method_seed=39, candidate_budget=6),
     )
 
     assert not torch.equal(first.candidates, second.candidates)
@@ -252,6 +298,22 @@ def test_coms_does_not_mutate_global_torch_rng() -> None:
 
 @pytest.mark.parametrize("method_id", ["standard_ga", "cma_es", "reinforce"])
 def test_probabilistic_baselines_do_not_mutate_global_torch_rng(method_id) -> None:
+    torch.manual_seed(1234)
+    expected = torch.rand(4)
+    torch.manual_seed(1234)
+
+    make_method(method_id, **dict(_METHOD_CONFIGS)[method_id]).run(
+        _simplex_problem(),
+        RunContext(method_seed=38, candidate_budget=5),
+    )
+
+    assert torch.equal(torch.rand(4), expected)
+
+
+@pytest.mark.parametrize("method_id", ["bo_qei", "ga_on_gp", "mc_dropout"])
+def test_gp_and_uncertainty_methods_do_not_mutate_global_torch_rng(
+    method_id,
+) -> None:
     torch.manual_seed(1234)
     expected = torch.rand(4)
     torch.manual_seed(1234)
@@ -323,6 +385,32 @@ def test_standard_baselines_reject_invalid_hyperparameters(
         make_method(method_id, **kwargs)
 
 
+@pytest.mark.parametrize(
+    "method_id,kwargs",
+    [
+        ("bo_qei", {"gp_training_steps": 0}),
+        ("bo_qei", {"acquisition_steps": 0}),
+        ("bo_qei", {"mc_samples": 0}),
+        ("bo_qei", {"random_start_fraction": 1.0}),
+        ("bo_qei", {"jitter": 0.0}),
+        ("ga_on_gp", {"gp_training_steps": 0}),
+        ("ga_on_gp", {"solver_steps": 0}),
+        ("ga_on_gp", {"random_start_fraction": float("nan")}),
+        ("mc_dropout", {"dropout_probability": 0.0}),
+        ("mc_dropout", {"dropout_probability": 1.0}),
+        ("mc_dropout", {"mc_samples": 0}),
+        ("mc_dropout", {"uncertainty_weight": -1.0}),
+        ("mc_dropout", {"uncertainty_weight": float("nan")}),
+    ],
+)
+def test_gp_and_uncertainty_methods_reject_invalid_hyperparameters(
+    method_id,
+    kwargs,
+) -> None:
+    with pytest.raises(ValueError):
+        make_method(method_id, **kwargs)
+
+
 def test_adaptation_metadata_is_explicit() -> None:
     coms = make_method("coms").metadata
     bdi = make_method("bdi").metadata
@@ -345,6 +433,20 @@ def test_adaptation_metadata_is_explicit() -> None:
         standard_ga.implementation_kind.value,
         cma_es.implementation_kind.value,
         reinforce.implementation_kind.value,
+    } == {"multi_fidelity_adaptation"}
+
+    bo_qei = make_method("bo_qei").metadata
+    ga_on_gp = make_method("ga_on_gp").metadata
+    mc_dropout = make_method("mc_dropout").metadata
+    assert bo_qei.display_name == "BO-qEI adaptation"
+    assert "native_pytorch_gp_and_qei" in bo_qei.adaptations
+    assert ga_on_gp.display_name == "GA on GP adaptation"
+    assert ga_on_gp.source_commit
+    assert mc_dropout.display_name == "MC-Dropout adaptation"
+    assert {
+        bo_qei.implementation_kind.value,
+        ga_on_gp.implementation_kind.value,
+        mc_dropout.implementation_kind.value,
     } == {"multi_fidelity_adaptation"}
 
 
@@ -415,6 +517,31 @@ def test_seed_runner_evaluates_builtin_candidates_only_after_return(tmp_path) ->
             },
         ),
         MethodSpec(
+            "bo_qei",
+            {
+                "gp_training_steps": 1,
+                "acquisition_steps": 1,
+                "mc_samples": 4,
+            },
+        ),
+        MethodSpec(
+            "ga_on_gp",
+            {
+                "gp_training_steps": 1,
+                "solver_steps": 1,
+            },
+        ),
+        MethodSpec(
+            "mc_dropout",
+            {
+                "hidden_size": 8,
+                "epochs": 1,
+                "batch_size": 2,
+                "mc_samples": 4,
+                "particle_steps": 1,
+            },
+        ),
+        MethodSpec(
             "coms",
             {
                 "hidden_size": 8,
@@ -448,6 +575,9 @@ def test_seed_runner_evaluates_builtin_candidates_only_after_return(tmp_path) ->
         "standard_ga",
         "cma_es",
         "reinforce",
+        "bo_qei",
+        "ga_on_gp",
+        "mc_dropout",
         "coms",
         "bdi",
     }

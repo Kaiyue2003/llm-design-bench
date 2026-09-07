@@ -58,6 +58,36 @@ Source provenance and the boundary on paper-parity claims for all three new
 methods are recorded in the
 [standard baseline source audit](BASELINE_SOURCE_AUDIT.md).
 
+## BO-qEI
+
+The registered `bo_qei` method fits a native exact Gaussian Process with an
+ARD RBF kernel to standardized design, model-scale, and training-step
+features. It jointly optimizes the requested candidate batch using a Monte
+Carlo estimate of q-Expected Improvement over the best logged standardized
+utility. Fixed base samples make each seeded acquisition optimization
+deterministic and reduce gradient noise between optimization steps.
+
+## GA on GP
+
+The registered `ga_on_gp` method shares the exact GP surrogate with BO-qEI,
+but performs plain constrained gradient ascent on posterior mean. Mixed top
+logged and random starts prevent all candidates from starting at duplicated
+logged designs.
+
+## MC-Dropout
+
+The registered `mc_dropout` method trains an MLP with generator-controlled
+dropout. Dropout remains active when scoring candidates, yielding Monte Carlo
+mean and epistemic standard-deviation estimates. Candidate search maximizes
+`mean - uncertainty_weight * std`, a conservative lower confidence bound for
+a maximization task.
+
+All three are reported as adaptations because the public SPADE artifacts do
+not provide the final LLM-DM preprocessing, task-specific hyperparameters, or
+baseline evaluation scripts. Their source and implementation boundaries are
+recorded in the
+[GP and uncertainty source audit](GP_UNCERTAINTY_BASELINE_AUDIT.md).
+
 ## COM
 
 The Conservative Objective Model fits the same MLP while constructing

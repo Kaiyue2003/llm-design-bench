@@ -92,6 +92,9 @@ def benchmark(
             "standard_ga",
             "cma_es",
             "reinforce",
+            "bo_qei",
+            "ga_on_gp",
+            "mc_dropout",
             "coms",
             "bdi",
         ]
