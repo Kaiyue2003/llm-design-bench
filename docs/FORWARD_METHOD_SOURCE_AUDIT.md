@@ -1,7 +1,6 @@
 # Forward Offline Method Source Audit
 
-This audit covers the integrated `tri_mentoring` and `ict` adaptations and the
-planned `roma` method ID.
+This audit covers the integrated `tri_mentoring`, `ict`, and `roma` adaptations.
 It fixes authoritative sources, implementation constraints, and the order in
 which shared PyTorch components should be introduced.
 
@@ -155,11 +154,61 @@ updates optimize a pessimistic probabilistic objective with a local-region
 penalty relative to the initial logged solution.
 
 The continuous-task scripts generally use a width-64 probabilistic network,
-50--200 warm-up epochs, 500 candidate updates, 20 inner adaptation steps, 128
-initial solutions, and task-specific inner/search learning rates. These are
+50--200 warm-up epochs, 500 candidate updates, 20 adversarial training steps,
+and 100 adaptation steps (five times `steps_per_update`), 128 initial solutions,
+and task-specific inner/search learning rates. These are
 not LLM-DM settings. The original implementation is TensorFlow, so a native
 PyTorch implementation is necessarily a framework port plus a multi-fidelity
 and constrained-space adaptation.
+
+The registered `roma` independently implements these components with a Softplus
+Gaussian proxy and native `torch.func.functional_call`. The
+[paper and Appendix A](https://proceedings.neurips.cc/paper_files/paper/2021/file/24b43fb034a10d78bec71274033b4096-Supplemental.pdf)
+motivate normalized weight steps with explicit relative-norm projection. The
+implementation uses one ball for every parameter tensor, including biases and
+variance parameters. The audited TensorFlow runtime instead skips certain
+scalar-sized variables and bounds step lengths without an explicit projection.
+We preserve the explicit bound rather than claiming those dynamics match.
+
+Training/consistency use Gaussian NLL as in the probabilistic reference runtime,
+not the main paper's scalar MSE presentation. Temporary weights restart from
+the pretrained reference before each candidate step, but the consistency target
+is the previous adapted prediction at the current candidate. At the first step,
+the target is the pretrained mean at target fidelity: using a logged label from
+another model scale here would introduce an inconsistent target. Each candidate
+owns its temporary weights rather than adapting all candidates jointly. The
+final search uses the reference's score-change penalty and optional log-standard-
+deviation term; the default uncertainty coefficient is zero. This is not an LCB.
+
+Design-only normalized Gaussian training noise leaves logged fidelity unchanged.
+Search and second-order smoothness operate through feasible design maps at
+fixed target fidelity. This changes the geometry from the original input-space
+derivatives. All visible data are used with final-epoch selection, no validation
+holdout; gradients use a global norm clip rather than the reference's per-tensor
+clip. Default 50/500 epoch/search counts and radius 0.0005 are an explicit
+starting configuration based on the continuous source scripts, not tuned LLM-DM
+settings. The original paper used 16 trials; this benchmark retains its common
+eight-seed protocol. No TensorFlow, Design-Bench, VAE, or runtime source code is
+vendored, and no exact numerical parity is asserted.
+
+### Integration validation
+
+The RoMA integration passed 287 pytest cases, with two data-recipes cases
+skipped because the sibling data checkout was unavailable. Coverage includes
+adversarial ascent direction, bounded/zero-norm weight projection, row-wise
+Gaussian NLL, second-order smoothness gradients checked by finite differences,
+detached consistency targets, candidate-state isolation, float32/float64 RNG
+reproducibility, simplex/box feasibility, small constant-label data, ablations,
+and evaluator-owned oracle calls. Wheel/source builds and package checks passed.
+
+Eight Branin smoke seeds (38--45) each returned 128 candidates with width 16,
+three training epochs, two adversarial steps, two adaptation steps, and two
+search updates. Every seed executed 24 adversarial training updates and 512
+local adaptation updates, with nonzero weight changes in both stages.
+The configuration is in [REPRODUCING.md](REPRODUCING.md); local artifacts are
+under `results/roma_smoke/` (ignored by Git). These CPU checks do not establish
+publication parity or formal LLM-DM performance. No full-default run or GPU
+validation was performed for this integration.
 
 ## Implementation order and promotion criteria
 

@@ -154,6 +154,52 @@ geometry, initialization, fresh teacher labels, raw meta-gradients, and
 small-data handling are explicit differences. See the
 [forward source audit](FORWARD_METHOD_SOURCE_AUDIT.md).
 
+## RoMA
+
+`roma` has a width-64, two-hidden-layer Softplus Gaussian proxy. Pretraining
+uses noisy normalized design features with unchanged logged fidelity context.
+For each minibatch, projected gradient ascent finds adversarial weights that
+increase Gaussian negative log-likelihood (NLL). The outer Adam update treats
+that perturbation as fixed and updates the base parameters through
+`torch.func.functional_call`; the base model is never overwritten with the
+adversarial weights. Input normalization uses only visible rows, with unit
+scale for constant columns. There is no oracle-based checkpoint selection.
+
+Each candidate maintains its own adapted parameter dictionary. Before every
+candidate update, the temporary weights reset to the pretrained reference.
+Projected descent then minimizes the norm of the candidate score's input
+gradient plus consistency NLL against the previous adapted model's detached
+mean at the CURRENT candidate. The first target is the pretrained prediction
+at target fidelity, not a logged score from a potentially different fidelity.
+The input gradient is taken with respect to unconstrained design coordinates;
+it includes the softmax/sigmoid map but never the fixed fidelity coordinates.
+This smoothness update uses second-order autograd through temporary weights.
+
+Every temporary parameter tensor is bounded by
+`||theta_t - theta_base|| <= weight_radius * ||theta_base||`.
+The projection also covers biases and variance parameters; zero-norm tensors
+stay fixed. Candidate ascent treats adapted weights as constants and optimizes
+`q - (q - q_initial)**2 / (2 * region)`, where
+`q = mean - uncertainty_weight * logstd`. This is a penalty on SCORE change,
+not distance from the initial mixture. The uncertainty term uses log standard
+deviation, not a Gaussian lower confidence bound; it defaults to zero.
+
+Defaults are 50 pretraining epochs, batch size 128, pretraining rate 0.001,
+20 adversarial steps, relative weight radius 0.0005, input noise 0.2,
+100 adaptation steps per candidate update, 500 candidate updates at rate
+0.003, consistency weight 1, region 4, and global gradient clipping at 1.
+`adaptation_steps=0` disables local adaptation; `weight_radius=0` disables
+both adversarial perturbations and local weight changes (Gaussian smoothing
+remains unless `input_noise_std=0`). All resolved settings enter result metadata.
+
+This is **RoMA adaptation**, not TensorFlow parity: Gaussian NLL, explicit
+tensor-wise projection, independent candidate state, constrained-coordinate
+smoothness, all-visible-data training, and multi-fidelity conditioning are
+declared choices. See the [source audit](FORWARD_METHOD_SOURCE_AUDIT.md).
+Default search is computationally expensive because it differentiates through
+input gradients for each candidate. Use reduced smoke settings to test the
+pipeline, not to report final performance.
+
 ## COM
 
 The Conservative Objective Model fits the same MLP while constructing

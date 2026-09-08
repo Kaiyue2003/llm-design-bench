@@ -20,12 +20,20 @@ class GaussianMLP(nn.Module):
         num_layers: int,
         initial_min_std: float,
         initial_max_std: float,
+        activation: str = "leaky_relu",
     ) -> None:
         super().__init__()
+        if activation not in {"leaky_relu", "softplus"}:
+            raise ValueError("activation must be leaky_relu or softplus")
         layers: list[nn.Module] = []
         width = input_dim
         for _ in range(num_layers):
-            layers.extend([nn.Linear(width, hidden_size), nn.LeakyReLU()])
+            layers.extend(
+                [
+                    nn.Linear(width, hidden_size),
+                    nn.Softplus() if activation == "softplus" else nn.LeakyReLU(),
+                ]
+            )
             width = hidden_size
         layers.append(nn.Linear(width, 2))
         self.layers = nn.Sequential(*layers)
@@ -36,9 +44,7 @@ class GaussianMLP(nn.Module):
         mean, raw_logstd = self.layers(inputs).unbind(dim=-1)
         max_logstd = self.max_logstd.to(dtype=inputs.dtype)
         min_logstd = self.min_logstd.to(dtype=inputs.dtype)
-        logstd = max_logstd - torch.nn.functional.softplus(
-            max_logstd - raw_logstd
-        )
+        logstd = max_logstd - torch.nn.functional.softplus(max_logstd - raw_logstd)
         logstd = min_logstd + torch.nn.functional.softplus(logstd - min_logstd)
         return mean, logstd
 
@@ -138,10 +144,13 @@ def fit_gaussian_ensemble(
                 indices = shuffled_bootstrap[start : start + batch_size]
                 mean, logstd = model(normalized[indices])
                 inverse_variance = torch.exp(-2.0 * logstd)
-                nll = 0.5 * (
-                    (utility[indices] - mean).square() * inverse_variance
-                    + 2.0 * logstd
-                ).mean()
+                nll = (
+                    0.5
+                    * (
+                        (utility[indices] - mean).square() * inverse_variance
+                        + 2.0 * logstd
+                    ).mean()
+                )
                 optimizer.zero_grad(set_to_none=True)
                 nll.backward()
                 optimizer.step()
@@ -156,8 +165,7 @@ def fit_gaussian_ensemble(
             nlls.append(
                 0.5
                 * (
-                    (utility - mean).square() * torch.exp(-2.0 * logstd)
-                    + 2.0 * logstd
+                    (utility - mean).square() * torch.exp(-2.0 * logstd) + 2.0 * logstd
                 ).mean()
             )
             for parameter in model.parameters():

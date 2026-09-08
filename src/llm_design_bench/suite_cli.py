@@ -97,6 +97,7 @@ def benchmark(
             "mc_dropout",
             "tri_mentoring",
             "ict",
+            "roma",
             "coms",
             "bdi",
         ]

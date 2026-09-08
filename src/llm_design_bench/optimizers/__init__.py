@@ -32,6 +32,7 @@ from llm_design_bench.optimizers.random_search import (
     RandomSearchMethod,
 )
 from llm_design_bench.optimizers.reinforce import ReinforceMethod
+from llm_design_bench.optimizers.roma import RobustModelAdaptationMethod
 from llm_design_bench.optimizers.registry import (
     get_method_capabilities,
     get_method_metadata,
@@ -67,6 +68,7 @@ __all__ = [
     "OfflineBBOMethod",
     "RandomSearchMethod",
     "ReinforceMethod",
+    "RobustModelAdaptationMethod",
     "SobolSearch",
     "SobolSearchMethod",
     "StandardGradientAscentMethod",

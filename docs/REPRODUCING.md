@@ -172,8 +172,8 @@ error. The Markdown and LaTeX tables display standard error.
 
 ## 6. Verify the package
 
-The unified suite now defaults to fourteen registered methods, including
-`tri_mentoring` and `ict`. To run ICT alone at its resolved constructor defaults:
+The unified suite now defaults to fifteen registered methods, including
+`tri_mentoring`, `ict`, and `roma`. To run ICT alone at its resolved constructor defaults:
 
 ```bash
 llm-design-bench-suite --function branin --method ict \
@@ -212,6 +212,28 @@ run_benchmark_suite(
 
 This uses eight paired seeds (38--45). `neighbor_samples=4` and
 `remember_count=2` control co-teaching, independently of 128 final candidates.
+
+For the RoMA smoke check, use the same task/runner and replace the method/config
+with the following (eight seeds and 128 candidates are retained):
+
+```python
+methods = [MethodSpec("roma", dict(
+    hidden_size=16, surrogate_epochs=3, batch_size=16,
+    weight_perturbation_steps=2, adaptation_steps=2, solver_steps=2,
+))]
+config = SeedBenchmarkConfig(
+    experiment_id="roma_smoke", candidate_budget=128,
+    results_dir=Path("results/roma_smoke"),
+)
+run_benchmark_suite(
+    [make_synthetic_task_spec("branin", logged_samples=64)], methods, config=config,
+)
+```
+
+The RoMA defaults (100 adaptation steps for each of 500 search updates per
+candidate) are much more expensive. The above smoke run verifies execution,
+not publication scores or LLM-DM performance. Disabling adaptation or setting
+the weight radius to zero is an ablation, not the default RoMA adaptation.
 
 ```bash
 python -m pytest -q
