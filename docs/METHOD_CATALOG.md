@@ -46,9 +46,9 @@ original component is labeled an adaptation, not a faithful reproduction.
 | `ga_on_gp` | GA on GP adaptation | Forward | integrated adaptation | Native exact RBF GP predictive mean + design ascent |
 | `mc_dropout` | MC-Dropout adaptation | Forward | integrated adaptation | Dropout surrogate + Monte Carlo lower-confidence-bound search |
 | `coms` | COMs | Forward | integrated adaptation | Unified compact PyTorch adaptation; retain adaptation label until parity audit passes |
-| `roma` | RoMA | Forward | planned | Robust local smoothness/model-adaptation port |
-| `ict` | ICT | Forward | planned | Importance-aware co-teaching and pseudo-label exchange |
-| `tri_mentoring` | Tri-Mentoring | Forward | planned | Three-surrogate mentoring with pairwise filtering |
+| `roma` | RoMA adaptation | Forward | planned | Clean-room probabilistic surrogate, adversarial weight perturbation, and robust adaptation |
+| `ict` | ICT adaptation | Forward | planned | Clean-room three-proxy co-teaching and meta-weighting |
+| `tri_mentoring` | Tri-Mentoring adaptation | Forward | planned | Clean-room three-proxy voting, pairwise mentoring, and adaptive soft labels |
 | `bdi` | BDI | Forward | integrated adaptation | Unified RBF version as `BDI adaptation`; faithful port requires a separate result ID |
 | `ltr` | LTR | Forward | planned | Learning-to-rank surrogate and paper-aligned search |
 | `match_opt` | MATCH-OPT | Forward | planned | Surrogate/data-support gradient matching |
@@ -106,6 +106,11 @@ The controls should not be silently renamed to a paper method:
   adapter**. Its [official repository](https://github.com/HarryYoung2018/spade)
   explicitly omits LLM-DM preprocessing, final task configurations, and the
   paper's full evaluation scripts.
+- RoMA, ICT, and Tri-Mentoring now have pinned author/official repositories,
+  but none contains an explicit license file at the audited revision. Their
+  algorithms will be implemented clean-room from the papers rather than by
+  copying source. See the
+  [forward-method source audit](FORWARD_METHOD_SOURCE_AUDIT.md).
 
 For every other planned method, locating the authoritative code repository,
 license, version/commit, original framework, and final paper configuration is
@@ -116,9 +121,9 @@ URL empty rather than guessing one.
 
 1. **Low-risk controls and classical methods:** Standard GA, CMA-ES,
    REINFORCE, BO-qEI, GA on GP, and MC-Dropout are integrated adaptations.
-2. **Forward offline methods:** RoMA, ICT, Tri-Mentoring, LTR, MATCH-OPT, and
-   PGS; the unified COMs/BDI adaptations are now available as comparison
-   points.
+2. **Forward offline methods:** implement Tri-Mentoring, then ICT, then RoMA
+   according to their source audit; LTR, MATCH-OPT, and PGS follow. The unified
+   COMs/BDI adaptations are already available as comparison points.
 3. **SPADE:** integrate the verified official PyTorch core early enough to
    establish the target paper method, but do not claim exact table reproduction.
 4. **Inverse generative methods:** CbAS, MINs, DDOM, GABO, GTG, RGD, BONET,

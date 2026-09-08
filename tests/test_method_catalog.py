@@ -45,6 +45,11 @@ def test_catalog_separates_controls_and_marks_current_adaptations() -> None:
         assert methods[method_id]["status"] == "integrated_adaptation"
         assert methods[method_id]["display_name"].endswith("adaptation")
         assert methods[method_id]["source_code"]
+    for method_id in ("roma", "ict", "tri_mentoring"):
+        assert methods[method_id]["status"] == "planned"
+        assert methods[method_id]["display_name"].endswith("adaptation")
+        assert len(methods[method_id]["source_commit"]) == 40
+        assert "no explicit license" in methods[method_id]["source_status"]
     assert methods["spade"]["status"] == "planned_official_adapter"
     assert methods["spade"]["source_code"] == "https://github.com/HarryYoung2018/spade"
 
