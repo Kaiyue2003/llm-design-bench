@@ -1,7 +1,7 @@
 # Forward Offline Method Source Audit
 
-This audit covers the integrated `tri_mentoring` adaptation and planned
-`ict` and `roma` method IDs.
+This audit covers the integrated `tri_mentoring` and `ict` adaptations and the
+planned `roma` method ID.
 It fixes authoritative sources, implementation constraints, and the order in
 which shared PyTorch components should be introduced.
 
@@ -103,9 +103,47 @@ Other tasks require task-specific changes, and no LLM-DM configuration is
 published.
 
 The source relies on saved proxy checkpoints, hard-coded CUDA assumptions,
-and several fixed shapes. The adapter should train proxies inside `fit`, make
-all sizes explicit, remove filesystem checkpoint coupling, and never evaluate
-intermediate candidates with the oracle.
+and several fixed shapes. The registered adapter trains proxies inside `run`,
+makes all sizes explicit, removes filesystem checkpoint coupling, and never
+evaluates intermediate candidates with the oracle.
+
+The implemented two-stage protocol adapts one ensemble at a best-logged moving
+anchor, then freezes it for final top-logged/random candidate search. This
+retains the audited source's adaptation/search separation, not independent
+per-candidate mentoring. The adaptation anchor advances before neighborhood
+sampling. Teacher labels are refreshed on each rotation, following the paper's
+Algorithm 1 rather than cached across all three rotations. Both student
+selections are made before either update. Selected losses and weights both
+have shape `(remember_count,)`, preventing unintended matrix broadcasting.
+
+Equations 6--8 of the [paper](https://arxiv.org/html/2309.11600v2) define the
+functional SGD inner step and raw meta-gradient used here. The reference uses
+`higher` with Adam and gradient normalization/clipping; we do not claim those
+optimizer dynamics are reproduced. We retain the [0, 2] weight bound. The
+outer MSE uses only visible logged rows with their logged fidelity context;
+all neighborhoods/search designs use the target context. Shared pretraining,
+small-sample checkpoint fallbacks, constrained-coordinate noise, and candidate
+initialization follow the mentoring helpers. Constant/near-constant input
+columns use unit scale rather than epsilon division, in both adaptations.
+
+### Integration validation
+
+The ICT integration passed 249 pytest cases, with two data-recipes integration
+cases skipped because the sibling checkout was unavailable. Focused coverage
+checks exchanged indices, row-wise weights (no broadcasting), detached teacher
+labels, finite-difference meta-gradients, one real update from original model
+parameters, teacher rotation, frozen final-search weights, local RNG isolation,
+float32/float64, simplex/box feasibility, and evaluator-owned oracle calls.
+The final numerical-safety guard was also checked by all 30 ICT tests.
+Wheel/source builds, package validation, and the suite CLI help check passed.
+
+Eight Branin smoke seeds (38--45) each returned 128 valid candidates using
+width 16, three pretraining epochs, two adaptation and two search steps, four
+neighbors, and two remembered samples. Every seed exercised six teacher
+rounds, twelve proxy updates, and nonzero importance-weight refinement.
+The reproducible configuration is in [REPRODUCING.md](REPRODUCING.md).
+Local raw outputs live under `results/ict_smoke/` (ignored by Git); these
+reduced CPU runs are execution checks, not formal LLM-DM or publication results.
 
 ## RoMA
 

@@ -42,6 +42,7 @@ class TriMentoringMethod(OfflineBBOMethod):
             "model_scale_and_training_step_context",
             "constrained_coordinate_neighborhoods",
             "small_offline_dataset_validation_fallback",
+            "unit_scale_for_constant_features",
             "unique_logged_and_random_initializations",
         ),
     )

@@ -47,7 +47,7 @@ original component is labeled an adaptation, not a faithful reproduction.
 | `mc_dropout` | MC-Dropout adaptation | Forward | integrated adaptation | Dropout surrogate + Monte Carlo lower-confidence-bound search |
 | `coms` | COMs | Forward | integrated adaptation | Unified compact PyTorch adaptation; retain adaptation label until parity audit passes |
 | `roma` | RoMA adaptation | Forward | planned | Clean-room probabilistic surrogate, adversarial weight perturbation, and robust adaptation |
-| `ict` | ICT adaptation | Forward | planned | Clean-room three-proxy co-teaching and meta-weighting |
+| `ict` | ICT adaptation | Forward | integrated adaptation | Independent PyTorch rotating co-teaching, functional meta-weighting, and frozen-ensemble search |
 | `tri_mentoring` | Tri-Mentoring adaptation | Forward | integrated adaptation | Independent PyTorch three-proxy voting, pairwise mentoring, and adaptive soft labels |
 | `bdi` | BDI | Forward | integrated adaptation | Unified RBF version as `BDI adaptation`; faithful port requires a separate result ID |
 | `ltr` | LTR | Forward | planned | Learning-to-rank surrogate and paper-aligned search |
@@ -71,7 +71,7 @@ generative baselines, and SPADE, for 24 paper methods total.
 
 The unified registry currently contains the controls `best_logged`,
 `random_search`, `sobol`, and `offline_mlp`. Standard GA, CMA-ES, REINFORCE,
-BO-qEI, GA on GP, MC-Dropout, Tri-Mentoring, COMs, and BDI are separately registered and
+BO-qEI, GA on GP, MC-Dropout, Tri-Mentoring, ICT, COMs, and BDI are separately registered and
 explicitly labeled adaptations.
 The controls should not be silently renamed to a paper method:
 
@@ -108,8 +108,8 @@ The controls should not be silently renamed to a paper method:
   paper's full evaluation scripts.
 - RoMA, ICT, and Tri-Mentoring now have pinned author/official repositories,
   but none contains an explicit license file at the audited revision. Their
-  algorithms will be implemented clean-room from the papers rather than by
-  copying source. See the
+  algorithms are implemented independently from the papers, not by copying
+  source (ICT and Tri-Mentoring integrated; RoMA pending). See the
   [forward-method source audit](FORWARD_METHOD_SOURCE_AUDIT.md).
 
 For every other planned method, locating the authoritative code repository,
@@ -121,8 +121,8 @@ URL empty rather than guessing one.
 
 1. **Low-risk controls and classical methods:** Standard GA, CMA-ES,
    REINFORCE, BO-qEI, GA on GP, and MC-Dropout are integrated adaptations.
-2. **Forward offline methods:** Tri-Mentoring is integrated; implement ICT,
-   then RoMA according to their source audit; LTR, MATCH-OPT, and PGS follow. The unified
+2. **Forward offline methods:** Tri-Mentoring and ICT are integrated; implement
+   RoMA next according to its source audit; LTR, MATCH-OPT, and PGS follow. The unified
    COMs/BDI adaptations are already available as comparison points.
 3. **SPADE:** integrate the verified official PyTorch core early enough to
    establish the target paper method, but do not claim exact table reproduction.

@@ -21,6 +21,7 @@ from llm_design_bench.optimizers.coms import (
 )
 from llm_design_bench.optimizers.cma_es import CMAEvolutionStrategyMethod
 from llm_design_bench.optimizers.ga_on_gp import GradientAscentOnGPMethod
+from llm_design_bench.optimizers.ict import ImportanceAwareCoTeachingMethod
 from llm_design_bench.optimizers.mc_dropout import MCDropoutMethod
 from llm_design_bench.optimizers.mlp_surrogate import (
     OfflineMLPMethod,
@@ -55,6 +56,7 @@ __all__ = [
     "DirichletRandomSearch",
     "FitThenProposeMethod",
     "GradientAscentOnGPMethod",
+    "ImportanceAwareCoTeachingMethod",
     "ImplementationKind",
     "MethodCapabilities",
     "MethodFamily",

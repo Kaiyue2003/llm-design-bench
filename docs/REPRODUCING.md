@@ -172,12 +172,12 @@ error. The Markdown and LaTeX tables display standard error.
 
 ## 6. Verify the package
 
-The unified suite now defaults to thirteen registered methods, including
-`tri_mentoring`. To run that method alone at its resolved constructor defaults:
+The unified suite now defaults to fourteen registered methods, including
+`tri_mentoring` and `ict`. To run ICT alone at its resolved constructor defaults:
 
 ```bash
-llm-design-bench-suite --function branin --method tri_mentoring \
-  --candidate-budget 128 --results-dir results/tri_mentoring
+llm-design-bench-suite --function branin --method ict \
+  --candidate-budget 128 --results-dir results/ict
 ```
 
 Omitting `--seed` uses seeds 38--45. This trains small surrogate networks,
@@ -186,6 +186,32 @@ steps can still be expensive. Development smoke runs should provide a smaller
 configuration through `MethodSpec` (for example, width 8, two surrogate epochs,
 two solver steps, and four neighbors), and must be reported separately from
 full experiments. See [method notes](METHODS.md) for defaults and semantics.
+
+For a reproducible ICT execution smoke check (not a publication run):
+
+```python
+from pathlib import Path
+
+from llm_design_bench.evaluation.seed_runner import MethodSpec, SeedBenchmarkConfig
+from llm_design_bench.evaluation.task_specs import make_synthetic_task_spec
+from llm_design_bench.evaluation.unified_report import run_benchmark_suite
+
+run_benchmark_suite(
+    [make_synthetic_task_spec("branin", logged_samples=64)],
+    [MethodSpec("ict", dict(
+        hidden_size=16, surrogate_epochs=3, batch_size=16,
+        surrogate_learning_rate=0.01, adaptation_steps=2, solver_steps=2,
+        neighbor_samples=4, remember_count=2,
+    ))],
+    config=SeedBenchmarkConfig(
+        experiment_id="ict_smoke", candidate_budget=128,
+        results_dir=Path("results/ict_smoke"),
+    ),
+)
+```
+
+This uses eight paired seeds (38--45). `neighbor_samples=4` and
+`remember_count=2` control co-teaching, independently of 128 final candidates.
 
 ```bash
 python -m pytest -q

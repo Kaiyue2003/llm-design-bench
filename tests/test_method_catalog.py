@@ -49,7 +49,7 @@ def test_catalog_separates_controls_and_marks_current_adaptations() -> None:
         assert methods[method_id]["source_code"]
     for method_id in ("roma", "ict", "tri_mentoring"):
         expected = (
-            "integrated_adaptation" if method_id == "tri_mentoring" else "planned"
+            "planned" if method_id == "roma" else "integrated_adaptation"
         )
         assert methods[method_id]["status"] == expected
         assert methods[method_id]["display_name"].endswith("adaptation")

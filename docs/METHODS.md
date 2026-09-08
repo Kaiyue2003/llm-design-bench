@@ -117,6 +117,43 @@ initialization are benchmark adaptations; see the
 as **Tri-Mentoring adaptation**. It adapts proxies separately for every
 candidate, so its search cost grows with both candidate budget and search steps.
 
+## ICT
+
+`ict` fits three independent MSE proxies using the shared mentoring trainer.
+It first adapts a single ensemble along a moving trajectory initialized at the
+best visible logged design. Each adaptation step advances that design using
+Adam, samples feasible neighbors, and rotates teacher roles in order 0, 1, 2.
+The teacher creates detached pseudo-labels; the other two proxies each select
+`remember_count` low-loss samples for the OTHER student. Both selections are
+computed before either student updates, with stable index-order tie breaking.
+Each rotation regenerates labels from the current teacher.
+
+For each student, weights start at one. A differentiable virtual SGD update
+on the selected, row-wise weighted MSE yields a logged-data MSE meta-gradient.
+The paper's raw weight gradient is used; updated weights are clipped to [0, 2]
+and detached before one real SGD update from the original parameters. Setting
+`reweighting=False` disables weight adaptation but retains small-loss exchange.
+No true scores are requested for pseudo-labeled designs.
+
+Final candidate search starts afresh from top unique logged designs, filling
+any shortage with random feasible starts. The adapted ensemble is frozen and
+shared across these independent Adam trajectories. Unlike Tri-Mentoring,
+ICT does NOT continue adapting a separate ensemble for every final candidate.
+
+Defaults: width 2048, 200 pretraining epochs, batch size 128, 100 adaptation
+steps, 100 final search steps, 128 neighbors, eight remembered samples,
+noise 0.1, and learning rates 0.001 (design/proxy) and 0.1 (weights).
+Inputs retain logged fidelity context during training/meta-supervision;
+neighbors and final candidates always use target fidelity. Both mentoring
+methods use unit scale for constant/near-constant feature columns, avoiding
+epsilon-amplified out-of-support features in very small datasets.
+
+This is **ICT adaptation**, independently implemented using native PyTorch
+functional updates, not a port of the original `higher`/Adam runtime. Search
+geometry, initialization, fresh teacher labels, raw meta-gradients, and
+small-data handling are explicit differences. See the
+[forward source audit](FORWARD_METHOD_SOURCE_AUDIT.md).
+
 ## COM
 
 The Conservative Objective Model fits the same MLP while constructing

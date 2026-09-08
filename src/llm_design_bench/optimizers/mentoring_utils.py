@@ -44,7 +44,10 @@ class MentoringData:
     ) -> "MentoringData":
         features = problem.train_features.detach()
         mean = features.mean(0)
-        std = features.std(0, unbiased=False).clamp_min(minimum_std)
+        raw_std = features.std(0, unbiased=False)
+        # Constant columns carry no empirical scale. Dividing target deviations
+        # by epsilon would amplify them by 1e6, especially with one logged row.
+        std = torch.where(raw_std >= minimum_std, raw_std, torch.ones_like(raw_std))
         utility, _, _ = problem.standardized_utility(minimum_std)
         return cls((features - mean) / std, utility.detach(), mean, std)
 

@@ -96,6 +96,7 @@ def benchmark(
             "ga_on_gp",
             "mc_dropout",
             "tri_mentoring",
+            "ict",
             "coms",
             "bdi",
         ]
