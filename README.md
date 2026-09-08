@@ -198,6 +198,7 @@ llm-design-bench-suite \
   --method bo_qei \
   --method ga_on_gp \
   --method mc_dropout \
+  --method tri_mentoring \
   --method coms \
   --method bdi \
   --seed 38 --seed 39 --seed 40 --seed 41 \
@@ -208,10 +209,11 @@ llm-design-bench-suite \
 
 Add `--fixed-1b` for the ablation. Both modes use the same unfiltered
 data-recipes normalization reference and the same 1B/19,500-step target.
-When `--method` is omitted, the suite runs these twelve registered methods.
+When `--method` is omitted, the suite runs these thirteen registered methods.
 The result labels remain **Standard GA adaptation**, **CMA-ES adaptation**,
 **REINFORCE adaptation**, **BO-qEI adaptation**, **GA on GP adaptation**,
-**MC-Dropout adaptation**, **COMs adaptation**, and **BDI adaptation**; none
+**MC-Dropout adaptation**, **Tri-Mentoring adaptation**, **COMs adaptation**,
+and **BDI adaptation**; none
 is presented as an exact reproduction of the cited implementation. Source
 audits are in
 [`docs/BASELINE_SOURCE_AUDIT.md`](docs/BASELINE_SOURCE_AUDIT.md) and
@@ -237,7 +239,7 @@ print("best objective:", -trace.recommendation_utility.max())
 
 The oracle-separated method API currently registers `best_logged`,
 `random_search`, `sobol`, `offline_mlp`, `standard_ga`, `cma_es`, `reinforce`,
-`bo_qei`, `ga_on_gp`, `mc_dropout`, `coms`, and `bdi`:
+`bo_qei`, `ga_on_gp`, `mc_dropout`, `tri_mentoring`, `coms`, and `bdi`:
 
 ```python
 from llm_design_bench.optimizers import make_method

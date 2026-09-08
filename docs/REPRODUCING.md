@@ -172,6 +172,21 @@ error. The Markdown and LaTeX tables display standard error.
 
 ## 6. Verify the package
 
+The unified suite now defaults to thirteen registered methods, including
+`tri_mentoring`. To run that method alone at its resolved constructor defaults:
+
+```bash
+llm-design-bench-suite --function branin --method tri_mentoring \
+  --candidate-budget 128 --results-dir results/tri_mentoring
+```
+
+Omitting `--seed` uses seeds 38--45. This trains small surrogate networks,
+not a language model. Per-candidate mentoring with width 2048 and 200 search
+steps can still be expensive. Development smoke runs should provide a smaller
+configuration through `MethodSpec` (for example, width 8, two surrogate epochs,
+two solver steps, and four neighbors), and must be reported separately from
+full experiments. See [method notes](METHODS.md) for defaults and semantics.
+
 ```bash
 python -m pytest -q
 python -m build

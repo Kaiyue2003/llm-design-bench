@@ -61,6 +61,16 @@ def _box_problem() -> OfflineProblem:
 
 
 _METHOD_CONFIGS = (
+    (
+        "tri_mentoring",
+        {
+            "hidden_size": 8,
+            "surrogate_epochs": 2,
+            "batch_size": 2,
+            "solver_steps": 2,
+            "neighbor_samples": 4,
+        },
+    ),
     ("best_logged", {}),
     ("random_search", {}),
     ("sobol", {}),
@@ -168,6 +178,7 @@ def test_builtin_method_returns_valid_candidate_batch(
 
 def test_builtin_methods_are_registered() -> None:
     assert {
+        "tri_mentoring",
         "best_logged",
         "random_search",
         "sobol",
@@ -473,6 +484,7 @@ class _CountingEvaluator:
 def test_seed_runner_evaluates_builtin_candidates_only_after_return(tmp_path) -> None:
     evaluator = _CountingEvaluator()
     methods = [
+        MethodSpec("tri_mentoring", dict(_METHOD_CONFIGS)["tri_mentoring"]),
         MethodSpec("best_logged"),
         MethodSpec("random_search"),
         MethodSpec("sobol"),
@@ -568,6 +580,7 @@ def test_seed_runner_evaluates_builtin_candidates_only_after_return(tmp_path) ->
     assert evaluator.predict_calls == len(methods) * 2
     assert set(result.per_seed["status"]) == {"success"}
     assert set(result.per_seed["method_id"]) == {
+        "tri_mentoring",
         "best_logged",
         "random_search",
         "sobol",

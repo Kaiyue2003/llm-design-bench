@@ -1,6 +1,7 @@
 # Forward Offline Method Source Audit
 
-This audit covers the planned `tri_mentoring`, `ict`, and `roma` method IDs.
+This audit covers the integrated `tri_mentoring` adaptation and planned
+`ict` and `roma` method IDs.
 It fixes authoritative sources, implementation constraints, and the order in
 which shared PyTorch components should be introduced.
 
@@ -55,6 +56,36 @@ LLM-DM settings.
 The clean-room implementation should use native PyTorch functional parameter
 updates instead of adding the old `higher` dependency. It must use isolated
 generators and constrained candidate coordinates.
+
+The registered adaptation now implements the paper's one-step inner and outer
+updates using `torch.func.functional_call`. Its pairwise comparisons use the
+strict-greater-than indicator, and mentoring uses only disagreement pairs as
+recorded in the source audit. Each candidate gets independent copies of all
+three pretrained models; adapted weights are never shared between candidates.
+It uses all visible logged rows for the outer MSE, retaining logged context.
+Neighborhood and search inputs always use the fixed target context. Local
+Gaussian perturbations are applied in unconstrained coordinates and mapped to
+feasible designs; this changes the original neighborhood geometry.
+
+Training uses separate seeded 90/10 splits with Pearson checkpoint selection.
+Small/constant-label validation sets use MSE, and fewer than three observations
+disable the split. This is explicit small-data behavior, not paper parity.
+Unique high-utility logged starts are supplemented by random feasible starts
+if there are fewer unique observations than the requested candidate budget.
+
+### Integration validation
+
+The integration was checked with Python 3.12 and PyTorch 2.14 on CPU: 217
+pytest cases passed and two data-recipes integration cases were skipped because
+the sibling checkout was unavailable. Focused tests include a finite-difference
+check of the soft-label meta-gradient, candidate-specific model isolation,
+float32/float64 reproducibility, simplex/box neighborhoods, and runner-owned
+oracle evaluation. Wheel and source distributions passed package validation.
+
+An eight-seed Branin smoke run (38--45) returned 128 candidates per seed with
+width 16, three surrogate epochs, two search steps, and four neighbors. All
+runs succeeded and exercised both disagreement updates and nonzero soft-label
+changes. These reduced settings validate execution, not publication scores.
 
 ## ICT
 

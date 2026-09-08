@@ -41,6 +41,7 @@ from llm_design_bench.optimizers.registry import (
 )
 from llm_design_bench.optimizers.sobol_search import SobolSearch, SobolSearchMethod
 from llm_design_bench.optimizers.standard_ga import StandardGradientAscentMethod
+from llm_design_bench.optimizers.tri_mentoring import TriMentoringMethod
 
 __all__ = [
     "BackwardDistillationMethod",
@@ -67,6 +68,7 @@ __all__ = [
     "SobolSearch",
     "SobolSearchMethod",
     "StandardGradientAscentMethod",
+    "TriMentoringMethod",
     "get_method_capabilities",
     "get_method_metadata",
     "list_methods",

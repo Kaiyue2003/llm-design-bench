@@ -33,7 +33,9 @@ def test_catalog_separates_controls_and_marks_current_adaptations() -> None:
     controls = {method["method_id"]: method for method in catalog["project_controls"]}
 
     assert set(controls) == {"best_logged", "random_search", "sobol", "offline_mlp"}
-    assert all(control["status"] == "integrated_unified" for control in controls.values())
+    assert all(
+        control["status"] == "integrated_unified" for control in controls.values()
+    )
     assert methods["coms"]["status"] == "integrated_adaptation"
     assert methods["bdi"]["status"] == "integrated_adaptation"
     for method_id in ("standard_ga", "cma_es", "reinforce"):
@@ -46,7 +48,10 @@ def test_catalog_separates_controls_and_marks_current_adaptations() -> None:
         assert methods[method_id]["display_name"].endswith("adaptation")
         assert methods[method_id]["source_code"]
     for method_id in ("roma", "ict", "tri_mentoring"):
-        assert methods[method_id]["status"] == "planned"
+        expected = (
+            "integrated_adaptation" if method_id == "tri_mentoring" else "planned"
+        )
+        assert methods[method_id]["status"] == expected
         assert methods[method_id]["display_name"].endswith("adaptation")
         assert len(methods[method_id]["source_commit"]) == 40
         assert "no explicit license" in methods[method_id]["source_status"]

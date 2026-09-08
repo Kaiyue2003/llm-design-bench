@@ -88,6 +88,35 @@ baseline evaluation scripts. Their source and implementation boundaries are
 recorded in the
 [GP and uncertainty source audit](GP_UNCERTAINTY_BASELINE_AUDIT.md).
 
+## Tri-Mentoring
+
+`tri_mentoring` independently trains three MSE proxies. Each candidate starts
+with a fresh copy of the pretrained ensemble. At each step, it samples feasible
+neighbors by perturbing unconstrained design coordinates, takes a majority
+vote on all unique pairwise comparisons, and mentors each proxy on the pairs
+where it disagrees. Ties use the paper's strict-greater-than indicator (vote 0).
+
+For each disagreeing proxy, a virtual SGD step on pairwise BCE-with-logits
+links soft labels to model parameters. Logged-data MSE through that virtual
+model supplies the label meta-gradient. Updated labels are clipped to [0, 1],
+detached, and used for one real SGD update. Adam then maximizes the adapted
+ensemble mean in constrained design coordinates. No oracle is available to
+either the inner or outer optimization.
+
+The implementation uses `torch.func.functional_call` and native autograd;
+`higher` is not required. Defaults retain a width-2048 two-hidden-layer ReLU
+network, 200 training epochs with cosine-decayed Adam, 200 search steps,
+10 neighbors, and learning rates 0.001 (search/mentoring) and 0.1 (labels).
+Each proxy selects a checkpoint using its own 10% split of the visible data:
+Pearson correlation, falling back to MSE for one-row or constant-label
+validation sets. Fewer than three visible rows use final-epoch models.
+
+Neighborhood geometry, context conditioning, small-data behavior, and
+initialization are benchmark adaptations; see the
+[forward source audit](FORWARD_METHOD_SOURCE_AUDIT.md). The method is reported
+as **Tri-Mentoring adaptation**. It adapts proxies separately for every
+candidate, so its search cost grows with both candidate budget and search steps.
+
 ## COM
 
 The Conservative Objective Model fits the same MLP while constructing
