@@ -223,6 +223,10 @@ audits are in
 [`docs/GP_UNCERTAINTY_BASELINE_AUDIT.md`](docs/GP_UNCERTAINTY_BASELINE_AUDIT.md),
 with RoMA/ICT/Tri-Mentoring details in
 [`docs/FORWARD_METHOD_SOURCE_AUDIT.md`](docs/FORWARD_METHOD_SOURCE_AUDIT.md).
+The next methods, LTR, MATCH-OPT, and PGS, are source-audited but **not yet
+implemented or included in these fifteen methods**. Their implementation order
+and acceptance requirements are recorded in the
+[ranking and policy source audit](docs/RANKING_POLICY_METHOD_SOURCE_AUDIT.md).
 
 ## Python API
 

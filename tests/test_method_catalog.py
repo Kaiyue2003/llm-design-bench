@@ -2,7 +2,6 @@ import json
 from collections import Counter
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "docs" / "method_catalog.json"
 
@@ -63,3 +62,36 @@ def test_unverified_catalog_sources_are_explicitly_empty() -> None:
         assert method["source_status"]
         if method["source_code"] is None:
             assert "verified" not in method["source_status"]
+
+
+def test_next_forward_sources_are_pinned_but_remain_planned() -> None:
+    catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
+    methods = {method["method_id"]: method for method in catalog["methods"]}
+    expected_sources = {
+        "ltr": (
+            "https://github.com/lamda-bbo/Offline-RaM",
+            "389e4bcf68c3e645e3a36e0f84ebdf05a76c235f",
+        ),
+        "match_opt": (
+            "https://github.com/azzafadhel/MatchOpt",
+            "aae3f579a04400206eaa7abe836961c7af94b508",
+        ),
+        "pgs": (
+            "https://github.com/yassineCh/PGS",
+            "54837299b33f986563b15176695e2c83472ffdda",
+        ),
+    }
+    assert catalog["next_forward_integration_order"] == list(expected_sources)
+    audit = ROOT / catalog["next_forward_source_audit"]
+    audit_text = audit.read_text(encoding="utf-8")
+    for method_id, (source_url, commit) in expected_sources.items():
+        method = methods[method_id]
+        assert method["status"] == "planned"
+        assert method["display_name"].endswith("adaptation")
+        assert method["source_code"] == source_url
+        assert method["source_commit"] == commit
+        assert len(commit) == 40
+        assert "no explicit license" in method["source_status"]
+        assert "source audited" in method["source_status"]
+        assert source_url in audit_text
+        assert commit in audit_text

@@ -32,8 +32,9 @@ original component is labeled an adaptation, not a faithful reproduction.
 - `legacy_adaptation`: runnable only through the legacy path.
 - `planned_official_adapter`: verified official PyTorch core exists, but the
   benchmark adapter has not been written.
-- `planned`: not implemented; its primary code/config source must be audited
-  before implementation begins.
+- `planned`: not implemented; source audit may be complete, but registration
+  requires implementation and validation. Any outstanding source/config audit
+  must be completed before implementation begins.
 
 ## Paper method matrix
 
@@ -50,9 +51,9 @@ original component is labeled an adaptation, not a faithful reproduction.
 | `ict` | ICT adaptation | Forward | integrated adaptation | Independent PyTorch rotating co-teaching, functional meta-weighting, and frozen-ensemble search |
 | `tri_mentoring` | Tri-Mentoring adaptation | Forward | integrated adaptation | Independent PyTorch three-proxy voting, pairwise mentoring, and adaptive soft labels |
 | `bdi` | BDI | Forward | integrated adaptation | Unified RBF version as `BDI adaptation`; faithful port requires a separate result ID |
-| `ltr` | LTR | Forward | planned | Learning-to-rank surrogate and paper-aligned search |
-| `match_opt` | MATCH-OPT | Forward | planned | Surrogate/data-support gradient matching |
-| `pgs` | PGS | Forward | planned | Policy-guided, perturbation-smoothed gradient search |
+| `ltr` | LTR adaptation | Forward | planned (source audited) | RaM-ListNet: sampled lists, ranking loss, normalized-output search |
+| `match_opt` | MATCH-OPT adaptation | Forward | planned (source audited) | Value regression + line-integral gradient matching on same-fidelity pairs |
+| `pgs` | PGS adaptation | Forward | planned (source audited) | CQL/SAC offline policy learns coordinate-wise gradient step sizes |
 | `cbas` | CbAS | Inverse | planned | Conditional adaptive sampling |
 | `mins` | MINs | Inverse | planned | Conditional GAN inverse model |
 | `ddom` | DDOM | Inverse | planned | Score-conditioned design diffusion |
@@ -111,6 +112,11 @@ The controls should not be silently renamed to a paper method:
   algorithms are implemented independently from the papers, not by copying
   source (all three integrated as adaptations). See the
   [forward-method source audit](FORWARD_METHOD_SOURCE_AUDIT.md).
+- LTR, MATCH-OPT, and PGS now have pinned paper-linked/author repositories.
+  They remain unimplemented. No explicit project-wide license file was found
+  at these revisions; plan independent implementations, not source vendoring.
+  See the [ranking and policy source audit](RANKING_POLICY_METHOD_SOURCE_AUDIT.md)
+  for algorithms, dependency hazards, multi-fidelity rules, and acceptance tests.
 
 For every other planned method, locating the authoritative code repository,
 license, version/commit, original framework, and final paper configuration is
@@ -122,8 +128,10 @@ URL empty rather than guessing one.
 1. **Low-risk controls and classical methods:** Standard GA, CMA-ES,
    REINFORCE, BO-qEI, GA on GP, and MC-Dropout are integrated adaptations.
 2. **Forward offline methods:** Tri-Mentoring, ICT, and RoMA are integrated;
-   audit sources for LTR, MATCH-OPT, and PGS before implementing them. The unified
-   COMs/BDI adaptations are already available as comparison points.
+   sources for LTR, MATCH-OPT, and PGS are audited. Implement in that order.
+   MATCH-OPT needs same-fidelity pairing; PGS first needs a validated,
+   constraint-consistent transition/action definition. The unified COMs/BDI
+   adaptations are already available as comparison points.
 3. **SPADE:** integrate the verified official PyTorch core early enough to
    establish the target paper method, but do not claim exact table reproduction.
 4. **Inverse generative methods:** CbAS, MINs, DDOM, GABO, GTG, RGD, BONET,
