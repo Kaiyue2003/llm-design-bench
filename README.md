@@ -229,6 +229,9 @@ LTR and MATCH-OPT are independently implemented adaptations. PGS is
 source-audited but **not yet implemented**. Acceptance requirements and
 deliberate deviations are recorded in the
 [ranking and policy source audit](docs/RANKING_POLICY_METHOD_SOURCE_AUDIT.md).
+PGS's [transition/action consistency layer](docs/PGS_TRANSITION_DESIGN.md) has
+been implemented and tested; its CQL/SAC policy and critics remain pending.
+It is not included in the seventeen registered methods.
 
 ## Python API
 

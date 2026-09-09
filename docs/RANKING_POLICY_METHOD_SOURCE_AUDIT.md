@@ -189,9 +189,11 @@ at identical designs create irreducible matching error, not a usable gradient.
 Source import-time CUDA/cache/reporting code is not imported or copied.
 See [method settings](METHODS.md#match-opt) for compact configurable defaults.
 
-PGS is next and
-requires a separate transition/action-consistency design check before its
-offline RL implementation. All three are or will be labeled adaptations; none of
+PGS's [transition/action-consistency gate](PGS_TRANSITION_DESIGN.md) is now
+implemented and tested: projected raw-design gradient steps, visible-only
+diagonal action calibration, same-fidelity pools, reconstruction checks, and
+contiguous finite-horizon fragments. CQL/SAC training and policy rollout remain
+to be implemented; PGS is not registered. All three are or will be labeled adaptations; none of
 these pinned repositories establishes exact parity with the SPADE LLM-DM table.
 
 Complete the agreed method roster before freezing and running formal

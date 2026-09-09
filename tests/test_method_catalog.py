@@ -97,3 +97,11 @@ def test_ranking_policy_sources_are_pinned_and_backlog_matches_status() -> None:
         assert "source audited" in method["source_status"]
         assert source_url in audit_text
         assert commit in audit_text
+
+
+def test_pgs_partial_transition_work_is_not_marked_as_an_integrated_method() -> None:
+    catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
+    pgs = next(method for method in catalog["methods"] if method["method_id"] == "pgs")
+    assert pgs["status"] == "planned"
+    assert pgs["integration_stage"] == "transition_contract_validated"
+    assert (ROOT / pgs["transition_design"]).is_file()

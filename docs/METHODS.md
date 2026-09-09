@@ -268,6 +268,18 @@ uses embedding width 32, 128 buckets, and 201 epochs; context grouping and
 separate supervised/pair minibatches are additional declared adaptations.
 See the [source audit](RANKING_POLICY_METHOD_SOURCE_AUDIT.md).
 
+## PGS (transition layer only; not registered)
+
+PGS's shared projected-gradient transition map and visible logged replay
+construction are implemented in `optimizers/pgs_transitions.py`. The module
+checks that inferred actions reconstruct their logged next designs before
+attaching utility-difference rewards, and rejects incompatible edges instead
+of clipping actions or fabricating rewards. See the
+[transition design](PGS_TRANSITION_DESIGN.md) for exact equations, defaults,
+same-fidelity pool selection, boundary handling, finite-horizon fragments,
+filtering caveats, and tests. CQL/SAC actor/critics and policy rollout are
+pending, so there is no `make_method("pgs")` or PGS benchmark result yet.
+
 ## COM
 
 The Conservative Objective Model fits the same MLP while constructing
