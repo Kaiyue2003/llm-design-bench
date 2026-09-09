@@ -24,6 +24,7 @@ from llm_design_bench.optimizers.ga_on_gp import GradientAscentOnGPMethod
 from llm_design_bench.optimizers.ict import ImportanceAwareCoTeachingMethod
 from llm_design_bench.optimizers.ltr import LearningToRankMethod
 from llm_design_bench.optimizers.match_opt import GradientMatchingMethod
+from llm_design_bench.optimizers.pgs import PolicyGuidedSearchMethod
 from llm_design_bench.optimizers.mc_dropout import MCDropoutMethod
 from llm_design_bench.optimizers.mlp_surrogate import (
     OfflineMLPMethod,
@@ -63,6 +64,7 @@ __all__ = [
     "ImplementationKind",
     "LearningToRankMethod",
     "GradientMatchingMethod",
+    "PolicyGuidedSearchMethod",
     "MethodCapabilities",
     "MethodFamily",
     "MethodMetadata",

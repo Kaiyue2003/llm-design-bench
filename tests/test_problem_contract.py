@@ -46,6 +46,14 @@ def test_offline_problem_from_task_does_not_query_oracle() -> None:
     assert isinstance(problem.design_space, SimplexSpace)
 
 
+def test_float32_problem_retains_original_box_boundary_precision() -> None:
+    task = LoggedSimplexTask()
+    task.design_bounds = np.array([[-32.768, 32.768]] * 3)
+    problem = OfflineProblem.from_task(task, dtype=torch.float32)
+    assert problem.train_designs.dtype == torch.float32
+    assert np.array_equal(problem.design_space.bounds.numpy(), task.design_bounds)
+
+
 def test_offline_problem_target_features_and_standardized_utility() -> None:
     problem = OfflineProblem.from_task(LoggedSimplexTask())
     designs = torch.tensor([[0.4, 0.4, 0.2]], dtype=torch.float32)

@@ -53,7 +53,7 @@ original component is labeled an adaptation, not a faithful reproduction.
 | `bdi` | BDI | Forward | integrated adaptation | Unified RBF version as `BDI adaptation`; faithful port requires a separate result ID |
 | `ltr` | LTR adaptation | Forward | integrated adaptation | RaM-ListNet: sampled lists, ranking loss, normalized-output search |
 | `match_opt` | MATCH-OPT adaptation | Forward | integrated adaptation | Value regression + line-integral gradient matching on same-fidelity pairs |
-| `pgs` | PGS adaptation | Forward | planned (transition gate validated) | Projected-gradient replay implemented; CQL/SAC policy/critics pending |
+| `pgs` | PGS adaptation | Forward | integrated adaptation | Certified replay, horizon-conditioned CQL/SAC, fixed-target projected-gradient rollout |
 | `cbas` | CbAS | Inverse | planned | Conditional adaptive sampling |
 | `mins` | MINs | Inverse | planned | Conditional GAN inverse model |
 | `ddom` | DDOM | Inverse | planned | Score-conditioned design diffusion |
@@ -72,7 +72,7 @@ generative baselines, and SPADE, for 24 paper methods total.
 
 The unified registry currently contains the controls `best_logged`,
 `random_search`, `sobol`, and `offline_mlp`. Standard GA, CMA-ES, REINFORCE,
-BO-qEI, GA on GP, MC-Dropout, Tri-Mentoring, ICT, RoMA, LTR, MATCH-OPT, COMs, and BDI are separately registered and
+BO-qEI, GA on GP, MC-Dropout, Tri-Mentoring, ICT, RoMA, LTR, MATCH-OPT, PGS, COMs, and BDI are separately registered and
 explicitly labeled adaptations.
 The controls should not be silently renamed to a paper method:
 
@@ -113,7 +113,7 @@ The controls should not be silently renamed to a paper method:
   source (all three integrated as adaptations). See the
   [forward-method source audit](FORWARD_METHOD_SOURCE_AUDIT.md).
 - LTR, MATCH-OPT, and PGS now have pinned paper-linked/author repositories.
-  LTR and MATCH-OPT are independently implemented; PGS remains planned.
+  All three are independently implemented adaptations.
   No explicit project-wide license file was found at these revisions; use
   independent implementations, not source vendoring.
   See the [ranking and policy source audit](RANKING_POLICY_METHOD_SOURCE_AUDIT.md)
@@ -128,9 +128,9 @@ URL empty rather than guessing one.
 
 1. **Low-risk controls and classical methods:** Standard GA, CMA-ES,
    REINFORCE, BO-qEI, GA on GP, and MC-Dropout are integrated adaptations.
-2. **Forward offline methods:** Tri-Mentoring, ICT, RoMA, LTR, and MATCH-OPT are
-   integrated. PGS has a [validated transition/action layer](PGS_TRANSITION_DESIGN.md);
-   CQL/SAC policy/critics and end-to-end method validation are next. The unified COMs/BDI
+2. **Forward offline methods:** Tri-Mentoring, ICT, RoMA, LTR, MATCH-OPT, and PGS
+   are integrated. PGS uses [certified transitions and native CQL/SAC](PGS_TRANSITION_DESIGN.md).
+   The unified COMs/BDI
    adaptations are already available as comparison points.
 3. **SPADE:** integrate the verified official PyTorch core early enough to
    establish the target paper method, but do not claim exact table reproduction.

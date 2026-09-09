@@ -62,6 +62,12 @@ def _box_problem() -> OfflineProblem:
 
 _METHOD_CONFIGS = (
     (
+        "pgs",
+        {"hidden_size": 16, "surrogate_epochs": 2, "batch_size": 2,
+         "rl_steps": 2, "cql_samples": 2, "trajectories_per_group": 2,
+         "top_fraction": 1.0, "solver_steps": 2},
+    ),
+    (
         "match_opt",
         {"embedding_dim": 2, "surrogate_epochs": 2, "batch_size": 2, "solver_steps": 2},
     ),
@@ -199,7 +205,7 @@ def test_builtin_method_returns_valid_candidate_batch(
     problem_factory,
 ) -> None:
     problem = problem_factory()
-    if method_id == "match_opt" and problem_factory is _simplex_problem:
+    if method_id in {"match_opt", "pgs"} and problem_factory is _simplex_problem:
         # Keep an eligible same-fidelity pair; other contexts remain distinct.
         problem.train_context[2].copy_(problem.train_context[3])
     result = make_method(method_id, **kwargs).run(
@@ -214,6 +220,7 @@ def test_builtin_method_returns_valid_candidate_batch(
 
 def test_builtin_methods_are_registered() -> None:
     assert {
+        "pgs",
         "match_opt",
         "ltr",
         "roma",

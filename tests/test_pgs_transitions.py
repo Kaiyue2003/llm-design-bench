@@ -93,6 +93,15 @@ def test_box_projection_and_out_of_range_actions_are_not_silently_clipped():
         )
 
 
+def test_box_projection_rounds_outward_float32_endpoints_inward():
+    space = BoxSpace(torch.tensor([[-32.768, 32.768], [0., 1.]], dtype=torch.float64))
+    projected = project_designs(torch.tensor([[-100., -1.], [100., 2.]]), space)
+    assert (projected.double() >= space.bounds[:, 0]).all()
+    assert (projected.double() <= space.bounds[:, 1]).all()
+    assert torch.equal(projected[:, 1], torch.tensor([0., 1.]))
+    assert projected.dtype == torch.float32
+
+
 @pytest.mark.parametrize(
     "simplex,context", [(True, True), (False, True), (True, False)]
 )
@@ -275,8 +284,8 @@ def test_invalid_config(kwargs):
         PGSTransitionConfig(**kwargs)
 
 
-def test_transition_gate_is_not_a_registered_pgs_method():
-    assert "pgs" not in method_names()
+def test_pgs_method_is_registered_after_policy_integration():
+    assert "pgs" in method_names()
 
 
 def test_wrong_reconstruction_is_rejected_not_assigned_a_reward(monkeypatch):

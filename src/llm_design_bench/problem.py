@@ -161,7 +161,9 @@ class OfflineProblem:
             if bounds is None:
                 design_space = SimplexSpace(int(task.mixture_dim))
             else:
-                design_space = BoxSpace(torch.as_tensor(bounds, dtype=dtype))
+                # Domain metadata must retain precision independently of model
+                # tensors; rounded float32 endpoints can lie outside the oracle.
+                design_space = BoxSpace(torch.as_tensor(bounds, dtype=torch.float64))
         if metadata is None:
             metric = getattr(task, "metric", None)
             objective_name = getattr(metric, "name", getattr(task, "name", "utility"))

@@ -268,7 +268,7 @@ uses embedding width 32, 128 buckets, and 201 epochs; context grouping and
 separate supervised/pair minibatches are additional declared adaptations.
 See the [source audit](RANKING_POLICY_METHOD_SOURCE_AUDIT.md).
 
-## PGS (transition layer only; not registered)
+## PGS
 
 PGS's shared projected-gradient transition map and visible logged replay
 construction are implemented in `optimizers/pgs_transitions.py`. The module
@@ -277,8 +277,51 @@ attaching utility-difference rewards, and rejects incompatible edges instead
 of clipping actions or fabricating rewards. See the
 [transition design](PGS_TRANSITION_DESIGN.md) for exact equations, defaults,
 same-fidelity pool selection, boundary handling, finite-horizon fragments,
-filtering caveats, and tests. CQL/SAC actor/critics and policy rollout are
-pending, so there is no `make_method("pgs")` or PGS benchmark result yet.
+filtering caveats, and tests.
+
+The registered **PGS adaptation** fits one two-hidden-layer ReLU surrogate on
+all visible standardized data, using the shared cosine learning-rate schedule
+and final epoch (no validation/oracle selection). It freezes that proxy before
+building certified replay. State inputs concatenate normalized design/fidelity
+features and remaining horizon divided by `max_horizon`. Replay rewards remain
+logged utility differences, divided by the visible utility population standard
+deviation (floored by `minimum_std`); no reward centering or proxy rewards.
+
+Native CQL/SAC uses a tanh-Gaussian actor with learned log-standard-deviation
+multiplier/offset and log-std clamped to [-20, 2]. Sampling uses the run-local
+generator and a stable tanh log-Jacobian. Two independent critics have frozen
+Polyak-updated targets. The Bellman backup uses minimum target Q; like the
+pinned source, `backup_entropy=False` by default. Enabling it subtracts
+`alpha * log_pi` in the backup. Terminal transitions receive only their reward.
+The actor always minimizes `alpha * log_pi - min(Q1,Q2)`; automatic entropy
+tuning uses target entropy `-design_dim` and initial alpha 1.
+
+CQL uses equal counts of uniform [-1,1], current-policy and next-policy
+proposal actions, ALL evaluated at the current state. Its per-critic penalty
+is `T * logsumexp((Q - proposal_log_density) / T) - Q_logged`, using the
+source's unnormalized logsumexp convention. Densities/actions are detached
+for critic updates. Actor updates freeze critic parameters while retaining
+action derivatives; entropy updates detach policy log densities. There is no
+learned CQL Lagrange multiplier or oracle-based checkpoint selection.
+
+At rollout, the actor uses tanh of its Gaussian location (deterministic
+evaluation), not a sampled action. The surrogate supplies raw design gradients
+at fixed target fidelity. The exact replay transition map and saved diagonal
+scale are reused. Search starts preserve exact feasible logged boundaries and
+fill missing candidates with feasible random designs. The horizon is bounded
+by both `solver_steps` and the maximum retained fragment length; it is recorded
+in diagnostics along with scales, replay coverage and rejection counts.
+
+Compact defaults: hidden width 64 for surrogate, actor and critics; 50 surrogate
+epochs; batch size 128; 1,000 RL updates; surrogate/RL Adam rates `3e-4`;
+discount 0.99; target update rate 0.005; CQL weight 5, ten samples per proposal
+distribution, temperature 1; automatic entropy enabled; 50 requested search
+steps; `minimum_std=1e-6`. Transition defaults are in the linked design.
+`automatic_entropy=False` holds alpha fixed; `backup_entropy=True` is a
+declared ablation. Only float32/float64 replay is supported. These are not
+frozen formal budgets or the source's 401,000-update configuration.
+Empty/invalid replay fails explicitly, without pool expansion or a substitute
+optimizer. GPU and real data-recipes coverage require separate validation.
 
 ## COM
 

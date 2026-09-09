@@ -1,8 +1,7 @@
 # Ranking and Policy Method Source Audit
 
-This source/design audit now also records the integrated `ltr` and `match_opt`
-adaptations. `pgs` remains planned and is not registered.
-Implementation order: **LTR and MATCH-OPT (integrated) -> PGS**. These have only
+This source/design audit now also records the integrated `ltr`, `match_opt`,
+and `pgs` adaptations. All three are registered. These have only
 tests and reduced-budget smoke validation, not formal eight-seed experiments.
 
 ## Authoritative sources
@@ -192,8 +191,13 @@ See [method settings](METHODS.md#match-opt) for compact configurable defaults.
 PGS's [transition/action-consistency gate](PGS_TRANSITION_DESIGN.md) is now
 implemented and tested: projected raw-design gradient steps, visible-only
 diagonal action calibration, same-fidelity pools, reconstruction checks, and
-contiguous finite-horizon fragments. CQL/SAC training and policy rollout remain
-to be implemented; PGS is not registered. All three are or will be labeled adaptations; none of
+contiguous finite-horizon fragments. Native CQL/SAC and deterministic policy
+rollout now use that gate, with visible-utility reward scaling and fixed target
+fidelity. The RL core retains twin critics, automatic entropy tuning, source-style
+importance-corrected CQL, target updates, and the source's default entropy-free
+Bellman backup. Compact widths, finite-horizon state conditioning, final-epoch
+cosine-schedule proxy training and the certified transition map are adaptations.
+All three are labeled adaptations; none of
 these pinned repositories establishes exact parity with the SPADE LLM-DM table.
 
 Complete the agreed method roster before freezing and running formal
@@ -227,3 +231,26 @@ Both runs completed through the unified evaluator/report writer. Local outputs
 are under ignored `results/match_opt_integration_smoke_20260909/`, not the
 publication reference table. CUDA and actual data-recipes group coverage
 remain unverified; verify eligible same-fidelity counts before formal runs.
+
+### PGS integration validation (2026-09-09)
+
+The native actor/critic tests check tanh-Gaussian log density, generator
+isolation, CQL importance correction, terminal Bellman targets, optional
+entropy backup, fixed/automatic entropy coefficients, isolated optimizer
+updates, target Polyak updates, frozen surrogate weights, saved action scale,
+and fixed-target/horizon-conditioned rollout. End-to-end tests cover both
+simplex and box designs, exact candidate budget, float32/float64, reproducibility,
+and no oracle evaluation on unsupported replay.
+
+Reduced smoke settings: Ackley and Branin, 32 logged rows each, seed 38, eight
+candidates, hidden width 16, three proxy epochs, batch size 8, five RL updates,
+two CQL samples per proposal distribution, two trajectories per eligible
+group, and three requested horizon/search steps. Both pass in
+`results/pgs_integration_smoke_verified_20260909/`. The initial smoke artifacts
+in `results/pgs_integration_smoke_20260909/` retain a failed Ackley run: outward
+float32 rounding of a box endpoint violated the oracle's original bounds.
+The fix preserves original boundary metadata and projects to inward
+representable endpoints when necessary; the evaluation rules were not relaxed.
+No hyperparameters were selected using oracle performance. CUDA and actual
+data-recipes execution remain unverified locally; these are integration smoke
+reports, not a formal experiment or evidence of algorithmic competitiveness.

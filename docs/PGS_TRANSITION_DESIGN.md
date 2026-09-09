@@ -1,7 +1,7 @@
 # PGS transition/action consistency gate
 
-Status: transition construction implemented and tested; **PGS is not yet a
-registered method**. CQL/SAC training and policy rollout remain to be written.
+Status: transition construction, CQL/SAC and policy rollout are implemented;
+**PGS adaptation is registered**. See [method settings](METHODS.md#pgs).
 This is not a PGS reproduction or a formal benchmark result. See the pinned
 [source audit](RANKING_POLICY_METHOD_SOURCE_AUDIT.md#3-pgs-offline-rl-learns-gradient-search-step-sizes).
 
@@ -15,7 +15,7 @@ conventions would make a replay tuple internally inconsistent.
 
 Our adapter instead requires every retained replay action to reconstruct its
 logged next design, within a declared numerical tolerance, using the exact
-same function that future policy rollout will call. No oracle, synthetic
+same function that policy rollout calls. No oracle, synthetic
 reward, action clipping, or movement of logged designs into the interior is
 used to pass this check.
 
@@ -32,13 +32,17 @@ next_x = project_domain(x + step_scale * a * g(x, c))
 ```
 
 Multiplication is element-wise. `project_domain` is Euclidean projection onto
-the probability simplex or coordinate-wise box clipping. This preserves
-logged boundary designs such as zero mixture weights. Both replay checking
+the probability simplex or coordinate-wise box clipping. Box metadata retains
+its original precision; if casting a boundary to the model dtype rounds it
+outward, projection uses the nearest inward representable endpoint. Exactly
+representable boundaries (including zero mixture weights) stay unchanged.
+This numerical correction is shared by replay checking and rollout; it does
+not relax the oracle's feasibility tolerance. Both replay checking
 and future rollout use `projected_gradient_step`; there must not be a second
 rollout-only step multiplier.
 
 The surrogate must be row-independent. Input differentiation neither updates
-its weights nor writes parameter gradient buffers. For future finite-horizon
+its weights nor writes parameter gradient buffers. For finite-horizon
 CQL/SAC, policy and critic state must concatenate visible-statistics-normalized
 design/context features with `remaining_steps / config.max_horizon`. The next
 state's remaining steps are one less. Use this identical representation during
@@ -61,9 +65,10 @@ generalization remains an explicit adaptation, not a guarantee of accuracy.
    not sorted by utility. Bound the horizon by `min(max_horizon, pool_size-1)`.
 
 For each logged edge `(x_i, u_i) -> (x_j, u_j)`, keep its original endpoints
-and reward `u_j - u_i` in raw maximization utility units. A future explicit
-reward standardization may use visible data only and must be recorded; it
-must not replace these rewards with surrogate predictions.
+and reward `u_j - u_i` in raw maximization utility units. The CQL/SAC adapter
+divides those differences by visible utility population standard deviation,
+floored by `minimum_std`, without subtracting a reward mean. The divisor is
+recorded; rewards are never replaced with surrogate predictions.
 
 ## Action calibration and rejection
 
@@ -83,7 +88,8 @@ a[edge,k] = b[edge,k] / step_scale[k]
 ```
 
 This produces bounded actions without clipping. Store the scale with the
-future model checkpoint and reuse it unchanged at target-fidelity rollout.
+run diagnostics and reuse it unchanged at target-fidelity rollout. A future
+persistent checkpoint must include this scale alongside the model weights.
 Reconstruct each next design with the shared map and reject edges whose
 maximum coordinate error exceeds `reconstruction_tolerance`. Only certified
 edges receive their logged utility-difference reward in the returned replay.
@@ -111,7 +117,7 @@ pools, ties, bounded horizons, action/gain rejection, partial trajectory
 filtering, terminal masks, and failure with no eligible data. CUDA has a
 conditional test; it is not locally verified when CUDA is unavailable.
 
-Before registering `pgs`, still implement and validate:
+The registered adapter now includes:
 
 - visible-only surrogate fitting followed by freezing;
 - a horizon- and fidelity-conditioned tanh-Gaussian actor, twin critics and
@@ -119,12 +125,14 @@ Before registering `pgs`, still implement and validate:
   actor/critic gradients, and target updates;
 - policy rollout using this exact transition map and saved scale, fixed target
   fidelity, valid remaining-horizon inputs, and an exact candidate budget;
-- full method reproducibility, oracle isolation, synthetic smoke reports, and
-  measured rejection/group coverage on actual data-recipes logs.
+- full method reproducibility, oracle isolation, and synthetic smoke reports.
+
+Actual data-recipes rejection/group coverage and GPU execution remain to be
+validated before formal runs. No new eight-seed publication experiment was run.
 
 Filtering can bias the retained transition distribution, and diagonal gain
 calibration can produce very different search scales from the original code.
 Report accepted/rejected counts, pool sizes, reconstruction errors and scales;
 freeze these choices before formal experiments. Do not tune them against
-hidden oracle scores or claim source parity. The future method remains
+hidden oracle scores or claim source parity. The method remains
 **PGS adaptation**, not an inverse-generative method or a REINFORCE alias.

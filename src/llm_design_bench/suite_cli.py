@@ -100,6 +100,7 @@ def benchmark(
             "roma",
             "ltr",
             "match_opt",
+            "pgs",
             "coms",
             "bdi",
         ]

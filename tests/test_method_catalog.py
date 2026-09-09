@@ -46,7 +46,7 @@ def test_catalog_separates_controls_and_marks_current_adaptations() -> None:
         assert methods[method_id]["status"] == "integrated_adaptation"
         assert methods[method_id]["display_name"].endswith("adaptation")
         assert methods[method_id]["source_code"]
-    for method_id in ("roma", "ict", "tri_mentoring", "ltr", "match_opt"):
+    for method_id in ("roma", "ict", "tri_mentoring", "ltr", "match_opt", "pgs"):
         assert methods[method_id]["status"] == "integrated_adaptation"
         assert methods[method_id]["display_name"].endswith("adaptation")
         assert len(methods[method_id]["source_commit"]) == 40
@@ -81,14 +81,12 @@ def test_ranking_policy_sources_are_pinned_and_backlog_matches_status() -> None:
             "54837299b33f986563b15176695e2c83472ffdda",
         ),
     }
-    assert catalog["next_forward_integration_order"] == ["pgs"]
+    assert catalog["next_forward_integration_order"] == []
     audit = ROOT / catalog["next_forward_source_audit"]
     audit_text = audit.read_text(encoding="utf-8")
     for method_id, (source_url, commit) in expected_sources.items():
         method = methods[method_id]
-        assert method["status"] == (
-            "planned" if method_id == "pgs" else "integrated_adaptation"
-        )
+        assert method["status"] == "integrated_adaptation"
         assert method["display_name"].endswith("adaptation")
         assert method["source_code"] == source_url
         assert method["source_commit"] == commit
@@ -99,9 +97,9 @@ def test_ranking_policy_sources_are_pinned_and_backlog_matches_status() -> None:
         assert commit in audit_text
 
 
-def test_pgs_partial_transition_work_is_not_marked_as_an_integrated_method() -> None:
+def test_pgs_integration_retains_transition_design_provenance() -> None:
     catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
     pgs = next(method for method in catalog["methods"] if method["method_id"] == "pgs")
-    assert pgs["status"] == "planned"
-    assert pgs["integration_stage"] == "transition_contract_validated"
+    assert pgs["status"] == "integrated_adaptation"
+    assert pgs["integration_stage"] == "integrated_cql_sac"
     assert (ROOT / pgs["transition_design"]).is_file()

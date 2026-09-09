@@ -203,6 +203,7 @@ llm-design-bench-suite \
   --method roma \
   --method ltr \
   --method match_opt \
+  --method pgs \
   --method coms \
   --method bdi \
   --seed 38 --seed 39 --seed 40 --seed 41 \
@@ -213,11 +214,11 @@ llm-design-bench-suite \
 
 Add `--fixed-1b` for the ablation. Both modes use the same unfiltered
 data-recipes normalization reference and the same 1B/19,500-step target.
-When `--method` is omitted, the suite runs these seventeen registered methods.
+When `--method` is omitted, the suite runs these eighteen registered methods.
 The result labels remain **Standard GA adaptation**, **CMA-ES adaptation**,
 **REINFORCE adaptation**, **BO-qEI adaptation**, **GA on GP adaptation**,
 **MC-Dropout adaptation**, **Tri-Mentoring adaptation**, **ICT adaptation**,
-**RoMA adaptation**, **LTR adaptation**, **MATCH-OPT adaptation**, **COMs adaptation**,
+**RoMA adaptation**, **LTR adaptation**, **MATCH-OPT adaptation**, **PGS adaptation**, **COMs adaptation**,
 and **BDI adaptation**; none
 is presented as an exact reproduction of the cited implementation. Source
 audits are in
@@ -225,13 +226,14 @@ audits are in
 [`docs/GP_UNCERTAINTY_BASELINE_AUDIT.md`](docs/GP_UNCERTAINTY_BASELINE_AUDIT.md),
 with RoMA/ICT/Tri-Mentoring details in
 [`docs/FORWARD_METHOD_SOURCE_AUDIT.md`](docs/FORWARD_METHOD_SOURCE_AUDIT.md).
-LTR and MATCH-OPT are independently implemented adaptations. PGS is
-source-audited but **not yet implemented**. Acceptance requirements and
+LTR, MATCH-OPT, and PGS are independently implemented adaptations.
+Acceptance requirements and
 deliberate deviations are recorded in the
 [ranking and policy source audit](docs/RANKING_POLICY_METHOD_SOURCE_AUDIT.md).
-PGS's [transition/action consistency layer](docs/PGS_TRANSITION_DESIGN.md) has
-been implemented and tested; its CQL/SAC policy and critics remain pending.
-It is not included in the seventeen registered methods.
+PGS combines its [certified transition layer](docs/PGS_TRANSITION_DESIGN.md)
+with native CQL/SAC policy training and fixed-target projected-gradient rollout.
+These methods have integration tests and reduced-budget smoke runs, not new
+formal eight-seed publication results.
 
 ## Python API
 
@@ -254,7 +256,7 @@ print("best objective:", -trace.recommendation_utility.max())
 The oracle-separated method API currently registers `best_logged`,
 `random_search`, `sobol`, `offline_mlp`, `standard_ga`, `cma_es`, `reinforce`,
 `bo_qei`, `ga_on_gp`, `mc_dropout`, `tri_mentoring`, `ict`, `roma`, `ltr`,
-`match_opt`, `coms`, and `bdi`:
+`match_opt`, `pgs`, `coms`, and `bdi`:
 
 ```python
 from llm_design_bench.optimizers import make_method

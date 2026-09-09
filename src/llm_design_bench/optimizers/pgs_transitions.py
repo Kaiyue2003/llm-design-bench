@@ -1,6 +1,6 @@
-"""PGS transition-consistency gate, not a registered optimization method.
+"""Certified replay construction shared by the registered PGS adaptation.
 
-Logged replay and future policy rollout share exactly the same projected
+Logged replay and policy rollout share exactly the same projected
 gradient step. No clipping of inferred actions or fabricated reward labels.
 """
 
@@ -77,8 +77,24 @@ def project_designs(values: torch.Tensor, space: DesignSpace) -> torch.Tensor:
     ):
         raise ValueError("projection requires a finite design matrix")
     if isinstance(space, BoxSpace):
-        bounds = space.bounds.to(values)
-        return values.maximum(bounds[:, 0]).minimum(bounds[:, 1])
+        original = space.bounds.to(device=values.device, dtype=torch.float64)
+        bounds = original.to(dtype=values.dtype)
+        lower, upper = bounds[:, 0], bounds[:, 1]
+        # When a conversion rounds outward, choose the nearest representable
+        # inward endpoint. Exactly representable boundaries remain unchanged.
+        lower = torch.where(
+            lower.double() < original[:, 0],
+            torch.nextafter(lower, torch.full_like(lower, math.inf)),
+            lower,
+        )
+        upper = torch.where(
+            upper.double() > original[:, 1],
+            torch.nextafter(upper, torch.full_like(upper, -math.inf)),
+            upper,
+        )
+        if (lower > upper).any():
+            raise ValueError("box has no representable point in the requested dtype")
+        return values.maximum(lower).minimum(upper)
     if isinstance(space, SimplexSpace):
         # Removing a common offset does not change simplex projection and
         # avoids cancellation for very large, nearly equal coordinates.
