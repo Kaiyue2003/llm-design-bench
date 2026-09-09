@@ -3,8 +3,9 @@
   "scope": "Methods compared in arXiv:2605.11246v2 plus project controls",
   "paper_method_count": 24,
   "paper_source": "https://arxiv.org/abs/2605.11246",
-  "next_forward_integration_order": [],
-  "next_forward_source_audit": "docs/RANKING_POLICY_METHOD_SOURCE_AUDIT.md",
+  "next_forward_integration_order": ["spade"],
+  "ranking_policy_source_audit": "docs/RANKING_POLICY_METHOD_SOURCE_AUDIT.md",
+  "next_forward_source_audit": "docs/SPADE_SOURCE_AUDIT.md",
   "methods": [
     {"method_id": "cma_es", "display_name": "CMA-ES adaptation", "paper_role": "baseline", "family": "standard", "status": "integrated_adaptation", "pytorch_plan": "Native full-covariance PyTorch CMA-ES over the mean of a five-member probabilistic neural ensemble", "source_code": "https://github.com/brandontrabucco/design-baselines/tree/master/design_baselines/cma_es", "source_commit": "785dbcfa58107bfcc426257a1c2e69d7f71c3c27", "source_status": "verified cited implementation; TensorFlow and pycma replaced by PyTorch and constrained-space mapping added"},
     {"method_id": "reinforce", "display_name": "REINFORCE adaptation", "paper_role": "baseline", "family": "standard", "status": "integrated_adaptation", "pytorch_plan": "Native PyTorch fixed-variance Gaussian policy optimized with standardized frozen-surrogate rewards", "source_code": "https://github.com/brandontrabucco/design-baselines/tree/master/design_baselines/reinforce", "source_commit": "785dbcfa58107bfcc426257a1c2e69d7f71c3c27", "source_status": "verified cited implementation; TensorFlow replaced by PyTorch and policy samples are mapped into the task design space"},
@@ -32,7 +33,7 @@
     {"method_id": "demo", "display_name": "DEMO", "paper_role": "baseline", "family": "inverse_generative", "status": "planned", "pytorch_plan": "PyTorch design-distribution diffusion and editing pipeline", "source_code": null, "source_status": "official source must be located and pinned"},
     {"method_id": "root", "display_name": "ROOT", "paper_role": "baseline", "family": "inverse_generative", "status": "planned", "pytorch_plan": "PyTorch probabilistic bridge for low-to-high-score distribution translation", "source_code": null, "source_status": "official source must be located and pinned"},
 
-    {"method_id": "spade", "display_name": "SPADE", "paper_role": "proposed", "family": "forward_surrogate", "status": "planned_official_adapter", "pytorch_plan": "Official PyTorch core plus llm-design-bench task, context, simplex, and reporting adapter", "source_code": "https://github.com/HarryYoung2018/spade", "source_status": "verified official core; paper preprocessing and final benchmark configs are not public"}
+    {"method_id": "spade", "display_name": "SPADE", "paper_role": "proposed", "family": "forward_surrogate", "status": "planned_official_adapter", "integration_stage": "source_audited", "source_audit": "docs/SPADE_SOURCE_AUDIT.md", "source_license": "MIT", "pytorch_plan": "Attributed official-core-derived PyTorch adaptation with native kNN, constrained design-only evolution, fixed target context, local generators, and exact candidate budget", "source_code": "https://github.com/HarryYoung2018/spade", "source_commit": "586151bbb56e246f93ca97ce33f79887a13161bd", "source_status": "verified MIT-licensed official core; source audited with search-contract probes; adapter not implemented; paper preprocessing and final benchmark configs are not public"}
   ],
   "project_controls": [
     {"method_id": "best_logged", "display_name": "Best Logged", "family": "reference", "status": "integrated_unified"},

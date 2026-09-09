@@ -81,8 +81,8 @@ def test_ranking_policy_sources_are_pinned_and_backlog_matches_status() -> None:
             "54837299b33f986563b15176695e2c83472ffdda",
         ),
     }
-    assert catalog["next_forward_integration_order"] == []
-    audit = ROOT / catalog["next_forward_source_audit"]
+    assert not set(expected_sources).intersection(catalog["next_forward_integration_order"])
+    audit = ROOT / catalog["ranking_policy_source_audit"]
     audit_text = audit.read_text(encoding="utf-8")
     for method_id, (source_url, commit) in expected_sources.items():
         method = methods[method_id]
@@ -103,3 +103,22 @@ def test_pgs_integration_retains_transition_design_provenance() -> None:
     assert pgs["status"] == "integrated_adaptation"
     assert pgs["integration_stage"] == "integrated_cql_sac"
     assert (ROOT / pgs["transition_design"]).is_file()
+
+
+def test_spade_source_audit_is_pinned_but_not_marked_integrated() -> None:
+    from llm_design_bench.optimizers.registry import method_names
+
+    catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
+    spade = next(method for method in catalog["methods"] if method["method_id"] == "spade")
+    assert spade["status"] == "planned_official_adapter"
+    assert spade["integration_stage"] == "source_audited"
+    assert spade["source_license"] == "MIT"
+    assert spade["source_commit"] == "586151bbb56e246f93ca97ce33f79887a13161bd"
+    assert "adapter not implemented" in spade["source_status"]
+    assert catalog["next_forward_integration_order"] == ["spade"]
+    assert catalog["next_forward_source_audit"] == spade["source_audit"]
+    audit = (ROOT / spade["source_audit"]).read_text(encoding="utf-8")
+    assert spade["source_code"] in audit
+    assert spade["source_commit"] in audit
+    assert "MIT" in audit
+    assert "spade" not in method_names()

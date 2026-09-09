@@ -235,6 +235,10 @@ with native CQL/SAC policy training and fixed-target projected-gradient rollout.
 These methods have integration tests and reduced-budget smoke runs, not new
 formal eight-seed publication results.
 
+SPADE's [official-source audit](docs/SPADE_SOURCE_AUDIT.md) is complete, with
+an MIT-licensed pinned revision and explicit constrained-search/context changes.
+Its adapter is next; SPADE is not yet one of the eighteen registered methods.
+
 ## Python API
 
 ```python
