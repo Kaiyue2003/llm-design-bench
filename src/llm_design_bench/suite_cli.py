@@ -99,6 +99,7 @@ def benchmark(
             "ict",
             "roma",
             "ltr",
+            "match_opt",
             "coms",
             "bdi",
         ]

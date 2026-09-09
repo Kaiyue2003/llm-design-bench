@@ -46,7 +46,7 @@ def test_catalog_separates_controls_and_marks_current_adaptations() -> None:
         assert methods[method_id]["status"] == "integrated_adaptation"
         assert methods[method_id]["display_name"].endswith("adaptation")
         assert methods[method_id]["source_code"]
-    for method_id in ("roma", "ict", "tri_mentoring", "ltr"):
+    for method_id in ("roma", "ict", "tri_mentoring", "ltr", "match_opt"):
         assert methods[method_id]["status"] == "integrated_adaptation"
         assert methods[method_id]["display_name"].endswith("adaptation")
         assert len(methods[method_id]["source_commit"]) == 40
@@ -81,13 +81,13 @@ def test_ranking_policy_sources_are_pinned_and_backlog_matches_status() -> None:
             "54837299b33f986563b15176695e2c83472ffdda",
         ),
     }
-    assert catalog["next_forward_integration_order"] == ["match_opt", "pgs"]
+    assert catalog["next_forward_integration_order"] == ["pgs"]
     audit = ROOT / catalog["next_forward_source_audit"]
     audit_text = audit.read_text(encoding="utf-8")
     for method_id, (source_url, commit) in expected_sources.items():
         method = methods[method_id]
         assert method["status"] == (
-            "integrated_adaptation" if method_id == "ltr" else "planned"
+            "planned" if method_id == "pgs" else "integrated_adaptation"
         )
         assert method["display_name"].endswith("adaptation")
         assert method["source_code"] == source_url

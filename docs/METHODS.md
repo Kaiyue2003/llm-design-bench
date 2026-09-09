@@ -230,6 +230,44 @@ recorded by the runner. These are not frozen formal experiment budgets or
 the original paper settings. RankCosine is not implemented yet. See the
 [source audit](RANKING_POLICY_METHOD_SOURCE_AUDIT.md).
 
+## MATCH-OPT
+
+`match_opt` is **MATCH-OPT adaptation**, independently implemented with a
+row-independent LeakyReLU (slope 0.3) MLP. It combines supervised utility MSE
+with MSE between observed pair differences `utility_v - utility_u` and a
+five-node left-endpoint approximation of the surrogate-gradient line integral
+from `x_u` to `x_v`. The latter remains differentiable with respect to model
+weights. Summing row outputs before input differentiation avoids constructing
+a quadratic batch Jacobian; batch-coupled layers are not supported here.
+
+Pair construction groups rows by exact equality of all logged context fields
+(scale AND steps), orders each group by utility, partitions into non-empty
+buckets, and samples monotone trajectories through the buckets each epoch.
+Adjacent trajectory points supply matching pairs. Each supervised minibatch
+draws a matching minibatch without replacement within that draw; pairs can be
+reused between updates. All visible rows enter value fitting once per epoch,
+including singleton contexts that cannot supply matching pairs. If every
+context is a singleton (or there is only one row), the method raises an explicit
+error before training; the runner records a failed run, not an MSE fallback.
+Without context, all rows form one group. Ties and duplicate designs are
+retained, with zero-displacement pair counts reported explicitly.
+
+Feature/utility normalization uses visible logs only. Paths hold fidelity
+constant and linear interpolation stays feasible on the simplex or box.
+The final epoch's frozen model guides Adam ascent of utility at fixed target
+fidelity, starting from unique top logged designs plus feasible random fills.
+The method cannot access the oracle or hidden-region diagnostics.
+
+Compact defaults are `embedding_dim=8` (hidden widths 128/32/8),
+`surrogate_epochs=50`, `batch_size=128`, `bucket_count=32`,
+`quadrature_nodes=5`, training Adam rate `1e-4`, `matching_weight=1`,
+`solver_steps=150`, search rate `1e-3`, and `minimum_std=1e-6`.
+Matching weight must be positive; a zero-weight MSE baseline is a different
+method. These defaults are not frozen formal experiment budgets. The source
+uses embedding width 32, 128 buckets, and 201 epochs; context grouping and
+separate supervised/pair minibatches are additional declared adaptations.
+See the [source audit](RANKING_POLICY_METHOD_SOURCE_AUDIT.md).
+
 ## COM
 
 The Conservative Objective Model fits the same MLP while constructing

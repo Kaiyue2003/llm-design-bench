@@ -1,8 +1,8 @@
 # Ranking and Policy Method Source Audit
 
-This source/design audit now also records the integrated `ltr` adaptation.
-`match_opt` and `pgs` remain planned and are not registered methods.
-Implementation order: **LTR (integrated) -> MATCH-OPT -> PGS**. LTR has only
+This source/design audit now also records the integrated `ltr` and `match_opt`
+adaptations. `pgs` remains planned and is not registered.
+Implementation order: **LTR and MATCH-OPT (integrated) -> PGS**. These have only
 tests and reduced-budget smoke validation, not formal eight-seed experiments.
 
 ## Authoritative sources
@@ -113,7 +113,7 @@ Integration hazards and tests:
   utility direction on a linear function with a known line integral.
 - Remove periodic oracle reporting and absolute cache paths. Train directly
   from `OfflineProblem`, without a cache produced by running other baselines.
-- **Multi-fidelity rule:** proposed default is same-(scale, steps) trajectory
+- **Multi-fidelity rule:** the adapter uses same-(scale, steps) trajectory
   pairs for mixture-gradient matching, while supervised fitting may use all
   visible rows. A cross-fidelity utility difference is not solely a mixture
   effect. Report eligible group/pair counts and reject unsupported data when
@@ -176,9 +176,22 @@ Constant feature and prediction scales use one; prediction calibration sees
 only visible rows. The model is frozen before target-fidelity search.
 See [method settings](METHODS.md#ltr) for compact configurable defaults.
 
-MATCH-OPT is next, with line-integral and same-fidelity pairing tests. PGS
+MATCH-OPT retains left-node quadrature with differentiable input gradients
+computed by summing independent row predictions. Each epoch builds monotone
+trajectories separately within exact logged-context groups. All visible rows,
+including singleton contexts, enter value fitting; matching pairs are sampled
+for each value minibatch. The final epoch is retained without oracle selection.
+Eligible rows/groups, effective buckets, pair counts, zero-displacement pairs,
+and both training-loss histories are reported. No eligible group raises a
+clear error before training; there is no silent MSE-only fallback. Repeated
+designs are retained as logged observations and diagnosed: conflicting labels
+at identical designs create irreducible matching error, not a usable gradient.
+Source import-time CUDA/cache/reporting code is not imported or copied.
+See [method settings](METHODS.md#match-opt) for compact configurable defaults.
+
+PGS is next and
 requires a separate transition/action-consistency design check before its
-offline RL implementation. All three will be labeled adaptations; none of
+offline RL implementation. All three are or will be labeled adaptations; none of
 these pinned repositories establishes exact parity with the SPADE LLM-DM table.
 
 Complete the agreed method roster before freezing and running formal
@@ -195,3 +208,20 @@ completed through the unified evaluator and report writer. Local artifacts
 are under ignored `results/ltr_integration_smoke_20260909/`; they are not
 publication reference results, and no performance-based settings were chosen.
 CUDA and real data-recipes execution remain unverified in this local environment.
+
+### MATCH-OPT integration validation (2026-09-09)
+
+CPU tests cover linear integral orientation, the analytic quadratic left-node
+formula, equivalence to a full batch Jacobian, and higher-order parameter
+gradients checked by finite differences. Integration tests cover simplex/box,
+fixed target context, exact same-fidelity grouping, singleton exclusion from
+matching only, duplicate designs, constant labels, reproducibility, and
+oracle isolation, including failed runs with no eligible pairs.
+
+The reduced-budget smoke used Ackley and Branin with 32 logged rows each,
+seed 38, and eight candidates. Settings: embedding width 2, three epochs,
+batch size 8, eight buckets, five quadrature nodes, and five search steps.
+Both runs completed through the unified evaluator/report writer. Local outputs
+are under ignored `results/match_opt_integration_smoke_20260909/`, not the
+publication reference table. CUDA and actual data-recipes group coverage
+remain unverified; verify eligible same-fidelity counts before formal runs.
