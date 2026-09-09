@@ -1,13 +1,13 @@
 # Seeded Publication Benchmark
 
-Normalized maximum score (100th percentile of K=128 recommendations), reported as mean +/- sample SD across 8 independent seeds. Higher is better.
+Normalized maximum score (100th percentile of K=128 recommendations), reported as mean +/- standard error across 8 independent seeds. Higher is better.
 
 | Method | LLM-DM | Ackley | Schaffer N. 2 | Sum of Different Powers | Matyas | Power Sum | Rosenbrock | Michalewicz | Hartmann 6-D | Shekel | Mean rank | Median rank |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | D(best) | 0.881 +/- 0.000 | 1.000 +/- 0.000 | 1.000 +/- 0.000 | 1.000 +/- 0.000 | 1.000 +/- 0.000 | 1.000 +/- 0.000 | 1.000 +/- 0.000 | 1.000 +/- 0.000 | 1.000 +/- 0.000 | 1.000 +/- 0.000 | -- | -- |
 | Best Logged | <u>0.995 +/- 0.000</u> | 1.000 +/- 0.000 | **1.000 +/- 0.000** | 1.000 +/- 0.000 | <u>1.000 +/- 0.000</u> | **1.000 +/- 0.000** | **1.000 +/- 0.000** | **1.000 +/- 0.000** | <u>1.000 +/- 0.000</u> | 1.000 +/- 0.000 | 1.90 | 2.00 |
-| COM | 0.989 +/- 0.014 | <u>1.185 +/- 0.367</u> | 0.512 +/- 0.096 | **1.001 +/- 0.002** | **1.000 +/- 0.000** | 0.965 +/- 0.017 | 0.931 +/- 0.013 | 0.238 +/- 0.088 | 0.176 +/- 0.076 | <u>1.557 +/- 0.290</u> | 2.40 | 3.00 |
-| BDI | **1.003 +/- 0.000** | **1.277 +/- 0.327** | <u>0.527 +/- 0.101</u> | <u>1.000 +/- 0.003</u> | 0.999 +/- 0.001 | <u>1.000 +/- 0.000</u> | <u>1.000 +/- 0.000</u> | <u>0.968 +/- 0.217</u> | **1.306 +/- 0.228** | **1.711 +/- 0.731** | 1.70 | 2.00 |
+| COM | 0.989 +/- 0.005 | <u>1.185 +/- 0.130</u> | 0.512 +/- 0.034 | **1.001 +/- 0.001** | **1.000 +/- 0.000** | 0.965 +/- 0.006 | 0.931 +/- 0.005 | 0.238 +/- 0.031 | 0.176 +/- 0.027 | <u>1.557 +/- 0.102</u> | 2.40 | 3.00 |
+| BDI | **1.003 +/- 0.000** | **1.277 +/- 0.116** | <u>0.527 +/- 0.036</u> | <u>1.000 +/- 0.001</u> | 0.999 +/- 0.000 | <u>1.000 +/- 0.000</u> | <u>1.000 +/- 0.000</u> | <u>0.968 +/- 0.077</u> | **1.306 +/- 0.081** | **1.711 +/- 0.258** | 1.70 | 2.00 |
 
 Bold is best and underlining is second best within each task, based on the mean score.
 
@@ -19,7 +19,7 @@ Bold is best and underlining is second best within each task, based on the mean 
 - Data-mixture training visibility: utility percentiles [0, 40].
 - `D(best)` is the best optimizer-visible logged utility. LLM-DM logged runs retain their recorded model scale and training step, while method recommendations are evaluated at the target 1B/19,500-step fidelity.
 - Synthetic functions: `ackley, schaffer2, sum_different_powers, matyas, power_sum, rosenbrock, michalewicz, hartmann6, shekel`.
-- Displayed uncertainty: sample SD.
+- Displayed uncertainty: standard error.
 - `task_summary.csv` also records sample SD, standard error, 95% Student-t CI, and observed seed range.
 - Candidate count: `K=128` for every method and trial.
 

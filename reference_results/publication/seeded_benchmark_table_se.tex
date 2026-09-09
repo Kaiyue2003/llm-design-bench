@@ -1,8 +1,8 @@
 % Requires: \usepackage{booktabs,graphicx,rotating}
 \begin{sidewaystable*}[t]
 \centering
-\caption{Reference-normalized maximum score (100th percentile of $K=128$ recommendations). Values are mean $\pm$ sample SD across 8 independent seeds. Higher is better; bold and underlined entries denote the best and second-best mean per task.}
-\label{tab:seeded-publication-benchmark}
+\caption{Reference-normalized maximum score (100th percentile of $K=128$ recommendations). Values are mean $\pm$ standard error across 8 independent seeds. Higher is better; bold and underlined entries denote the best and second-best mean per task.}
+\label{tab:seeded-publication-benchmark-se}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lcccccccccccc}
 \toprule
@@ -13,8 +13,8 @@ Method & \multicolumn{1}{c}{Data Mixture} & \multicolumn{2}{c}{Many Local Minima
 $\mathcal{D}$ (best) & $0.881 \pm 0.000$ & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ & -- & -- \\
 \midrule
 Best Logged & $\underline{0.995 \pm 0.000}$ & $1.000 \pm 0.000$ & $\mathbf{1.000 \pm 0.000}$ & $1.000 \pm 0.000$ & $\underline{1.000 \pm 0.000}$ & $\mathbf{1.000 \pm 0.000}$ & $\mathbf{1.000 \pm 0.000}$ & $\mathbf{1.000 \pm 0.000}$ & $\underline{1.000 \pm 0.000}$ & $1.000 \pm 0.000$ & 1.90 & 2.00 \\
-COM & $0.989 \pm 0.014$ & $\underline{1.185 \pm 0.367}$ & $0.512 \pm 0.096$ & $\mathbf{1.001 \pm 0.002}$ & $\mathbf{1.000 \pm 0.000}$ & $0.965 \pm 0.017$ & $0.931 \pm 0.013$ & $0.238 \pm 0.088$ & $0.176 \pm 0.076$ & $\underline{1.557 \pm 0.290}$ & 2.40 & 3.00 \\
-BDI & $\mathbf{1.003 \pm 0.000}$ & $\mathbf{1.277 \pm 0.327}$ & $\underline{0.527 \pm 0.101}$ & $\underline{1.000 \pm 0.003}$ & $0.999 \pm 0.001$ & $\underline{1.000 \pm 0.000}$ & $\underline{1.000 \pm 0.000}$ & $\underline{0.968 \pm 0.217}$ & $\mathbf{1.306 \pm 0.228}$ & $\mathbf{1.711 \pm 0.731}$ & 1.70 & 2.00 \\
+COM & $0.989 \pm 0.005$ & $\underline{1.185 \pm 0.130}$ & $0.512 \pm 0.034$ & $\mathbf{1.001 \pm 0.001}$ & $\mathbf{1.000 \pm 0.000}$ & $0.965 \pm 0.006$ & $0.931 \pm 0.005$ & $0.238 \pm 0.031$ & $0.176 \pm 0.027$ & $\underline{1.557 \pm 0.102}$ & 2.40 & 3.00 \\
+BDI & $\mathbf{1.003 \pm 0.000}$ & $\mathbf{1.277 \pm 0.116}$ & $\underline{0.527 \pm 0.036}$ & $\underline{1.000 \pm 0.001}$ & $0.999 \pm 0.000$ & $\underline{1.000 \pm 0.000}$ & $\underline{1.000 \pm 0.000}$ & $\underline{0.968 \pm 0.077}$ & $\mathbf{1.306 \pm 0.081}$ & $\mathbf{1.711 \pm 0.258}$ & 1.70 & 2.00 \\
 \bottomrule
 \end{tabular}%
 }

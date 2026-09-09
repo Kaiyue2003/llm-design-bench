@@ -1,4 +1,4 @@
 optimizer,mean_rank,median_rank,tasks
-best_logged,2.1,2.5,10
-coms,1.9,2.0,10
-bdi,2.0,2.0,10
+best_logged,1.9,2.0,10
+coms,2.4,3.0,10
+bdi,1.7,2.0,10

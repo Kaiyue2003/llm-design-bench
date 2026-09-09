@@ -1,9 +1,10 @@
 {
   "bdi_steps": 100,
-  "code_git_commit": "8cc1f2466140648f7edad810e2ce8b5d75f5111a",
+  "code_git_commit": "cbf8e04a57b658ca69b0be71aea14cbea04b49c4",
   "code_git_dirty": false,
+  "confidence_interval": "two_sided_95_percent_student_t",
   "config_fingerprint": "37c4cda71c6478d0",
-  "created_at_utc": "2026-08-27T14:35:54.392779+00:00",
+  "created_at_utc": "2026-09-09T12:02:59.004554+00:00",
   "data_mixture_metric": "stack_exchange_cross_entropy",
   "data_mixture_metric_index": 4,
   "data_recipes_git_commit": "37269969a0957448d51622e0c083977bc5d260e8",
@@ -29,6 +30,7 @@
     "coms",
     "bdi"
   ],
+  "observed_range": "minimum_and_maximum_seed_estimates",
   "particle_steps": 100,
   "platform": "Windows-10-10.0.26200-SP0",
   "python": "3.11.15",
@@ -55,6 +57,7 @@
     "hartmann6",
     "shekel"
   ],
+  "table1_style_uncertainty": "standard_error_over_independent_seeds",
   "torch_threads": 1,
   "train_max_percentile": 40.0,
   "train_min_percentile": 0.0,
