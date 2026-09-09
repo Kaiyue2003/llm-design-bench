@@ -62,6 +62,14 @@ def _box_problem() -> OfflineProblem:
 
 _METHOD_CONFIGS = (
     (
+        "ltr",
+        {
+            "hidden_size": 8, "surrogate_epochs": 2, "batch_size": 2,
+            "list_length": 3, "lists_per_epoch": 3, "validation_lists": 2,
+            "solver_steps": 2,
+        },
+    ),
+    (
         "roma",
         {
             "hidden_size": 8, "surrogate_epochs": 2, "batch_size": 2,
@@ -199,6 +207,7 @@ def test_builtin_method_returns_valid_candidate_batch(
 
 def test_builtin_methods_are_registered() -> None:
     assert {
+        "ltr",
         "roma",
         "ict",
         "tri_mentoring",
@@ -507,6 +516,7 @@ class _CountingEvaluator:
 def test_seed_runner_evaluates_builtin_candidates_only_after_return(tmp_path) -> None:
     evaluator = _CountingEvaluator()
     methods = [
+        MethodSpec("ltr", dict(_METHOD_CONFIGS)["ltr"]),
         MethodSpec("roma", dict(_METHOD_CONFIGS)["roma"]),
         MethodSpec("ict", dict(_METHOD_CONFIGS)["ict"]),
         MethodSpec("tri_mentoring", dict(_METHOD_CONFIGS)["tri_mentoring"]),
@@ -605,6 +615,7 @@ def test_seed_runner_evaluates_builtin_candidates_only_after_return(tmp_path) ->
     assert evaluator.predict_calls == len(methods) * 2
     assert set(result.per_seed["status"]) == {"success"}
     assert set(result.per_seed["method_id"]) == {
+        "ltr",
         "roma",
         "ict",
         "tri_mentoring",

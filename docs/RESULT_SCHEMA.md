@@ -128,6 +128,7 @@ llm-design-bench-suite \
   --method standard_ga --method cma_es --method reinforce \
   --method bo_qei --method ga_on_gp --method mc_dropout \
   --method tri_mentoring --method ict --method roma \
+  --method ltr \
   --method coms --method bdi \
   --seed 38 --seed 39 --seed 40 --seed 41 \
   --seed 42 --seed 43 --seed 44 --seed 45 \

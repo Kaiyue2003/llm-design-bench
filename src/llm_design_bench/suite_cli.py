@@ -98,6 +98,7 @@ def benchmark(
             "tri_mentoring",
             "ict",
             "roma",
+            "ltr",
             "coms",
             "bdi",
         ]

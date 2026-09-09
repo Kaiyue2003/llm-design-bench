@@ -46,7 +46,7 @@ def test_catalog_separates_controls_and_marks_current_adaptations() -> None:
         assert methods[method_id]["status"] == "integrated_adaptation"
         assert methods[method_id]["display_name"].endswith("adaptation")
         assert methods[method_id]["source_code"]
-    for method_id in ("roma", "ict", "tri_mentoring"):
+    for method_id in ("roma", "ict", "tri_mentoring", "ltr"):
         assert methods[method_id]["status"] == "integrated_adaptation"
         assert methods[method_id]["display_name"].endswith("adaptation")
         assert len(methods[method_id]["source_commit"]) == 40
@@ -64,7 +64,7 @@ def test_unverified_catalog_sources_are_explicitly_empty() -> None:
             assert "verified" not in method["source_status"]
 
 
-def test_next_forward_sources_are_pinned_but_remain_planned() -> None:
+def test_ranking_policy_sources_are_pinned_and_backlog_matches_status() -> None:
     catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
     methods = {method["method_id"]: method for method in catalog["methods"]}
     expected_sources = {
@@ -81,12 +81,14 @@ def test_next_forward_sources_are_pinned_but_remain_planned() -> None:
             "54837299b33f986563b15176695e2c83472ffdda",
         ),
     }
-    assert catalog["next_forward_integration_order"] == list(expected_sources)
+    assert catalog["next_forward_integration_order"] == ["match_opt", "pgs"]
     audit = ROOT / catalog["next_forward_source_audit"]
     audit_text = audit.read_text(encoding="utf-8")
     for method_id, (source_url, commit) in expected_sources.items():
         method = methods[method_id]
-        assert method["status"] == "planned"
+        assert method["status"] == (
+            "integrated_adaptation" if method_id == "ltr" else "planned"
+        )
         assert method["display_name"].endswith("adaptation")
         assert method["source_code"] == source_url
         assert method["source_commit"] == commit

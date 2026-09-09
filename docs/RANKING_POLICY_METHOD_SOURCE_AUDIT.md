@@ -1,9 +1,9 @@
 # Ranking and Policy Method Source Audit
 
-This is a source/design audit, not an implementation or a reproduction report.
-`ltr`, `match_opt`, and `pgs` remain planned and are not registered methods.
-Implementation order: **LTR -> MATCH-OPT -> PGS**. No training or eight-seed
-experiment was performed for these methods during this audit.
+This source/design audit now also records the integrated `ltr` adaptation.
+`match_opt` and `pgs` remain planned and are not registered methods.
+Implementation order: **LTR (integrated) -> MATCH-OPT -> PGS**. LTR has only
+tests and reduced-budget smoke validation, not formal eight-seed experiments.
 
 ## Authoritative sources
 
@@ -46,9 +46,10 @@ training at module import. The source checkouts are not runtime dependencies.
 The RaM mechanism combines sampled training lists, a learning-to-rank loss,
 and surrogate-output normalization before search. It is not merely an MSE
 proxy with a different name. The public training script runs both ListNet and
-RankCosine, although `config/default.yaml` defaults to MSE. Proposed first
+RankCosine, although `config/default.yaml` defaults to MSE. The integrated
 adapter: **LTR adaptation (RaM-ListNet)**. RankCosine can be a separately named
-configuration/ablation, not a second paper baseline.
+configuration/ablation, not a second paper baseline. Only ListNet is currently
+implemented; RankCosine is not an exposed configuration yet.
 
 Audited files: `model.py`, `utils.py`, `main_from_scratch.py`,
 `config/default.yaml`, and `run_from_scratch.sh` in the pinned repository.
@@ -166,10 +167,31 @@ Integration hazards and tests:
 
 ## Next implementation gate
 
-Implement LTR first, then verify ranking loss, search sign, small-data behavior,
-oracle isolation, exact candidate budget, and reproducibility. Only after
-tests and synthetic smoke runs pass should it enter the registered suite.
-MATCH-OPT follows with line-integral and same-fidelity pairing tests. PGS
+LTR is registered with ranking-loss, search-sign, small-data, checkpoint-copy,
+oracle-isolation, exact-budget, and reproducibility tests. It uses resampled
+training lists and fixed validation lists sharing the visible row pool, not a
+claim of unseen-row generalization. Constant/near-constant utilities and one-row
+datasets return logged/random starts with explicit skipped-training diagnostics.
+Constant feature and prediction scales use one; prediction calibration sees
+only visible rows. The model is frozen before target-fidelity search.
+See [method settings](METHODS.md#ltr) for compact configurable defaults.
+
+MATCH-OPT is next, with line-integral and same-fidelity pairing tests. PGS
 requires a separate transition/action-consistency design check before its
 offline RL implementation. All three will be labeled adaptations; none of
 these pinned repositories establishes exact parity with the SPADE LLM-DM table.
+
+Complete the agreed method roster before freezing and running formal
+experiments. Colab preparation changes the execution environment, not this
+order; reduced-budget integration smoke runs do not count as full trial seeds.
+
+### LTR integration validation (2026-09-09)
+
+The CPU smoke run used Ackley and Branin, 32 logged rows per task, seed 38,
+and eight candidates. Reduced settings were hidden width 8, three training
+epochs, list length 8, eight training lists per epoch, list batch size 4,
+four validation lists, and five candidate-search steps. Both task runs
+completed through the unified evaluator and report writer. Local artifacts
+are under ignored `results/ltr_integration_smoke_20260909/`; they are not
+publication reference results, and no performance-based settings were chosen.
+CUDA and real data-recipes execution remain unverified in this local environment.

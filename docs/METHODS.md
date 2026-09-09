@@ -200,6 +200,36 @@ Default search is computationally expensive because it differentiates through
 input gradients for each candidate. Use reduced smoke settings to test the
 pipeline, not to report final performance.
 
+## LTR
+
+`ltr` is **LTR adaptation (RaM-ListNet)**: an independently implemented
+two-hidden-layer ReLU ranking model. ListNet minimizes cross entropy between
+the softmax of standardized visible utilities and the model's log-softmax,
+averaging over lists. Each list samples rows without replacement; different
+lists may overlap. Training lists are generated lazily each epoch. Fixed
+validation lists use the same visible row pool and select a deep-copied best
+checkpoint by ranking loss; they do not measure unseen-row generalization.
+
+Features include logged fidelity context, standardized using only visible
+data. Search freezes the model and maximizes its output normalized by the
+mean and population standard deviation of predictions on visible logs.
+Constant prediction/feature columns use unit scale. Candidate Adam updates
+only unconstrained design coordinates, mapped to the simplex or box, while
+holding fidelity at its target. No hidden elites or oracle are accessible.
+Top unique logged designs initialize search; missing starts are sampled
+feasibly. With one row or utility standard deviation below `minimum_std`,
+training and search are skipped explicitly and these initial candidates are
+returned. Such a run is not evidence that a ranking model learned anything.
+
+Compact defaults: `hidden_size=64`, `surrogate_epochs=50`, `list_length=32`,
+`lists_per_epoch=256`, `batch_size=32` lists, `validation_lists=32`, training
+Adam rate `3e-4`, `weight_decay=1e-5`, `solver_steps=200`, search rate `1e-3`,
+and `minimum_std=1e-6`. Effective list length is bounded by the visible row
+count; short final batches are retained. All settings are configurable and
+recorded by the runner. These are not frozen formal experiment budgets or
+the original paper settings. RankCosine is not implemented yet. See the
+[source audit](RANKING_POLICY_METHOD_SOURCE_AUDIT.md).
+
 ## COM
 
 The Conservative Objective Model fits the same MLP while constructing

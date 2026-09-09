@@ -201,6 +201,7 @@ llm-design-bench-suite \
   --method tri_mentoring \
   --method ict \
   --method roma \
+  --method ltr \
   --method coms \
   --method bdi \
   --seed 38 --seed 39 --seed 40 --seed 41 \
@@ -211,11 +212,11 @@ llm-design-bench-suite \
 
 Add `--fixed-1b` for the ablation. Both modes use the same unfiltered
 data-recipes normalization reference and the same 1B/19,500-step target.
-When `--method` is omitted, the suite runs these fifteen registered methods.
+When `--method` is omitted, the suite runs these sixteen registered methods.
 The result labels remain **Standard GA adaptation**, **CMA-ES adaptation**,
 **REINFORCE adaptation**, **BO-qEI adaptation**, **GA on GP adaptation**,
 **MC-Dropout adaptation**, **Tri-Mentoring adaptation**, **ICT adaptation**,
-**RoMA adaptation**, **COMs adaptation**,
+**RoMA adaptation**, **LTR adaptation**, **COMs adaptation**,
 and **BDI adaptation**; none
 is presented as an exact reproduction of the cited implementation. Source
 audits are in
@@ -223,9 +224,9 @@ audits are in
 [`docs/GP_UNCERTAINTY_BASELINE_AUDIT.md`](docs/GP_UNCERTAINTY_BASELINE_AUDIT.md),
 with RoMA/ICT/Tri-Mentoring details in
 [`docs/FORWARD_METHOD_SOURCE_AUDIT.md`](docs/FORWARD_METHOD_SOURCE_AUDIT.md).
-The next methods, LTR, MATCH-OPT, and PGS, are source-audited but **not yet
-implemented or included in these fifteen methods**. Their implementation order
-and acceptance requirements are recorded in the
+LTR is integrated as an independent RaM-ListNet adaptation. MATCH-OPT and PGS
+are source-audited but **not yet implemented**. Their acceptance requirements
+and LTR's deliberate deviations are recorded in the
 [ranking and policy source audit](docs/RANKING_POLICY_METHOD_SOURCE_AUDIT.md).
 
 ## Python API
@@ -248,7 +249,7 @@ print("best objective:", -trace.recommendation_utility.max())
 
 The oracle-separated method API currently registers `best_logged`,
 `random_search`, `sobol`, `offline_mlp`, `standard_ga`, `cma_es`, `reinforce`,
-`bo_qei`, `ga_on_gp`, `mc_dropout`, `tri_mentoring`, `ict`, `roma`, `coms`, and `bdi`:
+`bo_qei`, `ga_on_gp`, `mc_dropout`, `tri_mentoring`, `ict`, `roma`, `ltr`, `coms`, and `bdi`:
 
 ```python
 from llm_design_bench.optimizers import make_method
