@@ -21,4 +21,6 @@ def test_container_reproduction_files_are_pinned_and_persistent() -> None:
     assert ":/results" in compose
     assert "37269969a0957448d51622e0c083977bc5d260e8" in reproduce
     assert "--seed 38 --seed 39 --seed 40 --seed 41" in reproduce
+    assert "docker/login-action@v3" in workflow
+    assert "password: ${{ secrets.GITHUB_TOKEN }}" in workflow
     assert "docker/build-push-action@v6" in workflow
