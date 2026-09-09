@@ -24,3 +24,6 @@ def test_container_reproduction_files_are_pinned_and_persistent() -> None:
     assert "docker/login-action@v3" in workflow
     assert "password: ${{ secrets.GITHUB_TOKEN }}" in workflow
     assert "docker/build-push-action@v6" in workflow
+    assert "load: ${{ github.event_name == 'pull_request' }}" in workflow
+    assert "Smoke test container" in workflow
+    assert "llm-design-bench-publication" in workflow
