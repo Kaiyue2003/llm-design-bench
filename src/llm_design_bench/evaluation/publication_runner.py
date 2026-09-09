@@ -14,12 +14,12 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import torch
+from scipy.stats import t as student_t
 
 from llm_design_bench.evaluation.offline_runner import make_logged_percentile_split
 from llm_design_bench.metrics.usefulness import usefulness_summary
-from llm_design_bench.optimizers.bdi import BackwardDistillationOptimizer
-from llm_design_bench.optimizers.best_logged import BestLoggedOptimizer
-from llm_design_bench.optimizers.coms import ConservativeObjectiveModelOptimizer
+from llm_design_bench.optimizers import get_method_metadata, make_method
+from llm_design_bench.problem import OfflineProblem, RunContext
 from llm_design_bench.tasks.data_recipes import DataRecipesTask
 from llm_design_bench.tasks.synthetic_functions import (
     CATEGORY_DISPLAY_NAMES,
@@ -102,13 +102,21 @@ def run_publication_benchmarks(
             min_percentile=config.train_min_percentile,
             max_percentile=config.train_max_percentile,
         )
+        problem = OfflineProblem.from_task(split.task)
         for seed in config.seeds:
             for optimizer_name in METHOD_ORDER:
                 key = ("data_mixture", DATA_MIXTURE_TASK, seed, optimizer_name)
                 if key in completed:
                     continue
-                optimizer = _make_optimizer(optimizer_name, config, seed)
-                trace = optimizer.optimize(split.task)
+                method_result, recommendation_utility = _run_registered_method(
+                    optimizer_name,
+                    split.task,
+                    problem,
+                    config,
+                    seed,
+                    dataset_seed=None,
+                    split_seed=0,
+                )
                 rows.append(
                     _result_row(
                         fingerprint=fingerprint,
@@ -121,7 +129,8 @@ def run_publication_benchmarks(
                         task_seed=None,
                         optimizer_seed=seed,
                         optimizer=optimizer_name,
-                        trace=trace,
+                        method_result=method_result,
+                        recommendation_utility=recommendation_utility,
                         reference_y=split.reference_y,
                         d_best_utility=split.d_best_utility,
                         refnorm_d_best_score=split.refnorm_d_best_score,
@@ -141,12 +150,20 @@ def run_publication_benchmarks(
             )
             reference_y = np.asarray(task.logged_y, dtype=float)
             d_best_utility = float(reference_y.max())
+            problem = OfflineProblem.from_task(task)
             for optimizer_name in METHOD_ORDER:
                 key = ("synthetic", task.name, seed, optimizer_name)
                 if key in completed:
                     continue
-                optimizer = _make_optimizer(optimizer_name, config, seed)
-                trace = optimizer.optimize(task)
+                method_result, recommendation_utility = _run_registered_method(
+                    optimizer_name,
+                    task,
+                    problem,
+                    config,
+                    seed,
+                    dataset_seed=seed,
+                    split_seed=seed,
+                )
                 rows.append(
                     _result_row(
                         fingerprint=fingerprint,
@@ -159,7 +176,8 @@ def run_publication_benchmarks(
                         task_seed=seed,
                         optimizer_seed=seed,
                         optimizer=optimizer_name,
-                        trace=trace,
+                        method_result=method_result,
+                        recommendation_utility=recommendation_utility,
                         reference_y=reference_y,
                         d_best_utility=d_best_utility,
                         refnorm_d_best_score=1.0,
@@ -194,6 +212,34 @@ def run_publication_benchmarks(
     )
     (config.results_dir / "seeded_benchmark_table.tex").write_text(
         render_latex_table(summary, ranks, d_best, metadata),
+        encoding="utf-8",
+    )
+    (config.results_dir / "TABLE1_STYLE.md").write_text(
+        render_markdown_report(
+            summary,
+            ranks,
+            d_best,
+            metadata,
+            uncertainty="se",
+        ),
+        encoding="utf-8",
+    )
+    (config.results_dir / "seeded_benchmark_table_se.tex").write_text(
+        render_latex_table(
+            summary,
+            ranks,
+            d_best,
+            metadata,
+            uncertainty="se",
+        ),
+        encoding="utf-8",
+    )
+    (config.results_dir / "SEED_RANGES.md").write_text(
+        render_seed_range_markdown(summary, d_best),
+        encoding="utf-8",
+    )
+    (config.results_dir / "seeded_benchmark_ranges.tex").write_text(
+        render_seed_range_latex(summary, d_best, metadata),
         encoding="utf-8",
     )
     return raw
@@ -232,12 +278,26 @@ def aggregate_publication_results(
         .agg(
             mean_score=("refnorm_max_score", "mean"),
             std_score=("refnorm_max_score", "std"),
+            min_score=("refnorm_max_score", "min"),
+            max_score=("refnorm_max_score", "max"),
             mean_raw_max_utility=("raw_max_utility", "mean"),
             std_raw_max_utility=("raw_max_utility", "std"),
+            min_raw_max_utility=("raw_max_utility", "min"),
+            max_raw_max_utility=("raw_max_utility", "max"),
             trials=("seed", "nunique"),
         )
         .fillna({"std_score": 0.0, "std_raw_max_utility": 0.0})
     )
+    summary["se_score"] = summary["std_score"] / np.sqrt(summary["trials"])
+    summary["range_score"] = summary["max_score"] - summary["min_score"]
+    summary["se_raw_max_utility"] = summary["std_raw_max_utility"] / np.sqrt(
+        summary["trials"]
+    )
+    summary["range_raw_max_utility"] = (
+        summary["max_raw_max_utility"] - summary["min_raw_max_utility"]
+    )
+    summary = _add_student_t_interval(summary, "score")
+    summary = _add_student_t_interval(summary, "raw_max_utility")
     summary["task_rank"] = summary.groupby("task")["mean_score"].rank(
         method="average",
         ascending=False,
@@ -269,12 +329,17 @@ def aggregate_publication_results(
         .agg(
             mean_score=("refnorm_d_best_score", "mean"),
             std_score=("refnorm_d_best_score", "std"),
+            min_score=("refnorm_d_best_score", "min"),
+            max_score=("refnorm_d_best_score", "max"),
             mean_raw_utility=("d_best_utility", "mean"),
             std_raw_utility=("d_best_utility", "std"),
             trials=("seed", "nunique"),
         )
         .fillna({"std_score": 0.0, "std_raw_utility": 0.0})
     )
+    d_best["se_score"] = d_best["std_score"] / np.sqrt(d_best["trials"])
+    d_best["range_score"] = d_best["max_score"] - d_best["min_score"]
+    d_best = _add_student_t_interval(d_best, "score")
     return summary, ranks, d_best
 
 
@@ -283,7 +348,10 @@ def render_markdown_report(
     ranks: pd.DataFrame,
     d_best: pd.DataFrame,
     metadata: dict[str, Any],
+    *,
+    uncertainty: str = "std",
 ) -> str:
+    error_column, uncertainty_label = _uncertainty_definition(uncertainty)
     tasks = _task_records(summary)
     header = ["Method", *[task["display_name"] for task in tasks], "Mean rank", "Median rank"]
     alignment = ["---", *["---:" for _ in tasks], "---:", "---:"]
@@ -293,7 +361,7 @@ def render_markdown_report(
         (
             "Normalized maximum score (100th percentile of "
             f"K={metadata['recommendations']} recommendations), reported as mean +/- "
-            f"sample SD across {metadata['trial_count']} independent seeds. Higher is better."
+            f"{uncertainty_label} across {metadata['trial_count']} independent seeds. Higher is better."
         ),
         "",
         "| " + " | ".join(header) + " |",
@@ -303,7 +371,7 @@ def render_markdown_report(
     d_best_cells = []
     for task in tasks:
         row = d_best[d_best["task"] == task["task"]].iloc[0]
-        d_best_cells.append(_plain_score_cell(row["mean_score"], row["std_score"]))
+        d_best_cells.append(_plain_score_cell(row["mean_score"], row[error_column]))
     lines.append("| D(best) | " + " | ".join(d_best_cells) + " | -- | -- |")
 
     for optimizer in METHOD_ORDER:
@@ -319,7 +387,7 @@ def render_markdown_report(
                     task=task["task"],
                     optimizer=optimizer,
                     mean=float(row["mean_score"]),
-                    std=float(row["std_score"]),
+                    std=float(row[error_column]),
                 )
             )
         rank = ranks[ranks["optimizer"] == optimizer].iloc[0]
@@ -356,7 +424,8 @@ def render_markdown_report(
                 "evaluated at the target 1B/19,500-step fidelity."
             ),
             f"- Synthetic functions: `{functions}`.",
-            "- Uncertainty: sample standard deviation, not standard error.",
+            f"- Displayed uncertainty: {uncertainty_label}.",
+            "- `task_summary.csv` also records sample SD, standard error, 95% Student-t CI, and observed seed range.",
             f"- Candidate count: `K={metadata['recommendations']}` for every method and trial.",
             "",
             "## Selection And Method Provenance",
@@ -385,6 +454,8 @@ def render_markdown_report(
             "- [Seed manifest](seed_manifest.csv)",
             "- [Run metadata](run_metadata.json)",
             "- [Overleaf table](seeded_benchmark_table.tex)",
+            "- [Table 1-style mean +/- SE report](TABLE1_STYLE.md)",
+            "- [Table 1-style Overleaf table](seeded_benchmark_table_se.tex)",
             "",
         ]
     )
@@ -396,7 +467,15 @@ def render_latex_table(
     ranks: pd.DataFrame,
     d_best: pd.DataFrame,
     metadata: dict[str, Any],
+    *,
+    uncertainty: str = "std",
 ) -> str:
+    error_column, uncertainty_label = _uncertainty_definition(uncertainty)
+    table_label = (
+        "tab:seeded-publication-benchmark-se"
+        if uncertainty == "se"
+        else "tab:seeded-publication-benchmark"
+    )
     tasks = _task_records(summary)
     groups = _task_groups(tasks)
     column_spec = "l" + "c" * len(tasks) + "cc"
@@ -418,9 +497,9 @@ def render_latex_table(
         "\\centering",
         "\\caption{Reference-normalized maximum score (100th percentile of "
         f"$K={metadata['recommendations']}$ recommendations). Values are mean "
-        f"$\\pm$ sample standard deviation across {metadata['trial_count']} independent seeds. "
+        f"$\\pm$ {uncertainty_label} across {metadata['trial_count']} independent seeds. "
         "Higher is better; bold and underlined entries denote the best and second-best mean per task.}",
-        "\\label{tab:seeded-publication-benchmark}",
+        f"\\label{{{table_label}}}",
         "\\resizebox{\\textwidth}{!}{%",
         f"\\begin{{tabular}}{{{column_spec}}}",
         "\\toprule",
@@ -433,7 +512,7 @@ def render_latex_table(
     d_best_cells = []
     for task in tasks:
         row = d_best[d_best["task"] == task["task"]].iloc[0]
-        d_best_cells.append(_latex_plain_score(row["mean_score"], row["std_score"]))
+        d_best_cells.append(_latex_plain_score(row["mean_score"], row[error_column]))
     lines.append("$\\mathcal{D}$ (best) & " + " & ".join(d_best_cells) + " & -- & -- \\\\")
     lines.append("\\midrule")
 
@@ -450,7 +529,7 @@ def render_latex_table(
                     task=task["task"],
                     optimizer=optimizer,
                     mean=float(row["mean_score"]),
-                    std=float(row["std_score"]),
+                    std=float(row[error_column]),
                 )
             )
         rank = ranks[ranks["optimizer"] == optimizer].iloc[0]
@@ -488,6 +567,102 @@ def render_latex_table(
     return "\n".join(lines)
 
 
+def render_seed_range_markdown(
+    summary: pd.DataFrame,
+    d_best: pd.DataFrame,
+) -> str:
+    tasks = _task_records(summary)
+    lines = [
+        "# Observed Seed Ranges",
+        "",
+        "Each cell is [minimum, maximum] over successful independent seed runs.",
+        "",
+        "| Method | " + " | ".join(task["display_name"] for task in tasks) + " |",
+        "| --- | " + " | ".join("---:" for _ in tasks) + " |",
+    ]
+    reference_cells = [
+        _plain_range_cell(
+            d_best[d_best["task"] == task["task"]].iloc[0]["min_score"],
+            d_best[d_best["task"] == task["task"]].iloc[0]["max_score"],
+        )
+        for task in tasks
+    ]
+    lines.append("| D(best) | " + " | ".join(reference_cells) + " |")
+    for optimizer in METHOD_ORDER:
+        cells = []
+        for task in tasks:
+            row = summary[
+                (summary["task"] == task["task"])
+                & (summary["optimizer"] == optimizer)
+            ].iloc[0]
+            cells.append(_plain_range_cell(row["min_score"], row["max_score"]))
+        lines.append(
+            f"| {METHOD_DISPLAY_NAMES[optimizer]} | "
+            + " | ".join(cells)
+            + " |"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def render_seed_range_latex(
+    summary: pd.DataFrame,
+    d_best: pd.DataFrame,
+    metadata: dict[str, Any],
+) -> str:
+    tasks = _task_records(summary)
+    lines = [
+        "% Requires: \\usepackage{booktabs,graphicx,rotating}",
+        "\\begin{sidewaystable*}[t]",
+        "\\centering",
+        "\\caption{Observed minimum and maximum reference-normalized scores "
+        f"across {metadata['trial_count']} independent seeds.}}",
+        "\\label{tab:seeded-publication-ranges}",
+        "\\resizebox{\\textwidth}{!}{%",
+        "\\begin{tabular}{l" + "c" * len(tasks) + "}",
+        "\\toprule",
+        "Method & "
+        + " & ".join(_latex_escape(task["display_name"]) for task in tasks)
+        + " \\\\",
+        "\\midrule",
+    ]
+    reference_cells = [
+        _latex_range_cell(
+            d_best[d_best["task"] == task["task"]].iloc[0]["min_score"],
+            d_best[d_best["task"] == task["task"]].iloc[0]["max_score"],
+        )
+        for task in tasks
+    ]
+    lines.append(
+        "$\\mathcal{D}$ (best) & " + " & ".join(reference_cells) + " \\\\"
+    )
+    lines.append("\\midrule")
+    for optimizer in METHOD_ORDER:
+        cells = []
+        for task in tasks:
+            row = summary[
+                (summary["task"] == task["task"])
+                & (summary["optimizer"] == optimizer)
+            ].iloc[0]
+            cells.append(_latex_range_cell(row["min_score"], row["max_score"]))
+        lines.append(
+            _latex_escape(METHOD_DISPLAY_NAMES[optimizer])
+            + " & "
+            + " & ".join(cells)
+            + " \\\\"
+        )
+    lines.extend(
+        [
+            "\\bottomrule",
+            "\\end{tabular}%",
+            "}",
+            "\\end{sidewaystable*}",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def _result_row(
     *,
     fingerprint: str,
@@ -500,7 +675,8 @@ def _result_row(
     task_seed: int | None,
     optimizer_seed: int,
     optimizer: str,
-    trace,
+    method_result,
+    recommendation_utility: np.ndarray,
     reference_y: np.ndarray,
     d_best_utility: float,
     refnorm_d_best_score: float,
@@ -519,8 +695,22 @@ def _result_row(
         "seed": seed,
         "task_seed": task_seed,
         "optimizer_seed": optimizer_seed,
+        "method_seed": optimizer_seed,
+        "dataset_seed": task_seed,
+        "split_seed": task_seed if task_seed is not None else 0,
         "optimizer": optimizer,
+        "method_id": optimizer,
         "method_display_name": METHOD_DISPLAY_NAMES[optimizer],
+        "implementation_kind": get_method_metadata(
+            optimizer
+        ).implementation_kind.value,
+        "original_framework": get_method_metadata(optimizer).original_framework,
+        "implementation_framework": get_method_metadata(
+            optimizer
+        ).implementation_framework,
+        "source_url": get_method_metadata(optimizer).source_url,
+        "source_commit": get_method_metadata(optimizer).source_commit,
+        "paper_url": get_method_metadata(optimizer).paper_url,
         "train_size": train_size,
         "train_min_percentile": train_min_percentile,
         "train_max_percentile": train_max_percentile,
@@ -528,13 +718,28 @@ def _result_row(
         "reference_max_utility": float(reference_y.max()),
         "d_best_utility": d_best_utility,
         "refnorm_d_best_score": refnorm_d_best_score,
-        "recommendation_count": len(trace.recommendations),
-        "query_count": len(trace.queried),
-        "cumulative_simulated_cost": trace.cumulative_cost,
+        "recommendation_count": len(method_result.candidates),
+        "query_count": 0,
+        "cumulative_simulated_cost": 0.0,
+        "training_summary_json": json.dumps(
+            method_result.training_summary,
+            sort_keys=True,
+            default=str,
+        ),
+        "resolved_method_config_json": json.dumps(
+            method_result.training_summary.get("resolved_method_config", {}),
+            sort_keys=True,
+            default=str,
+        ),
+        "diagnostics_json": json.dumps(
+            method_result.diagnostics,
+            sort_keys=True,
+            default=str,
+        ),
     }
     row.update(
         usefulness_summary(
-            trace.recommendation_utility,
+            recommendation_utility,
             reference_y,
             oracle_best=float(reference_y.max()),
         )
@@ -546,27 +751,43 @@ def _result_row(
     return row
 
 
-def _make_optimizer(
-    optimizer: str,
+def _run_registered_method(
+    method_id: str,
+    evaluator_task,
+    problem: OfflineProblem,
     config: PublicationBenchmarkConfig,
     seed: int,
+    *,
+    dataset_seed: int | None,
+    split_seed: int,
 ):
-    if optimizer == "best_logged":
-        return BestLoggedOptimizer(recommendations=config.recommendations)
-    if optimizer == "coms":
-        return ConservativeObjectiveModelOptimizer(
-            recommendations=config.recommendations,
-            seed=seed,
-            epochs=config.epochs,
-            particle_steps=config.particle_steps,
-        )
-    if optimizer == "bdi":
-        return BackwardDistillationOptimizer(
-            recommendations=config.recommendations,
-            seed=seed,
-            steps=config.bdi_steps,
-        )
-    raise KeyError(f"unknown publication optimizer: {optimizer}")
+    torch.manual_seed(seed)
+    np.random.seed(seed % (2**32 - 1))
+    kwargs: dict[str, Any] = {}
+    if method_id == "coms":
+        kwargs = {
+            "epochs": config.epochs,
+            "particle_steps": config.particle_steps,
+        }
+    elif method_id == "bdi":
+        kwargs = {"steps": config.bdi_steps}
+    elif method_id != "best_logged":
+        raise KeyError(f"unknown publication optimizer: {method_id}")
+    result = make_method(method_id, **kwargs).run(
+        problem,
+        RunContext(
+            method_seed=seed,
+            candidate_budget=config.recommendations,
+            dataset_seed=dataset_seed,
+            split_seed=split_seed,
+        ),
+    )
+    candidates = result.candidates.detach().cpu().numpy()
+    batch = evaluator_task.at_target_fidelity(candidates)
+    utility = np.asarray(evaluator_task.predict(batch), dtype=float)
+    if utility.shape != (config.recommendations,) or not np.isfinite(utility).all():
+        raise ValueError("evaluator returned invalid recommendation utilities")
+    return result, utility
 
 
 def _validate_config(config: PublicationBenchmarkConfig) -> None:
@@ -692,6 +913,9 @@ def _metadata(
         "deterministic_algorithms": config.deterministic,
         "torch_threads": config.torch_threads,
         "uncertainty": "sample_standard_deviation_ddof_1",
+        "table1_style_uncertainty": "standard_error_over_independent_seeds",
+        "confidence_interval": "two_sided_95_percent_student_t",
+        "observed_range": "minimum_and_maximum_seed_estimates",
         "selection_policy": (
             "union of the prior single-seed top COM and top BDI task in each synthetic category"
         ),
@@ -747,6 +971,36 @@ def _package_version(name: str) -> str | None:
         return None
 
 
+def _add_student_t_interval(
+    frame: pd.DataFrame,
+    metric: str,
+) -> pd.DataFrame:
+    result = frame.copy()
+    standard_error = result[f"se_{metric}"]
+    critical = result["trials"].map(
+        lambda count: (
+            float(student_t.ppf(0.975, df=int(count) - 1))
+            if int(count) > 1
+            else 0.0
+        )
+    )
+    result[f"ci95_low_{metric}"] = result[f"mean_{metric}"] - (
+        critical * standard_error
+    )
+    result[f"ci95_high_{metric}"] = result[f"mean_{metric}"] + (
+        critical * standard_error
+    )
+    return result
+
+
+def _uncertainty_definition(uncertainty: str) -> tuple[str, str]:
+    if uncertainty == "std":
+        return "std_score", "sample SD"
+    if uncertainty == "se":
+        return "se_score", "standard error"
+    raise ValueError("uncertainty must be 'std' or 'se'")
+
+
 def _task_records(summary: pd.DataFrame) -> list[dict[str, str]]:
     return (
         summary[["task", "display_name", "category", "category_display_name"]]
@@ -776,6 +1030,10 @@ def _plain_score_cell(mean: float, std: float) -> str:
     return f"{mean:.3f} +/- {std:.3f}"
 
 
+def _plain_range_cell(minimum: float, maximum: float) -> str:
+    return f"[{minimum:.3f}, {maximum:.3f}]"
+
+
 def _markdown_score_cell(
     summary: pd.DataFrame,
     *,
@@ -795,6 +1053,10 @@ def _markdown_score_cell(
 
 def _latex_plain_score(mean: float, std: float) -> str:
     return f"${mean:.3f} \\pm {std:.3f}$"
+
+
+def _latex_range_cell(minimum: float, maximum: float) -> str:
+    return "$[" + f"{minimum:.3f},\\,{maximum:.3f}" + "]$"
 
 
 def _latex_score_cell(

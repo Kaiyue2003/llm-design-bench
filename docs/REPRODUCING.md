@@ -4,6 +4,16 @@ The committed files under `reference_results/` are comparison artifacts, not
 inputs to the benchmark. Fresh runs are always written to the ignored
 `results/` directory.
 
+For the pinned one-command container workflow, use:
+
+```bash
+docker compose run --rm publication
+```
+
+This writes durable outputs to `results/docker/publication/`. See
+[Docker Reproduction](DOCKER.md) for immutable image tags, the external Data
+Recipes volume, and the environment manifest.
+
 ## 1. Create an environment
 
 ```bash
@@ -117,8 +127,11 @@ The compact publication table uses the following predeclared trial seeds:
 
 For synthetic tasks, the logged-dataset seed and optimizer seed both equal the
 trial seed. The Data Recipes logged dataset is fixed, while COM and BDI use the
-trial seed. All methods return `K=128` recommendations. Results are aggregated
-as mean +/- sample standard deviation (`ddof=1`), not standard error.
+trial seed. All methods return `K=128` recommendations. The
+compatibility table uses mean +/- sample standard deviation
+(`ddof=1`). A second Table 1-style report uses mean +/- standard
+error. `task_summary.csv` preserves both together with a 95%
+Student-t interval and observed minimum/maximum seed estimates.
 
 Run:
 

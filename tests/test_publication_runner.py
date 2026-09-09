@@ -35,12 +35,16 @@ def test_publication_runner_writes_seeded_reports_and_resumes(tmp_path) -> None:
 
     expected_files = {
         "README.md",
+        "SEED_RANGES.md",
+        "TABLE1_STYLE.md",
         "d_best_summary.csv",
         "rank_summary.csv",
         "raw_runs.csv",
         "run_metadata.json",
         "seed_manifest.csv",
         "seeded_benchmark_table.tex",
+        "seeded_benchmark_table_se.tex",
+        "seeded_benchmark_ranges.tex",
         "task_summary.csv",
     }
     assert expected_files.issubset(path.name for path in tmp_path.iterdir())
@@ -49,9 +53,15 @@ def test_publication_runner_writes_seeded_reports_and_resumes(tmp_path) -> None:
     assert metadata["seeds"] == [3, 5]
     assert metadata["recommendations"] == 4
     assert metadata["uncertainty"] == "sample_standard_deviation_ddof_1"
+    assert metadata["table1_style_uncertainty"] == (
+        "standard_error_over_independent_seeds"
+    )
 
     markdown = (tmp_path / "README.md").read_text(encoding="utf-8")
     latex = (tmp_path / "seeded_benchmark_table.tex").read_text(encoding="utf-8")
+    latex_se = (tmp_path / "seeded_benchmark_table_se.tex").read_text(
+        encoding="utf-8"
+    )
     assert "mean +/- sample SD across 2 independent seeds" in markdown
     assert "Best Logged" in markdown
     assert "COM" in markdown
@@ -62,6 +72,9 @@ def test_publication_runner_writes_seeded_reports_and_resumes(tmp_path) -> None:
     assert "target 1B/19,500-step fidelity" in latex
     assert "\\mathbf" in latex
     assert "\\underline" in latex
+    assert "standard error" in latex_se
+    assert "\\label{tab:seeded-publication-benchmark}" in latex
+    assert "\\label{tab:seeded-publication-benchmark-se}" in latex_se
 
 
 def test_publication_aggregation_uses_sample_standard_deviation() -> None:
@@ -93,5 +106,9 @@ def test_publication_aggregation_uses_sample_standard_deviation() -> None:
     com = summary[summary["optimizer"] == "coms"].iloc[0]
     assert com["mean_score"] == 2.0
     assert com["std_score"] == 2**0.5
+    assert com["se_score"] == 1.0
+    assert com["min_score"] == 1.0
+    assert com["max_score"] == 3.0
+    assert com["range_score"] == 2.0
     assert ranks.loc[ranks["optimizer"] == "coms", "mean_rank"].item() == 1.0
     assert d_best["mean_score"].item() == 1.0

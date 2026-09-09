@@ -166,14 +166,18 @@ successful-run statistics and the number of failed seeds.
 
 ## Seed-run artifacts
 
-The unified method runner writes two machine-readable files:
+The unified method runner writes two machine-readable files and two rendered
+tables:
 
 - `method_seed_results.csv` contains one row per method configuration and seed,
   including failures, timing, configuration, provenance, candidate diagnostics,
   raw utility, and reference-normalized scores;
 - `method_seed_summary.csv` aggregates successful runs with a mean, sample
-  standard deviation, standard error, and contributing-run count for each
-  metric, while also reporting requested, successful, and failed runs.
+  standard deviation, standard error, 95% Student-t confidence interval,
+  observed minimum and maximum, range, and contributing-run count for each
+  metric, while also reporting requested, successful, and failed runs;
+- `method_seed_table.md` is a GitHub-readable mean +/- SE table; and
+- `method_seed_table.tex` is the equivalent Overleaf-ready table.
 
 The runner creates a fresh method instance for every seed. It evaluates no
 candidate when method training or proposal fails.

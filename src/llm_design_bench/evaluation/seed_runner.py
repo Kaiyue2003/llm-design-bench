@@ -11,6 +11,7 @@ from typing import Any, Mapping, Sequence
 import numpy as np
 import pandas as pd
 import torch
+from scipy.stats import t as student_t
 
 from llm_design_bench.metrics.diversity import pairwise_diversity
 from llm_design_bench.metrics.novelty import candidate_novelty
@@ -151,6 +152,9 @@ def run_method_seed_benchmark(
             try:
                 _seed_everything(seed)
                 method = make_method(spec.method_id, **spec.kwargs)
+                row["resolved_method_config_json"] = _json_dumps(
+                    method.configuration()
+                )
                 context = RunContext(
                     method_seed=seed,
                     candidate_budget=config.candidate_budget,
@@ -207,6 +211,14 @@ def run_method_seed_benchmark(
     config.results_dir.mkdir(parents=True, exist_ok=True)
     per_seed.to_csv(config.results_dir / "method_seed_results.csv", index=False)
     summary.to_csv(config.results_dir / "method_seed_summary.csv", index=False)
+    (config.results_dir / "method_seed_table.md").write_text(
+        render_seed_summary_markdown(summary),
+        encoding="utf-8",
+    )
+    (config.results_dir / "method_seed_table.tex").write_text(
+        render_seed_summary_latex(summary),
+        encoding="utf-8",
+    )
     return SeedBenchmarkResult(per_seed=per_seed, summary=summary)
 
 
@@ -248,12 +260,118 @@ def summarize_seed_results(per_seed: pd.DataFrame) -> pd.DataFrame:
             mean = float(values.mean()) if count else float("nan")
             sample_std = float(values.std(ddof=1)) if count > 1 else float("nan")
             standard_error = sample_std / math.sqrt(count) if count > 1 else float("nan")
+            minimum = float(values.min()) if count else float("nan")
+            maximum = float(values.max()) if count else float("nan")
+            critical = (
+                float(student_t.ppf(0.975, df=count - 1))
+                if count > 1
+                else float("nan")
+            )
             row[f"{metric}_n"] = count
             row[f"{metric}_mean"] = mean
             row[f"{metric}_std"] = sample_std
             row[f"{metric}_se"] = standard_error
+            row[f"{metric}_ci95_low"] = mean - critical * standard_error
+            row[f"{metric}_ci95_high"] = mean + critical * standard_error
+            row[f"{metric}_min"] = minimum
+            row[f"{metric}_max"] = maximum
+            row[f"{metric}_range"] = maximum - minimum
         rows.append(row)
     return pd.DataFrame(rows)
+
+
+def render_seed_summary_markdown(
+    summary: pd.DataFrame,
+    *,
+    metric: str = "refnorm_max_score",
+) -> str:
+    """Render an auditable seed table with both uncertainty and observed range."""
+
+    _validate_summary_metric(summary, metric)
+    lines = [
+        "# Seeded Method Results",
+        "",
+        (
+            "Primary estimate is mean +/- standard error across successful seeds. "
+            "Sample SD, the two-sided 95% Student-t confidence interval, and the "
+            "observed seed range are shown separately."
+        ),
+        "",
+        "| Experiment | Method | Mean +/- SE | Sample SD | 95% CI | Observed range | Runs |",
+        "| --- | --- | ---: | ---: | ---: | ---: | ---: |",
+    ]
+    for _, row in summary.iterrows():
+        lines.append(
+            "| "
+            + " | ".join(
+                (
+                    str(row["experiment_id"]),
+                    str(row["display_name"]),
+                    _mean_error_cell(row, metric, "se"),
+                    _number(row[f"{metric}_std"]),
+                    _interval_cell(row, metric, "ci95"),
+                    _interval_cell(row, metric, "observed"),
+                    f"{int(row['successful_runs'])}/{int(row['requested_runs'])}",
+                )
+            )
+            + " |"
+        )
+    lines.extend(
+        [
+            "",
+            f"Metric: `{metric}`. Confidence intervals describe uncertainty in the seed mean; ",
+            "the observed range reports the minimum and maximum realized seed scores.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def render_seed_summary_latex(
+    summary: pd.DataFrame,
+    *,
+    metric: str = "refnorm_max_score",
+) -> str:
+    """Render a compact booktabs table suitable for direct Overleaf inclusion."""
+
+    _validate_summary_metric(summary, metric)
+    lines = [
+        "% Requires: \\usepackage{booktabs}",
+        "\\begin{table*}[t]",
+        "\\centering",
+        "\\caption{Seeded offline optimization results. The primary estimate is mean "
+        "$\\pm$ standard error; SD is the sample standard deviation, CI is a two-sided "
+        "95\\% Student-$t$ interval, and range is the observed minimum and maximum.}",
+        "\\label{tab:seeded-method-results}",
+        "\\begin{tabular}{llccccc}",
+        "\\toprule",
+        "Experiment & Method & Mean $\\pm$ SE & SD & 95\\% CI & Range & Runs \\\\",
+        "\\midrule",
+    ]
+    for _, row in summary.iterrows():
+        lines.append(
+            " & ".join(
+                (
+                    _latex_escape(str(row["experiment_id"])),
+                    _latex_escape(str(row["display_name"])),
+                    _mean_error_cell(row, metric, "se", latex=True),
+                    _number(row[f"{metric}_std"]),
+                    _interval_cell(row, metric, "ci95", latex=True),
+                    _interval_cell(row, metric, "observed", latex=True),
+                    f"{int(row['successful_runs'])}/{int(row['requested_runs'])}",
+                )
+            )
+            + " \\\\"
+        )
+    lines.extend(
+        [
+            "\\bottomrule",
+            "\\end{tabular}",
+            "\\end{table*}",
+            "",
+        ]
+    )
+    return "\n".join(lines)
 
 
 def _normalize_method_specs(
@@ -328,7 +446,13 @@ def _base_row(
         "adaptations_json": _json_dumps(metadata.adaptations),
         "source_url": metadata.source_url,
         "source_commit": metadata.source_commit,
+        "paper_url": metadata.paper_url,
+        "original_framework": metadata.original_framework,
+        "implementation_framework": metadata.implementation_framework,
+        "optional_dependencies_json": _json_dumps(metadata.optional_dependencies),
+        "config_schema_version": metadata.config_schema_version,
         "method_config_json": _json_dumps(spec.kwargs),
+        "resolved_method_config_json": None,
         "package_commit": config.package_commit,
         "task_name": problem.metadata.task_name,
         "objective_name": problem.metadata.objective_name,
@@ -453,3 +577,73 @@ def _normalized_designs(
 
 def _json_dumps(value: Any) -> str:
     return json.dumps(value, sort_keys=True, default=str, separators=(",", ":"))
+
+
+def _validate_summary_metric(summary: pd.DataFrame, metric: str) -> None:
+    required = {
+        "experiment_id",
+        "display_name",
+        "successful_runs",
+        "requested_runs",
+        f"{metric}_mean",
+        f"{metric}_std",
+        f"{metric}_se",
+        f"{metric}_ci95_low",
+        f"{metric}_ci95_high",
+        f"{metric}_min",
+        f"{metric}_max",
+    }
+    missing = sorted(required.difference(summary.columns))
+    if missing:
+        raise KeyError(f"missing seed-summary columns: {missing}")
+
+
+def _mean_error_cell(
+    row: pd.Series,
+    metric: str,
+    error: str,
+    *,
+    latex: bool = False,
+) -> str:
+    separator = " $\\pm$ " if latex else " +/- "
+    return _number(row[f"{metric}_mean"]) + separator + _number(
+        row[f"{metric}_{error}"]
+    )
+
+
+def _interval_cell(
+    row: pd.Series,
+    metric: str,
+    interval: str,
+    *,
+    latex: bool = False,
+) -> str:
+    if interval == "ci95":
+        low = row[f"{metric}_ci95_low"]
+        high = row[f"{metric}_ci95_high"]
+    elif interval == "observed":
+        low = row[f"{metric}_min"]
+        high = row[f"{metric}_max"]
+    else:
+        raise ValueError(f"unknown interval {interval!r}")
+    left, right = ("$[", "]$") if latex else ("[", "]")
+    return f"{left}{_number(low)}, {_number(high)}{right}"
+
+
+def _number(value: Any) -> str:
+    numeric = float(value)
+    return "--" if not math.isfinite(numeric) else f"{numeric:.3f}"
+
+
+def _latex_escape(value: str) -> str:
+    replacements = {
+        "\\": "\\textbackslash{}",
+        "&": "\\&",
+        "%": "\\%",
+        "$": "\\$",
+        "#": "\\#",
+        "_": "\\_",
+        "{": "\\{",
+        "}": "\\}",
+    }
+    return "".join(replacements.get(character, character) for character in value)

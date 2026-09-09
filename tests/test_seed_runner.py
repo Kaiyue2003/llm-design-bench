@@ -160,12 +160,20 @@ def test_seed_runner_writes_per_seed_and_summary_results(tmp_path) -> None:
     assert result.summary.loc[0, "failed_runs"] == 0
     assert result.summary.loc[0, "raw_max_utility_n"] == 2
     assert np.isfinite(result.summary.loc[0, "raw_max_utility_se"])
+    assert np.isfinite(result.summary.loc[0, "raw_max_utility_ci95_low"])
+    assert np.isfinite(result.summary.loc[0, "raw_max_utility_ci95_high"])
+    assert (
+        result.summary.loc[0, "raw_max_utility_min"]
+        <= result.summary.loc[0, "raw_max_utility_max"]
+    )
     assert result.summary.loc[0, "experiment_id"] == "contract-test"
     assert set(result.per_seed["normalization_reference_id"]) == {
         "toy-target-reference"
     }
     assert (tmp_path / "method_seed_results.csv").is_file()
     assert (tmp_path / "method_seed_summary.csv").is_file()
+    assert (tmp_path / "method_seed_table.md").is_file()
+    assert (tmp_path / "method_seed_table.tex").is_file()
     summary = json.loads(result.per_seed.loc[0, "training_summary_json"])
     assert summary["tag"] == "created"
 

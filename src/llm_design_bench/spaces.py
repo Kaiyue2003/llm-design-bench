@@ -12,6 +12,12 @@ class DesignSpace(ABC):
     @abstractmethod
     def dimension(self) -> int: ...
 
+    @property
+    def model_dimension(self) -> int:
+        """Dimension of the non-redundant representation seen by models."""
+
+        return self.dimension
+
     @abstractmethod
     def validate(self, designs: torch.Tensor) -> None: ...
 
@@ -20,6 +26,23 @@ class DesignSpace(ABC):
 
     @abstractmethod
     def to_unconstrained(self, designs: torch.Tensor) -> torch.Tensor: ...
+
+    def encode_for_model(self, designs: torch.Tensor) -> torch.Tensor:
+        """Map feasible designs to stable model inputs."""
+
+        self.validate(designs)
+        return designs
+
+    def decode_from_model(self, encoded: torch.Tensor) -> torch.Tensor:
+        """Map model-space values back to feasible physical designs."""
+
+        self.validate(encoded)
+        return encoded
+
+    def metric_features(self, designs: torch.Tensor) -> torch.Tensor:
+        """Return scale-comparable coordinates for diversity and novelty."""
+
+        return self.encode_for_model(designs)
 
     @abstractmethod
     def sample(
@@ -50,6 +73,10 @@ class SimplexSpace(DesignSpace):
     def dimension(self) -> int:
         return self._dimension
 
+    @property
+    def model_dimension(self) -> int:
+        return max(self.dimension - 1, 1)
+
     def validate(self, designs: torch.Tensor) -> None:
         _validate_matrix(designs, self.dimension)
         if torch.any(designs < -self.tolerance):
@@ -71,6 +98,39 @@ class SimplexSpace(DesignSpace):
         self.validate(designs)
         epsilon = torch.finfo(designs.dtype).tiny
         return torch.log(designs.clamp_min(epsilon))
+
+    def encode_for_model(self, designs: torch.Tensor) -> torch.Tensor:
+        self.validate(designs)
+        if self.dimension == 1:
+            return torch.zeros(
+                (len(designs), 1),
+                device=designs.device,
+                dtype=designs.dtype,
+            )
+        epsilon = torch.finfo(designs.dtype).tiny
+        logged = torch.log(designs.clamp_min(epsilon))
+        return logged[:, :-1] - logged[:, -1:]
+
+    def decode_from_model(self, encoded: torch.Tensor) -> torch.Tensor:
+        _validate_matrix(encoded, self.model_dimension)
+        if self.dimension == 1:
+            return torch.ones(
+                (len(encoded), 1),
+                device=encoded.device,
+                dtype=encoded.dtype,
+            )
+        reference = torch.zeros(
+            (len(encoded), 1),
+            device=encoded.device,
+            dtype=encoded.dtype,
+        )
+        return torch.softmax(torch.cat([encoded, reference], dim=1), dim=1)
+
+    def metric_features(self, designs: torch.Tensor) -> torch.Tensor:
+        self.validate(designs)
+        epsilon = torch.finfo(designs.dtype).tiny
+        logged = torch.log(designs.clamp_min(epsilon))
+        return logged - logged.mean(dim=1, keepdim=True)
 
     def sample(
         self,
@@ -144,6 +204,21 @@ class BoxSpace(DesignSpace):
         epsilon = torch.finfo(designs.dtype).eps
         unit = ((designs - lower) / (upper - lower)).clamp(epsilon, 1.0 - epsilon)
         return torch.logit(unit)
+
+    def encode_for_model(self, designs: torch.Tensor) -> torch.Tensor:
+        self.validate(designs)
+        bounds = self._bounds.to(device=designs.device, dtype=designs.dtype)
+        lower, upper = bounds[:, 0], bounds[:, 1]
+        return (designs - lower) / (upper - lower)
+
+    def decode_from_model(self, encoded: torch.Tensor) -> torch.Tensor:
+        _validate_matrix(encoded, self.dimension)
+        bounds = self._bounds.to(device=encoded.device, dtype=encoded.dtype)
+        lower, upper = bounds[:, 0], bounds[:, 1]
+        return lower + (upper - lower) * encoded.clamp(0.0, 1.0)
+
+    def metric_features(self, designs: torch.Tensor) -> torch.Tensor:
+        return self.encode_for_model(designs)
 
     def sample(
         self,

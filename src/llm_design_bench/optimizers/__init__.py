@@ -6,6 +6,14 @@ from llm_design_bench.optimizers.base import (
     MethodFamily,
     MethodMetadata,
     OfflineBBOMethod,
+    PreparedFitThenProposeMethod,
+)
+from llm_design_bench.optimizers.catalog import (
+    IntegrationStatus,
+    MethodBlueprint,
+    get_method_blueprint,
+    list_method_blueprints,
+    planned_method_names,
 )
 from llm_design_bench.optimizers.best_logged import BestLoggedOptimizer
 from llm_design_bench.optimizers.coms import ConservativeObjectiveModelOptimizer
@@ -20,6 +28,12 @@ from llm_design_bench.optimizers.registry import (
     register_method,
 )
 from llm_design_bench.optimizers.sobol_search import SobolSearch
+from llm_design_bench.optimizers.unified_baselines import (
+    UnifiedBDI,
+    UnifiedBestLogged,
+    UnifiedCOM,
+    UnifiedOfflineMLP,
+)
 
 __all__ = [
     "BackwardDistillationOptimizer",
@@ -28,16 +42,26 @@ __all__ = [
     "DirichletRandomSearch",
     "FitThenProposeMethod",
     "ImplementationKind",
+    "IntegrationStatus",
+    "MethodBlueprint",
     "MethodCapabilities",
     "MethodFamily",
     "MethodMetadata",
     "OfflineMLPOptimizer",
     "OfflineBBOMethod",
+    "PreparedFitThenProposeMethod",
     "SobolSearch",
+    "UnifiedBDI",
+    "UnifiedBestLogged",
+    "UnifiedCOM",
+    "UnifiedOfflineMLP",
+    "get_method_blueprint",
     "get_method_capabilities",
     "get_method_metadata",
     "list_methods",
+    "list_method_blueprints",
     "make_method",
     "method_names",
+    "planned_method_names",
     "register_method",
 ]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -18,9 +19,8 @@ from llm_design_bench.metrics.usefulness import (
     add_reference_normalized_score_columns,
     usefulness_summary,
 )
-from llm_design_bench.optimizers.bdi import BackwardDistillationOptimizer
-from llm_design_bench.optimizers.best_logged import BestLoggedOptimizer
-from llm_design_bench.optimizers.coms import ConservativeObjectiveModelOptimizer
+from llm_design_bench.optimizers import make_method
+from llm_design_bench.problem import OfflineProblem, RunContext
 from llm_design_bench.tasks.synthetic_functions import (
     CATEGORY_DISPLAY_NAMES,
     DEFAULT_SYNTHETIC_FUNCTIONS,
@@ -61,26 +61,36 @@ def run_synthetic_bo_benchmarks(
             logged_samples=config.logged_samples,
             seed=config.seed + task_index,
         )
+        problem = OfflineProblem.from_task(task)
         task_optimizers = optimizers
         if task_optimizers is None:
-            task_optimizers = (
-                BestLoggedOptimizer(recommendations=config.recommendations),
-                ConservativeObjectiveModelOptimizer(
-                    recommendations=config.recommendations,
-                    seed=config.seed,
-                    epochs=config.epochs,
-                    particle_steps=config.particle_steps,
-                ),
-                BackwardDistillationOptimizer(
-                    recommendations=config.recommendations,
-                    seed=config.seed,
-                    steps=config.bdi_steps,
-                ),
-            )
+            task_optimizers = ("best_logged", "coms", "bdi")
 
         logged_normalized = task.normalize_designs(task.logged_x.mixtures)
         for optimizer in task_optimizers:
-            trace = optimizer.optimize(task)
+            if isinstance(optimizer, str):
+                (
+                    optimizer_name,
+                    recommendations,
+                    recommendation_utility,
+                    training_summary_json,
+                ) = _run_unified_synthetic_method(
+                    optimizer,
+                    task,
+                    problem,
+                    config,
+                    dataset_seed=config.seed + task_index,
+                )
+                query_count = 0
+                cumulative_cost = 0.0
+            else:
+                trace = optimizer.optimize(task)
+                optimizer_name = trace.name
+                recommendations = trace.recommendations
+                recommendation_utility = trace.recommendation_utility
+                training_summary_json = None
+                query_count = len(trace.queried)
+                cumulative_cost = trace.cumulative_cost
             row = {
                 "task": task.name,
                 "display_name": task.display_name,
@@ -89,19 +99,31 @@ def run_synthetic_bo_benchmarks(
                 "source": task.spec.source,
                 "dimension": task.mixture_dim,
                 "logged_samples": len(task.logged_y),
-                "optimizer": trace.name,
+                "optimizer": optimizer_name,
                 "global_minimum_objective": task.spec.global_minimum_value,
                 "oracle_utility": task.oracle_utility,
-                "query_count": len(trace.queried),
-                "recommendation_count": len(trace.recommendations),
-                "cumulative_simulated_cost": trace.cumulative_cost,
+                "method_seed": config.seed,
+                "dataset_seed": config.seed + task_index,
+                "split_seed": config.seed + task_index,
+                "query_count": query_count,
+                "recommendation_count": len(recommendations),
+                "cumulative_simulated_cost": cumulative_cost,
+                "training_summary_json": training_summary_json,
             }
-            row.update(usefulness_summary(trace.recommendation_utility, task.logged_y, task.oracle_utility))
+            row.update(
+                usefulness_summary(
+                    recommendation_utility,
+                    task.logged_y,
+                    task.oracle_utility,
+                )
+            )
             row["best_objective"] = -row["raw_max_utility"]
             row["median_objective"] = -row["raw_median_utility"]
             row["mean_objective"] = -row["raw_mean_utility"]
 
-            recommendations_normalized = task.normalize_designs(trace.recommendations.mixtures)
+            recommendations_normalized = task.normalize_designs(
+                recommendations.mixtures
+            )
             row["candidate_diversity"] = pairwise_diversity(recommendations_normalized)
             row["candidate_novelty"] = candidate_novelty(
                 recommendations_normalized,
@@ -115,6 +137,44 @@ def run_synthetic_bo_benchmarks(
     save_synthetic_bo_summary_plot(frame, config.results_dir / "synthetic_bo_summary.png")
     save_synthetic_bo_category_plots(frame, config.results_dir)
     return frame
+
+
+def _run_unified_synthetic_method(
+    method_id: str,
+    task,
+    problem: OfflineProblem,
+    config: SyntheticBenchmarkConfig,
+    *,
+    dataset_seed: int,
+):
+    kwargs = {}
+    if method_id == "coms":
+        kwargs = {
+            "epochs": config.epochs,
+            "particle_steps": config.particle_steps,
+        }
+    elif method_id == "bdi":
+        kwargs = {"steps": config.bdi_steps}
+    elif method_id != "best_logged":
+        raise KeyError(f"unknown synthetic optimizer: {method_id}")
+    result = make_method(method_id, **kwargs).run(
+        problem,
+        RunContext(
+            method_seed=config.seed,
+            candidate_budget=config.recommendations,
+            dataset_seed=dataset_seed,
+            split_seed=dataset_seed,
+        ),
+    )
+    candidates = result.candidates.detach().cpu().numpy()
+    recommendations = task.at_target_fidelity(candidates)
+    utility = np.asarray(task.predict(recommendations), dtype=float)
+    return (
+        method_id,
+        recommendations,
+        utility,
+        json.dumps(result.training_summary, sort_keys=True, default=str),
+    )
 
 
 def save_synthetic_bo_category_plots(frame: pd.DataFrame, results_dir: Path) -> None:

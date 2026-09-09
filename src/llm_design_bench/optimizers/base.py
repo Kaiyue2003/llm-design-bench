@@ -9,6 +9,11 @@ import numpy as np
 import torch
 
 from llm_design_bench.problem import MethodResult, OfflineProblem, RunContext
+from llm_design_bench.transforms import (
+    PreparedOfflineProblem,
+    ProblemPreparationConfig,
+    prepare_offline_problem,
+)
 from llm_design_bench.types import CandidateBatch
 
 
@@ -16,6 +21,10 @@ class MethodFamily(str, Enum):
     STANDARD = "standard"
     FORWARD_SURROGATE = "forward_surrogate"
     INVERSE_GENERATIVE = "inverse_generative"
+    ADAPTIVE_SAMPLING = "adaptive_sampling"
+    TRAJECTORY_MODEL = "trajectory_model"
+    TRANSPORT = "transport"
+    HYBRID = "hybrid"
     REFERENCE = "reference"
 
 
@@ -45,6 +54,11 @@ class MethodMetadata:
     implementation_kind: ImplementationKind
     source_url: str | None = None
     source_commit: str | None = None
+    paper_url: str | None = None
+    original_framework: str | None = None
+    implementation_framework: str = "pytorch"
+    optional_dependencies: tuple[str, ...] = ()
+    config_schema_version: int = 1
     description: str = ""
     adaptations: tuple[str, ...] = ()
 
@@ -60,6 +74,10 @@ class MethodMetadata:
             raise ValueError(
                 "method_id may contain only lowercase letters, digits, and underscores"
             )
+        if self.implementation_framework.lower() != "pytorch":
+            raise ValueError("registered implementations must expose a PyTorch boundary")
+        if self.config_schema_version < 1:
+            raise ValueError("config_schema_version must be positive")
 
 
 class OfflineBBOMethod(ABC):
@@ -78,11 +96,27 @@ class OfflineBBOMethod(ABC):
         # dataclasses do not otherwise prevent mutation of tensor contents.
         prepared = problem.to(context.device, context.dtype, copy=True)
         generator = context.make_generator()
-        result = self.optimize(prepared, context=context, generator=generator)
-        if not isinstance(result, MethodResult):
+        optimized = self.optimize(prepared, context=context, generator=generator)
+        if not isinstance(optimized, MethodResult):
             raise TypeError("optimize must return MethodResult")
+        summary = dict(optimized.training_summary)
+        summary.setdefault("resolved_method_config", dict(self.configuration()))
+        result = MethodResult(
+            candidates=optimized.candidates,
+            training_summary=summary,
+            diagnostics=dict(optimized.diagnostics),
+        )
         self._validate_result(result, prepared, context)
         return result
+
+    def configuration(self) -> Mapping[str, Any]:
+        """Return JSON-safe public constructor state for run manifests."""
+
+        return {
+            name: value
+            for name, value in vars(self).items()
+            if not name.startswith("_") and _is_configuration_value(value)
+        }
 
     @abstractmethod
     def optimize(
@@ -176,6 +210,75 @@ class FitThenProposeMethod(OfflineBBOMethod):
         return {}
 
 
+class PreparedFitThenProposeMethod(OfflineBBOMethod):
+    """Template with deterministic splits and train-only fitted transforms."""
+
+    validation_fraction: float = 0.2
+    log1p_context_indices: tuple[int, ...] | None = None
+
+    def optimize(
+        self,
+        problem: OfflineProblem,
+        *,
+        context: RunContext,
+        generator: torch.Generator,
+    ) -> MethodResult:
+        prepared = prepare_offline_problem(
+            problem,
+            context,
+            ProblemPreparationConfig(
+                validation_fraction=self.validation_fraction,
+                log1p_context_indices=self.log1p_context_indices,
+            ),
+        )
+        summary = dict(
+            self.fit_prepared(
+                prepared,
+                context=context,
+                generator=generator,
+            )
+            or {}
+        )
+        summary.update(
+            {
+                "train_samples": len(prepared.split.train),
+                "validation_samples": len(prepared.split.validation),
+                "split_seed": prepared.split.split_seed,
+            }
+        )
+        candidates = self.propose_prepared(
+            prepared,
+            context=context,
+            generator=generator,
+        )
+        return MethodResult(
+            candidates=candidates,
+            training_summary=summary,
+            diagnostics=dict(self.diagnostics()),
+        )
+
+    @abstractmethod
+    def fit_prepared(
+        self,
+        problem: PreparedOfflineProblem,
+        *,
+        context: RunContext,
+        generator: torch.Generator,
+    ) -> Mapping[str, Any] | None: ...
+
+    @abstractmethod
+    def propose_prepared(
+        self,
+        problem: PreparedOfflineProblem,
+        *,
+        context: RunContext,
+        generator: torch.Generator,
+    ) -> torch.Tensor: ...
+
+    def diagnostics(self) -> Mapping[str, Any]:
+        return {}
+
+
 @dataclass(frozen=True)
 class EvaluationTrace:
     name: str
@@ -204,3 +307,16 @@ def top_candidates(
         ),
         utility[indices],
     )
+
+
+def _is_configuration_value(value: Any) -> bool:
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return True
+    if isinstance(value, (tuple, list)):
+        return all(_is_configuration_value(item) for item in value)
+    if isinstance(value, Mapping):
+        return all(
+            isinstance(key, str) and _is_configuration_value(item)
+            for key, item in value.items()
+        )
+    return False

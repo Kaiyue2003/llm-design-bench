@@ -26,6 +26,12 @@ that uses differentiable RBF kernel regression instead of the original legacy
 JAX/Neural Tangents runtime; see [Method Notes](docs/METHODS.md) for the exact
 mechanisms and limitations.
 
+The unified runnable registry currently exposes `best_logged`,
+`offline_mlp`, `coms`, and `bdi`. A separate
+integration catalog defines the requirements for CbAS, MINs, DDOM, GABO, GTG,
+RGD, BONET, DEMO, ROOT, and SPADE without presenting unfinished ports as
+runnable methods.
+
 ## Installation
 
 Install directly from GitHub:
@@ -45,6 +51,15 @@ python -m pytest -q
 
 Python 3.11 and 3.12 are supported. PyTorch is installed because the MLP, COM,
 and BDI implementations optimize differentiable surrogate models.
+
+For the fully pinned container environment, run:
+
+```bash
+docker compose run --rm smoke
+```
+
+See [Docker Reproduction](docs/DOCKER.md) for the full eight-seed command,
+external Data Recipes pin, result volume, and immutable GHCR tags.
 
 ## Quickstart
 
@@ -108,10 +123,12 @@ llm-design-bench-publication \
   --results-dir results/publication
 ```
 
-The command checkpoints raw per-seed rows and emits mean +/- sample standard
-deviation summaries, a seed manifest, environment metadata, a GitHub Markdown
-table, and an Overleaf-ready LaTeX table. The committed reference table and
-its raw inputs are in
+The command checkpoints raw per-seed rows and emits both mean +/- sample
+standard deviation and Table 1-style mean +/- standard error summaries.
+`task_summary.csv` also contains 95% Student-t confidence intervals
+and observed seed ranges. Seed manifests, environment metadata, GitHub
+Markdown tables, and Overleaf-ready LaTeX tables are written from the same raw
+rows. The committed reference table and its raw inputs are in
 [`reference_results/publication/`](reference_results/publication/).
 
 The synthetic publication subset is the union of the prior single-seed COM
@@ -185,19 +202,24 @@ The Python registry also exposes this setting as `make("data-recipes-1b")`.
 ## Python API
 
 ```python
-from llm_design_bench import make
-from llm_design_bench.optimizers import BackwardDistillationOptimizer
+import numpy as np
+
+from llm_design_bench import OfflineProblem, RunContext, make
+from llm_design_bench.optimizers import make_method
 
 task = make("synthetic-ackley", logged_samples=256, seed=38)
-optimizer = BackwardDistillationOptimizer(
-    recommendations=64,
-    seed=38,
-    steps=100,
+problem = OfflineProblem.from_task(task)
+method = make_method("bdi", steps=100)
+result = method.run(
+    problem,
+    RunContext(method_seed=38, dataset_seed=38, split_seed=38, candidate_budget=64),
 )
-trace = optimizer.optimize(task)
 
-print("best utility:", trace.recommendation_utility.max())
-print("best objective:", -trace.recommendation_utility.max())
+# Oracle evaluation remains outside the method boundary.
+batch = task.at_target_fidelity(result.candidates.detach().cpu().numpy())
+utility = np.asarray(task.predict(batch))
+print("best utility:", utility.max())
+print("best objective:", -utility.max())
 ```
 
 See [synthetic_quickstart.py](examples/synthetic_quickstart.py) and
@@ -223,6 +245,10 @@ Generated files go to `results/`, which is intentionally ignored by Git.
 The stable offline-method data boundary, candidate rules, seed policy, and
 implementation-provenance requirements are defined in
 [`docs/BENCHMARK_PROTOCOL.md`](docs/BENCHMARK_PROTOCOL.md).
+The concrete tensor flow is documented in
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), and the PyTorch port
+checklist and method skeleton are in
+[`docs/ADDING_METHODS.md`](docs/ADDING_METHODS.md).
 
 Using `pip`:
 

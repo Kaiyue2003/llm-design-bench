@@ -1,0 +1,54 @@
+name: llm-design-bench
+
+x-benchmark: &benchmark
+  image: ${LLM_DESIGN_BENCH_IMAGE:-ghcr.io/kaiyue2003/llm-design-bench:main}
+  build:
+    context: .
+    args:
+      VCS_REF: ${VCS_REF:-local}
+  volumes:
+    - ${RESULTS_DIR:-./results/docker}:/results
+    - data-recipes:/opt/external
+  environment: &determinism
+    PYTHONHASHSEED: "0"
+    OMP_NUM_THREADS: "1"
+    MKL_NUM_THREADS: "1"
+    OPENBLAS_NUM_THREADS: "1"
+
+services:
+  publication:
+    <<: *benchmark
+    environment:
+      <<: *determinism
+      RUN_RESULTS_DIR: /results/publication
+    command: ["/app/docker/reproduce_publication.sh"]
+
+  smoke:
+    <<: *benchmark
+    environment:
+      <<: *determinism
+      RUN_RESULTS_DIR: /results/smoke
+    command:
+      - llm-design-bench-publication
+      - --no-data-mixture
+      - --function
+      - ackley
+      - --function
+      - booth
+      - --seed
+      - "38"
+      - --logged-samples
+      - "32"
+      - --recommendations
+      - "8"
+      - --epochs
+      - "2"
+      - --particle-steps
+      - "2"
+      - --bdi-steps
+      - "2"
+      - --results-dir
+      - /results/smoke
+
+volumes:
+  data-recipes:

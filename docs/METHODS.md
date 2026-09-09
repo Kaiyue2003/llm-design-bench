@@ -10,9 +10,19 @@ designs live inside each function's box bounds.
 For synthetic minimization functions, the adapter defines
 `utility = -objective`. This lets every optimizer maximize the same quantity.
 
+## Shared PyTorch preparation
+
+The unified implementations operate on `OfflineProblem` and never
+receive the evaluator oracle. A deterministic split is created with
+`split_seed`. Context and utility transforms are fitted on training
+rows only. Simplex designs use additive log-ratio model features, while box
+designs use unit-box features; every final candidate is decoded and validated
+in physical coordinates.
+
 ## Offline MLP
 
-The MLP fits a two-hidden-layer ReLU network to standardized logged utilities.
+The registered MLP fits a two-hidden-layer SiLU network to standardized logged
+utilities.
 Candidate optimization starts from the best unique logged designs and updates
 unconstrained parameters with Adam. A softmax maps parameters to simplex
 mixtures; a sigmoid and the task bounds map parameters to continuous synthetic
@@ -32,6 +42,9 @@ port of the original
 [`design-baselines`](https://github.com/brandontrabucco/design-baselines)
 implementation.
 
+Its registry metadata records the TensorFlow origin, PyTorch implementation
+boundary, and the multi-fidelity adaptation.
+
 ## BDI
 
 The BDI adaptation first fits RBF kernel ridge regression to standardized
@@ -48,6 +61,15 @@ distillation mechanism while avoiding the original JAX, Neural Tangents, and
 Design-Bench dependencies. It should therefore be described as a BDI
 adaptation when reporting results. The reference implementation is the
 authors' [`GGchen1997/BDI`](https://github.com/GGchen1997/BDI) repository.
+
+## Planned inverse and diffusion methods
+
+CbAS, MINs, DDOM, GABO, GTG, RGD, BONET, DEMO, ROOT, and SPADE are represented
+by `MethodBlueprint` entries in the integration catalog. They are not
+registered as runnable methods until a PyTorch implementation has component
+parity tests and an end-to-end benchmark test. See
+[Adding an Offline Method](ADDING_METHODS.md) for the required components and
+porting checklist.
 
 ## Reference-normalized utility
 
