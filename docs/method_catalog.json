@@ -3,7 +3,7 @@
   "scope": "Methods compared in arXiv:2605.11246v2 plus project controls",
   "paper_method_count": 24,
   "paper_source": "https://arxiv.org/abs/2605.11246",
-  "next_forward_integration_order": ["spade"],
+  "next_forward_integration_order": [],
   "ranking_policy_source_audit": "docs/RANKING_POLICY_METHOD_SOURCE_AUDIT.md",
   "next_forward_source_audit": "docs/SPADE_SOURCE_AUDIT.md",
   "methods": [
@@ -33,7 +33,7 @@
     {"method_id": "demo", "display_name": "DEMO", "paper_role": "baseline", "family": "inverse_generative", "status": "planned", "pytorch_plan": "PyTorch design-distribution diffusion and editing pipeline", "source_code": null, "source_status": "official source must be located and pinned"},
     {"method_id": "root", "display_name": "ROOT", "paper_role": "baseline", "family": "inverse_generative", "status": "planned", "pytorch_plan": "PyTorch probabilistic bridge for low-to-high-score distribution translation", "source_code": null, "source_status": "official source must be located and pinned"},
 
-    {"method_id": "spade", "display_name": "SPADE", "paper_role": "proposed", "family": "forward_surrogate", "status": "planned_official_adapter", "integration_stage": "source_audited", "source_audit": "docs/SPADE_SOURCE_AUDIT.md", "source_license": "MIT", "pytorch_plan": "Attributed official-core-derived PyTorch adaptation with native kNN, constrained design-only evolution, fixed target context, local generators, and exact candidate budget", "source_code": "https://github.com/HarryYoung2018/spade", "source_commit": "586151bbb56e246f93ca97ce33f79887a13161bd", "source_status": "verified MIT-licensed official core; source audited with search-contract probes; adapter not implemented; paper preprocessing and final benchmark configs are not public"}
+    {"method_id": "spade", "display_name": "SPADE adaptation (official-core-derived)", "paper_role": "proposed", "family": "forward_surrogate", "status": "integrated_adaptation", "integration_stage": "integrated_diffusion_lcb_ea", "source_audit": "docs/SPADE_SOURCE_AUDIT.md", "source_license": "MIT", "pytorch_plan": "Attributed official-core-derived PyTorch adaptation with native kNN, constrained design-only evolution, fixed target context, local generators, and exact candidate budget", "source_code": "https://github.com/HarryYoung2018/spade", "source_commit": "586151bbb56e246f93ca97ce33f79887a13161bd", "source_status": "verified MIT-licensed official core; source audited and adapter integrated with packaged attribution, component comparison and contract tests; paper preprocessing and final benchmark configs are not public; not a parity reproduction"}
   ],
   "project_controls": [
     {"method_id": "best_logged", "display_name": "Best Logged", "family": "reference", "status": "integrated_unified"},

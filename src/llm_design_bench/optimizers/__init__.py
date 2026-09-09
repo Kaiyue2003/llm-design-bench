@@ -25,6 +25,7 @@ from llm_design_bench.optimizers.ict import ImportanceAwareCoTeachingMethod
 from llm_design_bench.optimizers.ltr import LearningToRankMethod
 from llm_design_bench.optimizers.match_opt import GradientMatchingMethod
 from llm_design_bench.optimizers.pgs import PolicyGuidedSearchMethod
+from llm_design_bench.optimizers.spade import SpadeMethod
 from llm_design_bench.optimizers.mc_dropout import MCDropoutMethod
 from llm_design_bench.optimizers.mlp_surrogate import (
     OfflineMLPMethod,
@@ -65,6 +66,7 @@ __all__ = [
     "LearningToRankMethod",
     "GradientMatchingMethod",
     "PolicyGuidedSearchMethod",
+    "SpadeMethod",
     "MethodCapabilities",
     "MethodFamily",
     "MethodMetadata",

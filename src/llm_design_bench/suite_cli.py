@@ -101,6 +101,7 @@ def benchmark(
             "ltr",
             "match_opt",
             "pgs",
+            "spade",
             "coms",
             "bdi",
         ]

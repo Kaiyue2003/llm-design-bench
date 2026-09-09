@@ -67,7 +67,7 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-llm_design_bench = ["py.typed"]
+llm_design_bench = ["py.typed", "third_party/*.txt"]
 
 [dependency-groups]
 dev = [

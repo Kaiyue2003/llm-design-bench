@@ -1,9 +1,10 @@
 # SPADE source audit and adapter gate
 
-Audited 2026-09-09. This is a pre-integration audit, not a registered method,
-training run, or reproduction of a published result. The registry still has
-18 methods. Complete the agreed method roster before the full one-seed trials
-and subsequent eight-seed experiments.
+Audited and integrated 2026-09-09. The original audit and its probes are
+retained below; the implementation update is at the end. SPADE is now the
+nineteenth registered method, an official-core-derived adaptation, not a
+reproduction of a published result. Complete the agreed method roster before
+the full one-seed trials and subsequent eight-seed experiments.
 
 ## Source and reuse boundary
 
@@ -20,9 +21,9 @@ and subsequent eight-seed experiments.
   benchmark preprocessing/evaluation stack and final per-task configurations.
   A generic NPZ loader is not the paper's LLM-DM adapter.
 
-The source checkout used for inspection is outside this package. No upstream
-code is vendored or imported by the benchmark in this audit. At integration,
-prefer a small, attributed internal core over an unpinned runtime dependency.
+The source checkout used for inspection is outside this package. The initial
+audit did not vendor code; the subsequent integration uses a small, attributed
+internal core rather than an unpinned runtime dependency.
 Record every change, especially generator/dtype plumbing, native kNN and search.
 The intended label is **SPADE adaptation (official-core-derived)** with
 `ImplementationKind.MULTI_FIDELITY_ADAPTATION`, not an unchanged official wrapper
@@ -185,7 +186,7 @@ data-recipes checkout). Ruff passed for the changed catalog test file, and
 the diff passed whitespace checks. These counts exclude the three upstream
 public-API smoke tests described above.
 
-## Next implementation step and acceptance gate
+## Implementation acceptance gate
 
 1. Add an attributed PyTorch scalar-diffusion/calibration/support core with
    source provenance and packaged MIT notice. Test reference formulas,
@@ -201,3 +202,57 @@ public-API smoke tests described above.
 
 Do not freeze the formal configuration or run eight seeds as part of this
 integration step. Coordinate the inverse-method roster before formal training.
+
+## Integration update (2026-09-09)
+
+`optimizers/spade_core.py` contains the attributed diffusion and regularization
+core. `optimizers/spade.py` implements the immutable method configuration,
+visible-only fitting and constrained evolutionary search. The full MIT notice
+is included at `llm_design_bench/third_party/SPADE_LICENSE.txt` in both source
+and wheel distributions; there is no runtime import of the source checkout.
+
+The adapter follows the decisions above with these explicit refinements:
+
+- It supports deterministic DDIM only (no eta argument); it omits the source's
+  mathematically unused noise draws at eta=0. MC chunks generate exactly the
+  requested draws, not rounded-up groups subsequently discarded. These changes
+  alter RNG sequences but not the sampling equations.
+- Final candidates come from a freshly scored final population, which already
+  includes the previous generation's elites. No archive of historical noisy
+  best scores is retained. Exactly K evaluated population slots are returned;
+  duplicate designs may occur and their count is reported, never hidden.
+- Source population capping by N is removed. Population is at least K and two;
+  initialization cycles through utility-ranked visible designs with jitter.
+  Configured elite count is below configured population, retaining offspring.
+- The source topology is preserved; `LocalLinear` initializes with the same
+  fan-in uniform law using the run generator, without global RNG mutation.
+- Visible-standardization uses shared benchmark safeguards (minimum std 1e-6),
+  not the NPZ loader's 1e-12 threshold. Both feature and utility scales are saved.
+- Compact defaults use width 64, time dimension 32, 50 epochs, 32 acquisition
+  draws and 50 generations. They are configurable, not frozen formal budgets.
+  See [method settings](METHODS.md#spade).
+
+Against the pinned official core, a CPU float32 component probe copied identical
+weights into both networks (two input dimensions, width eight, time dimension
+four, 100 diffusion steps). Noise prediction agreed exactly; ten-step eta=0
+DDIM sampling with the same initial noise had maximum absolute error
+2.384185791015625e-7. This is a component check, not whole-method parity.
+Committed tests also check the forward-noising and zero-epsilon DDIM formulas,
+finite-difference calibration gradients, support hinges, deterministic neighbor
+ties, uncertainty-floor edge cases, fixed-context search, local RNG, small and
+duplicate datasets, exact budgets, float32/float64 and oracle isolation.
+
+Reduced CPU integration smoke: Ackley and Branin, 32 logged rows each, seed 38,
+K=8; width 16, time dimension eight, 20 diffusion steps, three epochs, batch
+eight, three calibration draws/steps, four acquisition draws with three DDIM
+steps, population eight, elite four and three generations. Both complete through
+the evaluator/report writer. Artifacts are ignored under
+`results/spade_integration_smoke_20260909/`, not `reference_results/`.
+CUDA and real data-recipes execution remain unverified locally. These checks
+do not count as full trial seeds or as evidence of competitive performance.
+
+Integration regression suite: 448 passed, seven skipped (five CUDA tests and
+two missing-data-recipes tests). Ruff and whitespace checks passed. Source and
+wheel distributions passed Twine checks; the SPADE MIT notice was verified in
+both archives. The original 409-test audit count above describes the earlier
+documentation-only stage, not this integration.

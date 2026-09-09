@@ -214,7 +214,7 @@ llm-design-bench-suite \
 
 Add `--fixed-1b` for the ablation. Both modes use the same unfiltered
 data-recipes normalization reference and the same 1B/19,500-step target.
-When `--method` is omitted, the suite runs these eighteen registered methods.
+When `--method` is omitted, the suite runs these nineteen registered methods.
 The result labels remain **Standard GA adaptation**, **CMA-ES adaptation**,
 **REINFORCE adaptation**, **BO-qEI adaptation**, **GA on GP adaptation**,
 **MC-Dropout adaptation**, **Tri-Mentoring adaptation**, **ICT adaptation**,
@@ -235,9 +235,11 @@ with native CQL/SAC policy training and fixed-target projected-gradient rollout.
 These methods have integration tests and reduced-budget smoke runs, not new
 formal eight-seed publication results.
 
-SPADE's [official-source audit](docs/SPADE_SOURCE_AUDIT.md) is complete, with
-an MIT-licensed pinned revision and explicit constrained-search/context changes.
-Its adapter is next; SPADE is not yet one of the eighteen registered methods.
+**SPADE adaptation (official-core-derived)** is also registered as `spade`.
+It uses an attributed MIT-licensed PyTorch diffusion core, native Torch kNN,
+and design-only constrained evolution at fixed target fidelity. See the
+[source audit](docs/SPADE_SOURCE_AUDIT.md) and [settings](docs/METHODS.md#spade).
+It has integration smoke validation, not new formal publication results.
 
 ## Python API
 

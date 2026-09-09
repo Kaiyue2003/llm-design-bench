@@ -365,6 +365,51 @@ supports both simplex and box spaces. It records the RBF substitution in
 method provenance. The legacy `BackwardDistillationOptimizer` remains only
 for reproducing old result paths.
 
+## SPADE
+
+Registered ID: `spade`; result label: **SPADE adaptation (official-core-derived)**.
+The conditional model diffuses standardized utility, not designs. Training
+combines denoising MSE, differentiable short-DDIM mean/rank calibration, and
+neighbor-mean/uncertainty support hinges. The final epoch is used without oracle
+selection. All neural, neighbor and search operations use PyTorch; the run's
+generator controls initialization, shuffling, diffusion draws and evolution.
+
+Important constructor settings (all saved in resolved run configuration):
+
+| Setting | Default |
+| --- | --- |
+| `diff_hidden`, `diff_t_dim`, `diff_steps` | 64, 32, 100 |
+| `diff_epochs`, `diff_batch`, `diff_lr`, `diff_grad_clip` | 50, 64, 0.001, 1.0 |
+| `calib_weight`, `calib_pairs`, `calib_temp` | 1.0, 32, 1.0 |
+| `calib_mc_samples`, `calib_mc_steps` | 4, 10 |
+| `support_weight`, `support_k`, `support_transform` | 1.0, 10, false |
+| `support_tau_a`, `support_sigma_a0`, `support_sigma_a1` | 0.02, 0.02, 0.005 |
+| `acq_beta`, `acq_mc_samples`, `acq_mc_steps` | 0.1, 32, 50 |
+| `mc_batch`, `knn_chunk` | 256, 256 |
+| `ea_pop`, `ea_elite`, `ea_gens` | 128, 64, 50 |
+| `ea_mut_sigma_init`, `ea_mut_sigma_min`, `ea_crossover` | 0.12, 0.02, 0.3 |
+
+These are compact integration defaults, not the paper's unpublished selected
+configuration. The beta schedule is linear from 1e-4 to 0.02; only eta=0 DDIM
+is supported. MC standard deviation uses correction zero, as in the source.
+Feature and utility normalization see only visible rows. kNN uses standardized
+joint design/context Euclidean distances, including self-neighbors and stable
+row-index tie breaks. Effective k is capped by N; N must be at least two.
+
+Evolution changes design coordinates only. Initialization and all children are
+projected before model/support queries, with target context fixed throughout.
+The population is at least K regardless of logged dataset size. A fresh LCB
+evaluation selects K entries from the final population including its retained
+elites; uniqueness and total acquisition workload are recorded. Optional support
+transformation applies directly to moments so a degenerate sample distribution
+still respects the requested uncertainty floor. It is off by default, separately
+from support training loss. No oracle is available until the method returns.
+
+See the [source audit](SPADE_SOURCE_AUDIT.md) for attribution, source differences,
+component comparisons and reduced integration smoke validation. Main experiments
+remain multi-scale logs to target 1B; fixed-1B is an ablation. Formal training
+still waits for the agreed method roster, including inverse methods.
+
 ## Reference-normalized utility
 
 For a statistic `u` and full logged reference utilities `D`, the score is

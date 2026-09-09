@@ -51,7 +51,7 @@ def test_catalog_separates_controls_and_marks_current_adaptations() -> None:
         assert methods[method_id]["display_name"].endswith("adaptation")
         assert len(methods[method_id]["source_commit"]) == 40
         assert "no explicit license" in methods[method_id]["source_status"]
-    assert methods["spade"]["status"] == "planned_official_adapter"
+    assert methods["spade"]["status"] == "integrated_adaptation"
     assert methods["spade"]["source_code"] == "https://github.com/HarryYoung2018/spade"
 
 
@@ -105,20 +105,20 @@ def test_pgs_integration_retains_transition_design_provenance() -> None:
     assert (ROOT / pgs["transition_design"]).is_file()
 
 
-def test_spade_source_audit_is_pinned_but_not_marked_integrated() -> None:
+def test_spade_integration_retains_source_pin_and_mit_provenance() -> None:
     from llm_design_bench.optimizers.registry import method_names
 
     catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
     spade = next(method for method in catalog["methods"] if method["method_id"] == "spade")
-    assert spade["status"] == "planned_official_adapter"
-    assert spade["integration_stage"] == "source_audited"
+    assert spade["status"] == "integrated_adaptation"
+    assert spade["integration_stage"] == "integrated_diffusion_lcb_ea"
     assert spade["source_license"] == "MIT"
     assert spade["source_commit"] == "586151bbb56e246f93ca97ce33f79887a13161bd"
-    assert "adapter not implemented" in spade["source_status"]
-    assert catalog["next_forward_integration_order"] == ["spade"]
+    assert "adapter integrated" in spade["source_status"]
+    assert catalog["next_forward_integration_order"] == []
     assert catalog["next_forward_source_audit"] == spade["source_audit"]
     audit = (ROOT / spade["source_audit"]).read_text(encoding="utf-8")
     assert spade["source_code"] in audit
     assert spade["source_commit"] in audit
     assert "MIT" in audit
-    assert "spade" not in method_names()
+    assert "spade" in method_names()

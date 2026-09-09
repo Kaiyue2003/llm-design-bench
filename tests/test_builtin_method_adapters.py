@@ -61,6 +61,9 @@ def _box_problem() -> OfflineProblem:
 
 
 _METHOD_CONFIGS = (
+    ("spade", {"diff_hidden": 8, "diff_t_dim": 4, "diff_epochs": 2,
+               "calib_mc_steps": 2, "acq_mc_steps": 2, "acq_mc_samples": 2,
+               "ea_pop": 4, "ea_elite": 2, "ea_gens": 2}),
     (
         "pgs",
         {"hidden_size": 16, "surrogate_epochs": 2, "batch_size": 2,
@@ -220,6 +223,7 @@ def test_builtin_method_returns_valid_candidate_batch(
 
 def test_builtin_methods_are_registered() -> None:
     assert {
+        "spade",
         "pgs",
         "match_opt",
         "ltr",

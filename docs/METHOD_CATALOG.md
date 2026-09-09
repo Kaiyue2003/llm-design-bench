@@ -63,7 +63,7 @@ original component is labeled an adaptation, not a faithful reproduction.
 | `bonet` | BONET | Inverse | planned | Autoregressive generative pretraining |
 | `demo` | DEMO | Inverse | planned | Design-distribution diffusion/editing |
 | `root` | ROOT | Inverse | planned | Probabilistic-bridge distribution translation |
-| `spade` | SPADE | Forward (proposed) | source audited; adapter planned | Attributed official-core-derived PyTorch adaptation; constrained search and fixed context |
+| `spade` | SPADE adaptation (official-core-derived) | Forward (proposed) | integrated adaptation | Attributed diffusion core, native kNN, constrained LCB evolution at fixed target |
 
 The counts are 3 standard methods, 11 forward-surrogate baselines, 9 inverse
 generative baselines, and SPADE, for 24 paper methods total.
@@ -106,10 +106,10 @@ The controls should not be silently renamed to a paper method:
 - SPADE's MIT-licensed official source is pinned to
   `586151bbb56e246f93ca97ce33f79887a13161bd`. The intended result label is
   **SPADE adaptation (official-core-derived)**, not an unchanged wrapper:
-  search-domain, target-context, candidate-budget and RNG changes are required.
+  search-domain, target-context, candidate-budget and RNG changes are implemented.
   Its public release omits final LLM-DM preprocessing/configuration. See the
   [SPADE source audit](SPADE_SOURCE_AUDIT.md) for verified hazards, reuse terms,
-  defaults and the acceptance gate. It is not registered yet.
+  defaults and integration validation. It is now registered as `spade`.
 - RoMA, ICT, and Tri-Mentoring now have pinned author/official repositories,
   but none contains an explicit license file at the audited revision. Their
   algorithms are implemented independently from the papers, not by copying
@@ -135,8 +135,8 @@ URL empty rather than guessing one.
    are integrated. PGS uses [certified transitions and native CQL/SAC](PGS_TRANSITION_DESIGN.md).
    The unified COMs/BDI
    adaptations are already available as comparison points.
-3. **SPADE:** source audit complete; implement the attributed PyTorch core and
-   constrained adapter next, without claiming exact table reproduction.
+3. **SPADE:** attributed PyTorch core and constrained adapter integrated,
+   without claiming exact table reproduction.
 4. **Inverse generative methods:** CbAS, MINs, DDOM, GABO, GTG, RGD, BONET,
    DEMO, and ROOT.
 
