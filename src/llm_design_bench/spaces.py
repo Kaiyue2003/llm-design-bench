@@ -193,9 +193,9 @@ class BoxSpace(DesignSpace):
 
     def from_unconstrained(self, parameters: torch.Tensor) -> torch.Tensor:
         _validate_matrix(parameters, self.dimension)
-        bounds = self._bounds.to(device=parameters.device, dtype=parameters.dtype)
+        bounds = self._representable_bounds(parameters)
         lower, upper = bounds[:, 0], bounds[:, 1]
-        return lower + (upper - lower) * torch.sigmoid(parameters)
+        return (lower + (upper - lower) * torch.sigmoid(parameters)).clamp(lower, upper)
 
     def to_unconstrained(self, designs: torch.Tensor) -> torch.Tensor:
         self.validate(designs)
@@ -213,9 +213,19 @@ class BoxSpace(DesignSpace):
 
     def decode_from_model(self, encoded: torch.Tensor) -> torch.Tensor:
         _validate_matrix(encoded, self.dimension)
-        bounds = self._bounds.to(device=encoded.device, dtype=encoded.dtype)
+        bounds = self._representable_bounds(encoded)
         lower, upper = bounds[:, 0], bounds[:, 1]
-        return lower + (upper - lower) * encoded.clamp(0.0, 1.0)
+        return (lower + (upper - lower) * encoded.clamp(0.0, 1.0)).clamp(lower, upper)
+
+    def _representable_bounds(self, values: torch.Tensor) -> torch.Tensor:
+        exact = self._bounds.to(device=values.device, dtype=torch.float64)
+        rounded = exact.to(dtype=values.dtype)
+        lower, upper = rounded[:, 0], rounded[:, 1]
+        lower = torch.where(lower.double() < exact[:, 0], torch.nextafter(lower, torch.full_like(lower, torch.inf)), lower)
+        upper = torch.where(upper.double() > exact[:, 1], torch.nextafter(upper, torch.full_like(upper, -torch.inf)), upper)
+        if torch.any(lower >= upper):
+            raise ValueError("box has no usable interval in the requested dtype")
+        return torch.stack([lower, upper], dim=-1)
 
     def metric_features(self, designs: torch.Tensor) -> torch.Tensor:
         return self.encode_for_model(designs)
@@ -239,7 +249,8 @@ class BoxSpace(DesignSpace):
             device=device,
             dtype=dtype,
         )
-        return lower + (upper - lower) * unit
+        representable = self._representable_bounds(unit)
+        return (lower + (upper - lower) * unit).clamp(representable[:, 0], representable[:, 1])
 
     def clone(self) -> "BoxSpace":
         return BoxSpace(self._bounds, tolerance=self.tolerance)

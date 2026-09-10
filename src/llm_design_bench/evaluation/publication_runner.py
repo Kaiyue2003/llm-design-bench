@@ -3,10 +3,11 @@ from __future__ import annotations
 import hashlib
 import importlib.metadata
 import json
+import os
 import platform
 import subprocess
 import sys
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,11 @@ from scipy.stats import t as student_t
 from llm_design_bench.evaluation.offline_runner import make_logged_percentile_split
 from llm_design_bench.metrics.usefulness import usefulness_summary
 from llm_design_bench.optimizers import get_method_metadata, make_method
+from llm_design_bench.optimizers.additional_metadata import SOURCES
+from llm_design_bench.evaluation.reproducibility import (
+    atomic_replace, code_digest, data_assets_manifest, environment_versions,
+    save_run_artifacts, verify_run_artifacts,
+)
 from llm_design_bench.problem import OfflineProblem, RunContext
 from llm_design_bench.tasks.data_recipes import DataRecipesTask
 from llm_design_bench.tasks.synthetic_functions import (
@@ -40,11 +46,8 @@ PUBLICATION_SYNTHETIC_FUNCTIONS = (
     "shekel",
 )
 METHOD_ORDER = ("best_logged", "coms", "bdi")
-METHOD_DISPLAY_NAMES = {
-    "best_logged": "Best Logged",
-    "coms": "COM",
-    "bdi": "BDI",
-}
+ALL_METHOD_ORDER = (*METHOD_ORDER, "offline_mlp", *SOURCES)
+METHOD_DISPLAY_NAMES = {name: get_method_metadata(name).display_name for name in ALL_METHOD_ORDER}
 DATA_MIXTURE_TASK = "data_recipes_stack_exchange"
 DATA_MIXTURE_DISPLAY_NAME = "LLM-DM"
 DATA_MIXTURE_CATEGORY = "data_mixture"
@@ -53,6 +56,10 @@ DATA_MIXTURE_CATEGORY_DISPLAY_NAME = "Data Mixture"
 
 @dataclass(frozen=True)
 class PublicationBenchmarkConfig:
+    methods: tuple[str, ...] = METHOD_ORDER
+    method_configs: dict[str, dict[str, Any]] = field(default_factory=dict)
+    method_steps: int = 50
+    device: str = "cpu"
     seeds: tuple[int, ...] = DEFAULT_PUBLICATION_SEEDS
     functions: tuple[str, ...] = PUBLICATION_SYNTHETIC_FUNCTIONS
     data_recipes_root: Path | None = None
@@ -88,7 +95,8 @@ def run_publication_benchmarks(
         )
         data_commit, data_dirty = _git_state(data_task.root)
 
-    fingerprint = _config_fingerprint(config, data_commit)
+    data_assets = data_assets_manifest(data_task.root if data_task is not None else None)
+    fingerprint = _config_fingerprint(config, data_commit, data_assets)
     raw_path = config.results_dir / "raw_runs.csv"
     rows = _load_resumable_rows(raw_path, fingerprint, config.resume)
     completed = {
@@ -104,7 +112,7 @@ def run_publication_benchmarks(
         )
         problem = OfflineProblem.from_task(split.task)
         for seed in config.seeds:
-            for optimizer_name in METHOD_ORDER:
+            for optimizer_name in config.methods:
                 key = ("data_mixture", DATA_MIXTURE_TASK, seed, optimizer_name)
                 if key in completed:
                     continue
@@ -151,7 +159,7 @@ def run_publication_benchmarks(
             reference_y = np.asarray(task.logged_y, dtype=float)
             d_best_utility = float(reference_y.max())
             problem = OfflineProblem.from_task(task)
-            for optimizer_name in METHOD_ORDER:
+            for optimizer_name in config.methods:
                 key = ("synthetic", task.name, seed, optimizer_name)
                 if key in completed:
                     continue
@@ -189,7 +197,7 @@ def run_publication_benchmarks(
                 _write_raw_rows(rows, raw_path)
 
     raw = _ordered_raw_frame(pd.DataFrame(rows), config)
-    raw.to_csv(raw_path, index=False)
+    _write_raw_rows(raw.to_dict("records"), raw_path)
     summary, ranks, d_best = aggregate_publication_results(raw)
     summary.to_csv(config.results_dir / "task_summary.csv", index=False)
     ranks.to_csv(config.results_dir / "rank_summary.csv", index=False)
@@ -201,11 +209,21 @@ def run_publication_benchmarks(
         fingerprint=fingerprint,
         data_commit=data_commit,
         data_dirty=data_dirty,
+        data_assets=data_assets,
     )
     (config.results_dir / "run_metadata.json").write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    provenance = ["# Method provenance", "", "These runs use the configurations in raw_runs.csv. "
+                  "The additional methods are adaptations, not validated reproductions of published tables.", ""]
+    for method_id in config.methods:
+        method = get_method_metadata(method_id)
+        provenance.extend([f"## {method.display_name}", "", f"- Implementation: `{method.implementation_kind.value}`",
+                           f"- Source: {method.source_url or 'native baseline'}",
+                           f"- Source revision: `{method.source_commit or 'not pinned'}`",
+                           *[f"- {adaptation}" for adaptation in method.adaptations], ""])
+    (config.results_dir / "METHOD_PROVENANCE.md").write_text("\n".join(provenance), encoding="utf-8")
     (config.results_dir / "README.md").write_text(
         render_markdown_report(summary, ranks, d_best, metadata),
         encoding="utf-8",
@@ -315,7 +333,7 @@ def aggregate_publication_results(
     ranks = ranks.sort_values("method_order").drop(columns="method_order").reset_index(drop=True)
 
     d_best = (
-        raw.groupby(
+        raw.drop_duplicates(["suite", "task", "seed"]).groupby(
             [
                 "suite",
                 "task",
@@ -374,7 +392,7 @@ def render_markdown_report(
         d_best_cells.append(_plain_score_cell(row["mean_score"], row[error_column]))
     lines.append("| D(best) | " + " | ".join(d_best_cells) + " | -- | -- |")
 
-    for optimizer in METHOD_ORDER:
+    for optimizer in _summary_method_order(summary):
         cells = []
         for task in tasks:
             row = summary[
@@ -430,11 +448,10 @@ def render_markdown_report(
             "",
             "## Selection And Method Provenance",
             "",
-            (
-                "The synthetic subset is the union of the previously committed single-seed COM and BDI "
-                "winner in each test-problem category. It is intentionally performance-selected for a "
-                "compact descriptive table and must not be presented as an unbiased all-task comparison."
-            ),
+            metadata.get("selection_policy", "Tasks were selected by the caller."),
+            "",
+            "Additional methods are continuous PyTorch adaptations. Published-result parity is not established. "
+            "Exact source revisions, settings and substitutions are in METHOD_PROVENANCE.md and run_metadata.json.",
             "",
             (
                 "COM is a native PyTorch reimplementation of the conservative objective-model structure "
@@ -516,7 +533,7 @@ def render_latex_table(
     lines.append("$\\mathcal{D}$ (best) & " + " & ".join(d_best_cells) + " & -- & -- \\\\")
     lines.append("\\midrule")
 
-    for optimizer in METHOD_ORDER:
+    for optimizer in _summary_method_order(summary):
         cells = []
         for task in tasks:
             row = summary[
@@ -556,9 +573,8 @@ def render_latex_table(
             f"Seeds: {seed_text}. "
             "For LLM-DM, $\\mathcal{D}$ (best) uses the recorded logged fidelity, whereas method "
             "recommendations are evaluated at the target 1B/19,500-step fidelity. "
-            "The synthetic subset is performance-selected from the prior exploratory sweep; "
-            "the table is descriptive rather than an unbiased all-task comparison. "
-            "COM and BDI are native PyTorch implementations; BDI uses the repository's RBF-kernel adaptation.",
+            "Task selection and implementation adaptations are recorded in the accompanying run manifest. "
+            "Results for additional methods do not establish published-result parity.",
             "\\end{minipage}",
             "\\end{sidewaystable*}",
             "",
@@ -588,7 +604,7 @@ def render_seed_range_markdown(
         for task in tasks
     ]
     lines.append("| D(best) | " + " | ".join(reference_cells) + " |")
-    for optimizer in METHOD_ORDER:
+    for optimizer in _summary_method_order(summary):
         cells = []
         for task in tasks:
             row = summary[
@@ -637,7 +653,7 @@ def render_seed_range_latex(
         "$\\mathcal{D}$ (best) & " + " & ".join(reference_cells) + " \\\\"
     )
     lines.append("\\midrule")
-    for optimizer in METHOD_ORDER:
+    for optimizer in _summary_method_order(summary):
         cells = []
         for task in tasks:
             row = summary[
@@ -711,6 +727,8 @@ def _result_row(
         "source_url": get_method_metadata(optimizer).source_url,
         "source_commit": get_method_metadata(optimizer).source_commit,
         "paper_url": get_method_metadata(optimizer).paper_url,
+        "adaptations_json": json.dumps(get_method_metadata(optimizer).adaptations),
+        "artifacts_json": json.dumps(method_result.diagnostics["reproduction_artifacts"], sort_keys=True),
         "train_size": train_size,
         "train_min_percentile": train_min_percentile,
         "train_max_percentile": train_max_percentile,
@@ -764,20 +782,24 @@ def _run_registered_method(
     torch.manual_seed(seed)
     np.random.seed(seed % (2**32 - 1))
     kwargs: dict[str, Any] = {}
-    if method_id == "coms":
+    if method_id in {"coms", "offline_mlp"}:
         kwargs = {
             "epochs": config.epochs,
             "particle_steps": config.particle_steps,
         }
     elif method_id == "bdi":
         kwargs = {"steps": config.bdi_steps}
+    elif method_id in SOURCES:
+        kwargs = {"epochs": config.epochs, "steps": config.method_steps}
     elif method_id != "best_logged":
         raise KeyError(f"unknown publication optimizer: {method_id}")
+    kwargs.update(config.method_configs.get(method_id, {}))
     result = make_method(method_id, **kwargs).run(
         problem,
         RunContext(
             method_seed=seed,
             candidate_budget=config.recommendations,
+            device=config.device,
             dataset_seed=dataset_seed,
             split_seed=split_seed,
         ),
@@ -787,10 +809,23 @@ def _run_registered_method(
     utility = np.asarray(evaluator_task.predict(batch), dtype=float)
     if utility.shape != (config.recommendations,) or not np.isfinite(utility).all():
         raise ValueError("evaluator returned invalid recommendation utilities")
+    artifacts = save_run_artifacts(config.results_dir, problem, result, utility,
+                                   method_id=method_id, method_seed=seed, dataset_seed=dataset_seed)
+    result = replace(result, diagnostics={**result.diagnostics, "reproduction_artifacts": artifacts})
     return result, utility
 
 
 def _validate_config(config: PublicationBenchmarkConfig) -> None:
+    if not config.methods or len(set(config.methods)) != len(config.methods):
+        raise ValueError("methods must be nonempty and unique")
+    if set(config.methods).difference(ALL_METHOD_ORDER):
+        raise ValueError("unknown publication method")
+    if set(config.method_configs).difference(config.methods):
+        raise ValueError("method_configs contains an unselected method")
+    if torch.device(config.device).type not in {"cpu", "cuda"}:
+        raise ValueError("device must be cpu or cuda")
+    if torch.device(config.device).type == "cuda" and not torch.cuda.is_available():
+        raise ValueError("CUDA was selected but is unavailable")
     if not config.seeds:
         raise ValueError("at least one seed is required")
     if len(set(config.seeds)) != len(config.seeds):
@@ -803,6 +838,7 @@ def _validate_config(config: PublicationBenchmarkConfig) -> None:
         "epochs",
         "particle_steps",
         "bdi_steps",
+        "method_steps",
         "torch_threads",
     ):
         if getattr(config, name) < 1:
@@ -813,20 +849,23 @@ def _validate_config(config: PublicationBenchmarkConfig) -> None:
 
 def _configure_torch(config: PublicationBenchmarkConfig) -> None:
     torch.set_num_threads(config.torch_threads)
-    if config.deterministic:
-        torch.use_deterministic_algorithms(True)
+    torch.use_deterministic_algorithms(config.deterministic)
 
 
 def _config_fingerprint(
     config: PublicationBenchmarkConfig,
     data_commit: str | None,
+    data_assets: dict[str, str] | None = None,
 ) -> str:
     payload = asdict(config)
     payload["results_dir"] = "<excluded>"
     payload["resume"] = "<excluded>"
     payload["data_recipes_root"] = "<external>" if config.data_recipes_root else None
     payload["data_recipes_commit"] = data_commit
-    payload["methods"] = METHOD_ORDER
+    payload["methods"] = config.methods
+    payload["code_sha256"] = code_digest()
+    payload["dependency_versions"] = environment_versions()
+    payload["data_assets"] = data_assets or {}
     encoded = json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()[:16]
 
@@ -847,11 +886,17 @@ def _load_resumable_rows(
             "existing raw_runs.csv was produced by a different configuration; "
             "use --no-resume or choose another results directory"
         )
+    if "artifacts_json" not in frame:
+        raise ValueError("existing results have no replay artifacts; choose a new directory")
+    for artifacts in frame["artifacts_json"]:
+        verify_run_artifacts(path.parent, artifacts)
     return frame.to_dict(orient="records")
 
 
 def _write_raw_rows(rows: list[dict[str, Any]], path: Path) -> None:
-    pd.DataFrame(rows).to_csv(path, index=False)
+    temporary = path.with_suffix(".tmp")
+    pd.DataFrame(rows).to_csv(temporary, index=False)
+    atomic_replace(temporary, path)
 
 
 def _ordered_raw_frame(
@@ -890,15 +935,23 @@ def _metadata(
     fingerprint: str,
     data_commit: str | None,
     data_dirty: bool | None,
+    data_assets: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     repository_root = Path(__file__).resolve().parents[3]
     code_commit, code_dirty = _git_state(repository_root)
+    if code_commit is None:
+        code_commit = os.environ.get("LLM_DESIGN_BENCH_VCS_REF")
     return {
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
         "config_fingerprint": fingerprint,
         "seeds": list(config.seeds),
         "trial_count": len(config.seeds),
-        "methods": list(METHOD_ORDER),
+        "methods": list(config.methods),
+        "method_configs": config.method_configs,
+        "method_steps": config.method_steps,
+        "device": config.device,
+        "code_sha256": code_digest(),
+        "data_asset_sha256": data_assets or {},
         "synthetic_functions": list(config.functions),
         "include_data_mixture": config.include_data_mixture,
         "data_mixture_metric_index": config.metric_index,
@@ -917,7 +970,9 @@ def _metadata(
         "confidence_interval": "two_sided_95_percent_student_t",
         "observed_range": "minimum_and_maximum_seed_estimates",
         "selection_policy": (
-            "union of the prior single-seed top COM and top BDI task in each synthetic category"
+            "Performance-selected union of prior single-seed COM and BDI category winners; descriptive comparison only."
+            if config.functions == PUBLICATION_SYNTHETIC_FUNCTIONS
+            else "Explicit caller-selected synthetic tasks; no claim of an unbiased all-task comparison."
         ),
         "code_git_commit": code_commit,
         "code_git_dirty": code_dirty,
@@ -936,10 +991,7 @@ def _metadata(
                 "bayeso-benchmarks",
             )
         },
-        "method_provenance": {
-            "coms": "https://github.com/brandontrabucco/design-baselines",
-            "bdi": "https://github.com/GGchen1997/BDI",
-        },
+        "method_provenance": {name: asdict(get_method_metadata(name)) for name in config.methods},
     }
 
 
@@ -1021,9 +1073,13 @@ def _task_groups(tasks: list[dict[str, str]]) -> list[tuple[str, list[dict[str, 
 
 def _method_index(name: str) -> int:
     try:
-        return METHOD_ORDER.index(name)
+        return ALL_METHOD_ORDER.index(name)
     except ValueError:
-        return len(METHOD_ORDER)
+        return len(ALL_METHOD_ORDER)
+
+
+def _summary_method_order(summary: pd.DataFrame) -> tuple[str, ...]:
+    return tuple(sorted(summary["optimizer"].unique(), key=_method_index))
 
 
 def _plain_score_cell(mean: float, std: float) -> str:

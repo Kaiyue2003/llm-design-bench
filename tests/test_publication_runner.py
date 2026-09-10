@@ -1,13 +1,48 @@
 import json
 
 import pandas as pd
+import pytest
+import numpy as np
+from dataclasses import replace
+from pathlib import Path
 
 from llm_design_bench.evaluation.publication_runner import (
     METHOD_ORDER,
+    ALL_METHOD_ORDER,
     PublicationBenchmarkConfig,
     aggregate_publication_results,
     run_publication_benchmarks,
+    _config_fingerprint,
 )
+
+
+def test_all_methods_reports_artifacts_and_tamper_detection(tmp_path):
+    settings = json.loads((Path(__file__).parents[1] / "configs/all_methods_smoke.json").read_text())
+    config = PublicationBenchmarkConfig(methods=ALL_METHOD_ORDER, method_configs=settings,
+        seeds=(5,), functions=("booth",), include_data_mixture=False, logged_samples=16,
+        recommendations=4, epochs=1, particle_steps=1, bdi_steps=1, method_steps=2, results_dir=tmp_path)
+    rows = run_publication_benchmarks(config)
+    assert set(rows.optimizer) == set(ALL_METHOD_ORDER)
+    assert len(rows) == 14
+    assert np.isfinite(rows.raw_max_utility).all()
+    markdown = (tmp_path / "TABLE1_STYLE.md").read_text()
+    for name in ("CbAS", "MINs", "DDOM", "GABO", "GTG", "RGD", "BONET", "DEMO", "ROOT", "SPADE"):
+        assert name in markdown
+    replay = run_publication_benchmarks(config)
+    assert len(replay) == len(rows)
+    entry = json.loads(rows.iloc[0].artifacts_json)["candidates"]
+    with (tmp_path / entry["path"]).open("ab") as handle:
+        handle.write(b"tampered")
+    with pytest.raises(ValueError, match="modified replay artifact"):
+        run_publication_benchmarks(config)
+
+
+def test_resume_fingerprint_covers_method_settings_and_data():
+    config = PublicationBenchmarkConfig(include_data_mixture=False)
+    original = _config_fingerprint(config, None, {"data": "hash1"})
+    assert original != _config_fingerprint(config, None, {"data": "hash2"})
+    assert original != _config_fingerprint(replace(config, methods=("cbas",)), None, {"data": "hash1"})
+    assert original != _config_fingerprint(replace(config, method_configs={"coms": {"hidden_size": 64}}), None, {"data": "hash1"})
 
 
 def test_publication_runner_writes_seeded_reports_and_resumes(tmp_path) -> None:

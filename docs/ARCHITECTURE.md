@@ -68,9 +68,10 @@ summaries, and diagnostics. Oracle utilities cannot appear in this object.
 4. call `propose_prepared`;
 5. validate the exact candidate count, dtype, device, and search-space bounds.
 
-The runnable registry contains implementations that can execute. The separate
-integration catalog describes planned methods. A planned method is promoted to
-the registry only after its PyTorch implementation and parity tests pass.
+The runnable registry contains executable implementations. The integration
+catalog separately tracks `planned`, `implemented_adaptation`, and
+`parity_validated` states. Equation checks and executable contract tests do not
+establish numerical equivalence to an upstream implementation.
 
 ## Current implementations
 
@@ -81,8 +82,14 @@ the registry only after its PyTorch implementation and parity tests pass.
 | `coms` | forward surrogate | lightweight PyTorch adaptation of TensorFlow code |
 | `bdi` | bidirectional surrogate | lightweight PyTorch/RBF adaptation of JAX code |
 
-CbAS, MINs, DDOM, GABO, GTG, RGD, BONET, DEMO, ROOT, and SPADE are cataloged
-for later integration. They are intentionally not runnable placeholders.
+CbAS, MINs, DDOM, GABO, GTG, RGD, BONET, DEMO, ROOT, and SPADE are also runnable.
+They share seeded PyTorch components while implementing separate algorithmic
+procedures. [Additional Methods](ADDITIONAL_METHODS.md) documents the boundaries.
+
+The new methods isolate module initialization with `torch.random.fork_rng`
+and use the run's generator for stochastic operations. Trajectory and bridge
+pairs stay within observed fidelity groups. The evaluator saves input arrays
+and evaluated candidate arrays only after optimization returns.
 
 ## Statistical outputs
 

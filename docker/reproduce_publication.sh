@@ -15,10 +15,12 @@ if ! git -C "${DATA_RECIPES_ROOT}" diff --quiet \
   exit 2
 fi
 
-git -C "${DATA_RECIPES_ROOT}" fetch origin "${DATA_RECIPES_COMMIT}" --depth 1
+if ! git -C "${DATA_RECIPES_ROOT}" cat-file -e "${DATA_RECIPES_COMMIT}^{commit}" 2>/dev/null; then
+  git -C "${DATA_RECIPES_ROOT}" fetch origin "${DATA_RECIPES_COMMIT}" --depth 1
+fi
 git -C "${DATA_RECIPES_ROOT}" checkout --detach "${DATA_RECIPES_COMMIT}"
 
-exec llm-design-bench-publication \
+exec llm-design-bench-publication "$@" \
   --data-recipes-root "${DATA_RECIPES_ROOT}" \
   --seed 38 --seed 39 --seed 40 --seed 41 \
   --seed 42 --seed 43 --seed 44 --seed 45 \

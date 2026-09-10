@@ -16,6 +16,20 @@ x-benchmark: &benchmark
     OPENBLAS_NUM_THREADS: "1"
 
 services:
+  all-methods:
+    <<: *benchmark
+    environment:
+      <<: *determinism
+      RUN_RESULTS_DIR: /results/all-methods
+    command: ["/app/docker/reproduce_publication.sh", "--all-methods"]
+
+  all-methods-smoke:
+    <<: *benchmark
+    environment:
+      <<: *determinism
+      RUN_RESULTS_DIR: /results/all-methods-smoke
+    command: ["/app/docker/reproduce_all_methods_smoke.sh"]
+
   publication:
     <<: *benchmark
     environment:
