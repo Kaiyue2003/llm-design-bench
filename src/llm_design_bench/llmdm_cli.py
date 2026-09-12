@@ -122,6 +122,23 @@ def run(
         infrastructure_retry_reason=infrastructure_retry_reason,
     )
     typer.echo(result.summary.to_string(index=False))
+    # A persisted algorithm failure is still a failed process for a job scheduler.
+    # Do not fail a successful shard merely because another shard failed earlier.
+    selected_methods = run_id or [entry["run_id"] for entry in frozen["methods"]]
+    selected_seeds = seed or frozen["shared_settings"][f"{phase}_seeds"]
+    task_ids = {
+        "multi_scale": ["data_recipes_stack_exchange"],
+        "fixed_1b": ["data_recipes_stack_exchange_1b"],
+        "both": ["data_recipes_stack_exchange", "data_recipes_stack_exchange_1b"],
+    }[setting]
+    rows = result.per_seed
+    selected = rows[
+        rows["run_id"].isin(selected_methods)
+        & rows["method_seed"].isin(selected_seeds)
+        & rows["task_id"].isin(task_ids)
+    ]
+    if selected.empty or (selected["status"] != "success").any():
+        raise typer.Exit(code=1)
 
 
 def main() -> None:
