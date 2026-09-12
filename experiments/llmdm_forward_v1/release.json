@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "experiment_id": "llmdm_forward_v1",
+  "protocol_id": "llmdm_scale_stratified_v1",
+  "code_commit": "3d09ac372b171c58b8375942694c39bc78f40948",
+  "package_source_sha256": "8cbb0194de96977d242f5db87d32d05c8ae3ad650f994fdaa7697c831866c3f4",
+  "upstream_commit": "37269969a0957448d51622e0c083977bc5d260e8",
+  "data_manifest_id": "a27d497d18b2a476cbcc5d09651ba6e98a6618c78e1d22569c02b0de8858f8bc",
+  "plan_id": "cd224313aa7db776f6abf550adcf3b93e667f9643d5792e9ad7f6fad437d2307",
+  "counts": {
+    "source_rows": 472,
+    "empty_histories": 18,
+    "usable_logged": 454,
+    "main_visible": 184,
+    "fixed_1b_visible": 26,
+    "methods": 19
+  },
+  "artifact_sha256": {
+    "plan.json": "7b5f472d5956fc1f724f741721b27f3596e519bdcab758f51810d0297263010d",
+    "data/manifest.json": "8ace01695e662db3ef42a080d6cc6b54435af9ba417f01baef43347f770c30d7",
+    "data/visible.npz": "021b0fba9bcc5f2dbfb5f51cdec647f9ab37d3cad7ff0da8241dbf1685a913d7",
+    "data/reference.npz": "031f8001f709ad7aef85962c035aba541d0123d83ba999a3275041bf0c758599"
+  }
+}

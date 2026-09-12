@@ -1,0 +1,4 @@
+# Frozen artifacts have published byte hashes, including JSON line endings.
+plan.json -text whitespace=trailing-space,space-before-tab,cr-at-eol
+data/manifest.json -text whitespace=trailing-space,space-before-tab,cr-at-eol
+data/*.npz -text

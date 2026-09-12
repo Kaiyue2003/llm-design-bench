@@ -1,0 +1,67 @@
+{
+  "artifacts": {
+    "reference.npz": "031f8001f709ad7aef85962c035aba541d0123d83ba999a3275041bf0c758599",
+    "visible.npz": "021b0fba9bcc5f2dbfb5f51cdec647f9ab37d3cad7ff0da8241dbf1685a913d7"
+  },
+  "manifest_id": "a27d497d18b2a476cbcc5d09651ba6e98a6618c78e1d22569c02b0de8858f8bc",
+  "metadata": {
+    "data_file": {
+      "path": "results/data_mixing_runs.pkl",
+      "sha256": "ef90f34fb544b9d0e15aaac41bae8867fc52467e5fb42330788e6705147fafac"
+    },
+    "domain_order": [
+      "RedPajamaWikipedia",
+      "RedPajamaStackExchange",
+      "RedPajamaGithub",
+      "RedPajamaArXiv",
+      "RedPajamaBook"
+    ],
+    "metric_index": 4,
+    "objective": "eval/RedPajamaStackExchange/CrossEntropyLoss",
+    "oracle_checkpoints": {
+      "opt_algos/data_models/20250119_174726_j8mad2i5/checkpoints/checkpoint_latest.pt": "022d0327d3872e2ff70e41877d3bb26a03f7e73ab7381830a39b1db050f14e66"
+    },
+    "oracle_sidecars": {
+      "opt_algos/data_models/20250119_174726_j8mad2i5/config.json": "027a3c1f01a2bb6a01648c8f17e110bfe1f9896783b32f5520b95e1109985216",
+      "opt_algos/data_models/20250119_174726_j8mad2i5/feature_mask.json": "2c9d102fedc4c3a24efc9fa47d3d062f81f4dd3900c8450e4b17148c94c9dd74"
+    },
+    "schema_version": 1,
+    "source_files": {
+      "opt_algos/benchmarks.py": "9dd5d70a4976ac5105fd185f68fc09e55373ea78a122ff717bb45b4f82b04671",
+      "opt_algos/bopt_utils.py": "96c87381d24d093e5d8ebe28192ad8b6b1b02c8ce30b7d561238567c095d6a9a",
+      "opt_algos/botorch/eimf copy.py": "66e9f881574804970ae21dbfacb1021e6b6b9ed2a46fa7c54c9220d0636c0cc5",
+      "opt_algos/botorch/eimf.py": "fe6a32510fb53d48ac4a207ce474d24e87a34104829929053a73de5315220e67",
+      "opt_algos/botorch/sweep.py": "ab7a5dba136401822280b8575b6755ba6f29f08193fce2f3bd2f83b1a0467149",
+      "opt_algos/botorch/train_eikg.py": "a652ca5ddc378040b42dffd70046317b6342bbcee4a5e8a14db3689429376f2f",
+      "opt_algos/custom_bo/bopt_utils.py": "c6028e1d061d913321eec6a950188b0ef9f851eb01c6ecd4728f408e5ee487d4",
+      "opt_algos/custom_bo/eval_ei_optimizer.py": "eb1ac71a8d85a67847b4425efe3712eea9f9c19278c91f780e346af6dc095f47",
+      "opt_algos/custom_bo/misc_utils.py": "fdb04bad5d5fd9308bf7acda8faeff1542048fb3078bbea99913aabd1be7ed04",
+      "opt_algos/data_model.py": "8718dc1e958c703b74196c30ff08948f32642cd80710f6d9f57c59a3792fd027",
+      "opt_algos/eval_ei_optimizer.py": "6b7a48e8b9929be470289bfd3c53bd81418456f7eb5d257955fb90da994ac529",
+      "opt_algos/misc_utils.py": "f83c8af83b73fee15a851b38e9773dd50fc33437aa87c8668f537d06a94b264e",
+      "opt_algos/old/data_generation.py": "5321bce2d373b78a9851f7b081b8d23780e5daeb28d7c2a91a6b2f1cc12ecba4",
+      "opt_algos/optimizers.py": "8ff16a7a768f7745712cd21032837f4827567b2e29a2e4abae22ee943190db21",
+      "opt_algos/plot.py": "1299442b4316deaae852b5fcacf87f18804c62fe696ac425ca47f587a428676b",
+      "opt_algos/sweep.py": "2e77ff33080f006b4a72185819cd785578400d396c52bd09a8c5de07a78d68ef",
+      "opt_algos/tests.py": "055c3422bf3ed5806f47f8af1336a25412382e916aeb1bc5dfd7f0a5ec8e2af8"
+    },
+    "source_fingerprint": "3bc37267a9a8519760c07c2cab9941000b63c255f0d22a4515a01ce4c9166241",
+    "split": {
+      "bounds": "inclusive",
+      "checkpoint_selection": "last_history_row",
+      "fixed_1b": "subset_of_main_visible_without_resplitting",
+      "group_by": "model_scale",
+      "max_percentile": 40.0,
+      "min_percentile": 0.0,
+      "quantile_method": "linear",
+      "row_order": "source_position_ascending",
+      "tie_rule": "keep_all_equal_to_cutoff"
+    },
+    "target_context": [
+      1000.0,
+      19500.0
+    ],
+    "upstream_revision": "37269969a0957448d51622e0c083977bc5d260e8",
+    "utility_transform": "negative_loss"
+  }
+}

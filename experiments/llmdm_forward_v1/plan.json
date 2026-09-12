@@ -1,0 +1,521 @@
+{
+  "data_manifest_id": "a27d497d18b2a476cbcc5d09651ba6e98a6618c78e1d22569c02b0de8858f8bc",
+  "experiment_id": "llmdm_forward_v1",
+  "methods": [
+    {
+      "dtype": "float32",
+      "kwargs": {},
+      "method_id": "best_logged",
+      "requested_kwargs": {},
+      "run_id": "best_logged"
+    },
+    {
+      "dtype": "float32",
+      "kwargs": {},
+      "method_id": "random_search",
+      "requested_kwargs": {},
+      "run_id": "random_search"
+    },
+    {
+      "dtype": "float32",
+      "kwargs": {},
+      "method_id": "sobol",
+      "requested_kwargs": {},
+      "run_id": "sobol"
+    },
+    {
+      "dtype": "float32",
+      "kwargs": {
+        "batch_size": 64,
+        "epochs": 200,
+        "hidden_size": 128,
+        "learning_rate": 0.001,
+        "minimum_std": 1e-06,
+        "particle_learning_rate": 0.05,
+        "particle_steps": 200
+      },
+      "method_id": "offline_mlp",
+      "requested_kwargs": {
+        "batch_size": 64,
+        "epochs": 200,
+        "hidden_size": 128,
+        "particle_steps": 200
+      },
+      "run_id": "offline_mlp"
+    },
+    {
+      "dtype": "float32",
+      "kwargs": {
+        "batch_size": 64,
+        "hidden_size": 128,
+        "initial_max_std": 0.2,
+        "initial_min_std": 0.1,
+        "minimum_std": 1e-06,
+        "num_layers": 2,
+        "solver_learning_rate": 0.01,
+        "solver_steps": 200,
+        "surrogate_epochs": 200,
+        "surrogate_learning_rate": 0.0003
+      },
+      "method_id": "standard_ga",
+      "requested_kwargs": {
+        "batch_size": 64,
+        "hidden_size": 128,
+        "solver_steps": 200,
+        "surrogate_epochs": 200
+      },
+      "run_id": "standard_ga"
+    },
+    {
+      "dtype": "float32",
+      "kwargs": {
+        "adversarial_steps": 20,
+        "alpha": 0.1,
+        "alpha_learning_rate": 0.01,
+        "batch_size": 64,
+        "epochs": 200,
+        "hidden_size": 128,
+        "learning_rate": 0.001,
+        "minimum_std": 1e-06,
+        "overestimation_limit": 0.5,
+        "particle_learning_rate": 0.05,
+        "particle_steps": 200
+      },
+      "method_id": "coms",
+      "requested_kwargs": {
+        "adversarial_steps": 20,
+        "batch_size": 64,
+        "epochs": 200,
+        "hidden_size": 128,
+        "particle_steps": 200
+      },
+      "run_id": "coms"
+    },
+    {
+      "dtype": "float64",
+      "kwargs": {
+        "distillation_weight": 1.0,
+        "forward_weight": 1.0,
+        "gamma": 0.0,
+        "label": 2.0,
+        "learning_rate": 0.05,
+        "lengthscale": null,
+        "minimum_std": 1e-06,
+        "ridge": 0.001,
+        "steps": 200
+      },
+      "method_id": "bdi",
+      "requested_kwargs": {
+        "steps": 200
+      },
+      "run_id": "bdi"
+    },
+    {
+      "dtype": "float64",
+      "kwargs": {
+        "gp_learning_rate": 0.05,
+        "gp_training_steps": 200,
+        "initial_lengthscale": 1.0,
+        "initial_noise": 0.01,
+        "initial_output_scale": 1.0,
+        "jitter": 1e-05,
+        "minimum_std": 1e-06,
+        "random_start_fraction": 0.25,
+        "solver_learning_rate": 0.01,
+        "solver_steps": 200
+      },
+      "method_id": "ga_on_gp",
+      "requested_kwargs": {
+        "gp_training_steps": 200,
+        "solver_steps": 200
+      },
+      "run_id": "ga_on_gp"
+    },
+    {
+      "dtype": "float64",
+      "kwargs": {
+        "acquisition_learning_rate": 0.05,
+        "acquisition_steps": 200,
+        "gp_learning_rate": 0.05,
+        "gp_training_steps": 200,
+        "initial_lengthscale": 1.0,
+        "initial_noise": 0.01,
+        "initial_output_scale": 1.0,
+        "jitter": 1e-05,
+        "mc_samples": 128,
+        "minimum_std": 1e-06,
+        "random_start_fraction": 0.25
+      },
+      "method_id": "bo_qei",
+      "requested_kwargs": {
+        "acquisition_steps": 200,
+        "gp_training_steps": 200,
+        "mc_samples": 128
+      },
+      "run_id": "bo_qei"
+    },
+    {
+      "dtype": "float32",
+      "kwargs": {
+        "batch_size": 64,
+        "covariance_epsilon": 1e-06,
+        "ensemble_size": 5,
+        "generations": 100,
+        "hidden_size": 128,
+        "initial_max_std": 0.2,
+        "initial_min_std": 0.1,
+        "minimum_std": 1e-06,
+        "num_layers": 1,
+        "population_size": 16,
+        "sigma": 0.5,
+        "surrogate_epochs": 200,
+        "surrogate_learning_rate": 0.001
+      },
+      "method_id": "cma_es",
+      "requested_kwargs": {
+        "batch_size": 64,
+        "ensemble_size": 5,
+        "generations": 100,
+        "hidden_size": 128,
+        "population_size": 16,
+        "surrogate_epochs": 200
+      },
+      "run_id": "cma_es"
+    },
+    {
+      "dtype": "float32",
+      "kwargs": {
+        "batch_size": 64,
+        "ensemble_size": 5,
+        "exploration_std": 0.1,
+        "hidden_size": 128,
+        "initial_max_std": 0.2,
+        "initial_min_std": 0.1,
+        "iterations": 200,
+        "minimum_std": 1e-06,
+        "num_layers": 1,
+        "reinforce_batch_size": 512,
+        "reinforce_learning_rate": 0.01,
+        "surrogate_epochs": 200,
+        "surrogate_learning_rate": 0.001
+      },
+      "method_id": "reinforce",
+      "requested_kwargs": {
+        "batch_size": 64,
+        "ensemble_size": 5,
+        "hidden_size": 128,
+        "iterations": 200,
+        "reinforce_batch_size": 512,
+        "surrogate_epochs": 200
+      },
+      "run_id": "reinforce"
+    },
+    {
+      "dtype": "float32",
+      "kwargs": {
+        "batch_size": 64,
+        "dropout_probability": 0.1,
+        "epochs": 200,
+        "hidden_size": 128,
+        "learning_rate": 0.001,
+        "mc_samples": 32,
+        "minimum_std": 1e-06,
+        "num_layers": 2,
+        "particle_learning_rate": 0.05,
+        "particle_steps": 200,
+        "random_start_fraction": 0.25,
+        "uncertainty_weight": 1.0
+      },
+      "method_id": "mc_dropout",
+      "requested_kwargs": {
+        "batch_size": 64,
+        "dropout_probability": 0.1,
+        "epochs": 200,
+        "hidden_size": 128,
+        "mc_samples": 32,
+        "particle_steps": 200
+      },
+      "run_id": "mc_dropout"
+    },
+    {
+      "dtype": "float32",
+      "kwargs": {
+        "adaptation_steps": 10,
+        "batch_size": 64,
+        "consistency_weight": 1.0,
+        "gradient_clip": 1.0,
+        "hidden_size": 64,
+        "initial_max_std": 0.2,
+        "initial_min_std": 0.1,
+        "input_noise_std": 0.2,
+        "minimum_std": 1e-06,
+        "region": 4.0,
+        "solver_learning_rate": 0.003,
+        "solver_steps": 100,
+        "surrogate_epochs": 100,
+        "surrogate_learning_rate": 0.001,
+        "uncertainty_weight": 0.0,
+        "weight_perturbation_steps": 5,
+        "weight_radius": 0.0005
+      },
+      "method_id": "roma",
+      "requested_kwargs": {
+        "adaptation_steps": 10,
+        "batch_size": 64,
+        "hidden_size": 64,
+        "solver_steps": 100,
+        "surrogate_epochs": 100,
+        "weight_perturbation_steps": 5
+      },
+      "run_id": "roma"
+    },
+    {
+      "dtype": "float32",
+      "kwargs": {
+        "adaptation_steps": 100,
+        "batch_size": 64,
+        "hidden_size": 128,
+        "mentoring_learning_rate": 0.001,
+        "minimum_std": 1e-06,
+        "neighbor_noise_std": 0.1,
+        "neighbor_samples": 128,
+        "remember_count": 8,
+        "reweighting": true,
+        "solver_learning_rate": 0.001,
+        "solver_steps": 100,
+        "surrogate_epochs": 200,
+        "surrogate_learning_rate": 0.001,
+        "validation_fraction": 0.1,
+        "weight_learning_rate": 0.1
+      },
+      "method_id": "ict",
+      "requested_kwargs": {
+        "adaptation_steps": 100,
+        "batch_size": 64,
+        "hidden_size": 128,
+        "solver_steps": 100,
+        "surrogate_epochs": 200,
+        "surrogate_learning_rate": 0.001
+      },
+      "run_id": "ict"
+    },
+    {
+      "dtype": "float32",
+      "kwargs": {
+        "batch_size": 64,
+        "hidden_size": 128,
+        "label_learning_rate": 0.1,
+        "mentoring_learning_rate": 0.001,
+        "minimum_std": 1e-06,
+        "neighbor_noise_std": 0.1,
+        "neighbor_samples": 10,
+        "soft_labels": true,
+        "solver_learning_rate": 0.001,
+        "solver_steps": 100,
+        "surrogate_epochs": 200,
+        "surrogate_learning_rate": 0.001,
+        "validation_fraction": 0.1
+      },
+      "method_id": "tri_mentoring",
+      "requested_kwargs": {
+        "batch_size": 64,
+        "hidden_size": 128,
+        "neighbor_samples": 10,
+        "solver_steps": 100,
+        "surrogate_epochs": 200,
+        "surrogate_learning_rate": 0.001
+      },
+      "run_id": "tri_mentoring"
+    },
+    {
+      "dtype": "float32",
+      "kwargs": {
+        "batch_size": 32,
+        "hidden_size": 128,
+        "list_length": 32,
+        "lists_per_epoch": 256,
+        "minimum_std": 1e-06,
+        "solver_learning_rate": 0.001,
+        "solver_steps": 200,
+        "surrogate_epochs": 100,
+        "surrogate_learning_rate": 0.0003,
+        "validation_lists": 32,
+        "weight_decay": 1e-05
+      },
+      "method_id": "ltr",
+      "requested_kwargs": {
+        "batch_size": 32,
+        "hidden_size": 128,
+        "list_length": 32,
+        "lists_per_epoch": 256,
+        "solver_steps": 200,
+        "surrogate_epochs": 100
+      },
+      "run_id": "ltr"
+    },
+    {
+      "dtype": "float32",
+      "kwargs": {
+        "batch_size": 64,
+        "bucket_count": 32,
+        "embedding_dim": 8,
+        "matching_weight": 1.0,
+        "minimum_std": 1e-06,
+        "quadrature_nodes": 5,
+        "solver_learning_rate": 0.001,
+        "solver_steps": 200,
+        "surrogate_epochs": 200,
+        "surrogate_learning_rate": 0.0001
+      },
+      "method_id": "match_opt",
+      "requested_kwargs": {
+        "batch_size": 64,
+        "bucket_count": 32,
+        "embedding_dim": 8,
+        "quadrature_nodes": 5,
+        "solver_steps": 200,
+        "surrogate_epochs": 200
+      },
+      "run_id": "match_opt"
+    },
+    {
+      "dtype": "float32",
+      "kwargs": {
+        "action_margin": 1.05,
+        "automatic_entropy": true,
+        "backup_entropy": false,
+        "batch_size": 64,
+        "cql_samples": 10,
+        "cql_temperature": 1.0,
+        "cql_weight": 5.0,
+        "discount": 0.99,
+        "gradient_floor": 1e-08,
+        "hidden_size": 128,
+        "initial_alpha": 1.0,
+        "max_horizon": 50,
+        "max_step_scale": 1000000.0,
+        "minimum_std": 1e-06,
+        "reconstruction_tolerance": 1e-05,
+        "rl_learning_rate": 0.0003,
+        "rl_steps": 10000,
+        "solver_steps": 50,
+        "surrogate_epochs": 200,
+        "surrogate_learning_rate": 0.0003,
+        "target_rate": 0.005,
+        "top_fraction": 0.2,
+        "trajectories_per_group": 32
+      },
+      "method_id": "pgs",
+      "requested_kwargs": {
+        "batch_size": 64,
+        "hidden_size": 128,
+        "rl_steps": 10000,
+        "solver_steps": 50,
+        "surrogate_epochs": 200
+      },
+      "run_id": "pgs"
+    },
+    {
+      "dtype": "float32",
+      "kwargs": {
+        "acq_beta": 0.1,
+        "acq_mc_samples": 64,
+        "acq_mc_steps": 50,
+        "calib_mc_samples": 4,
+        "calib_mc_steps": 10,
+        "calib_pairs": 32,
+        "calib_temp": 1.0,
+        "calib_weight": 1.0,
+        "diff_batch": 64,
+        "diff_beta_end": 0.02,
+        "diff_beta_start": 0.0001,
+        "diff_epochs": 100,
+        "diff_grad_clip": 1.0,
+        "diff_hidden": 128,
+        "diff_lr": 0.001,
+        "diff_steps": 100,
+        "diff_t_dim": 32,
+        "ea_crossover": 0.3,
+        "ea_elite": 64,
+        "ea_gens": 100,
+        "ea_mut_sigma_init": 0.12,
+        "ea_mut_sigma_min": 0.02,
+        "ea_pop": 128,
+        "knn_chunk": 256,
+        "mc_batch": 256,
+        "minimum_std": 1e-06,
+        "support_k": 10,
+        "support_sigma_a0": 0.02,
+        "support_sigma_a1": 0.005,
+        "support_tau_a": 0.02,
+        "support_transform": false,
+        "support_weight": 1.0
+      },
+      "method_id": "spade",
+      "requested_kwargs": {
+        "acq_mc_samples": 64,
+        "acq_mc_steps": 50,
+        "calib_mc_samples": 4,
+        "calib_mc_steps": 10,
+        "diff_batch": 64,
+        "diff_epochs": 100,
+        "diff_hidden": 128,
+        "diff_steps": 100,
+        "diff_t_dim": 32,
+        "ea_elite": 64,
+        "ea_gens": 100,
+        "ea_pop": 128
+      },
+      "run_id": "spade"
+    }
+  ],
+  "package_source": {
+    "git_commit": "3d09ac372b171c58b8375942694c39bc78f40948",
+    "git_dirty": false,
+    "sha256": "8cbb0194de96977d242f5db87d32d05c8ae3ad650f994fdaa7697c831866c3f4"
+  },
+  "plan_id": "cd224313aa7db776f6abf550adcf3b93e667f9643d5792e9ad7f6fad437d2307",
+  "schema_version": 1,
+  "shared_settings": {
+    "candidate_budget": 128,
+    "duplicates": "allowed_and_counted_after_rounding_to_12_decimals",
+    "fixed_1b": "subset_of_main_visible_without_resplitting",
+    "float64_methods": [
+      "bdi",
+      "bo_qei",
+      "ga_on_gp"
+    ],
+    "formal_seeds": [
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45
+    ],
+    "metric_index": 4,
+    "mixed_precision": false,
+    "objective": "eval/RedPajamaStackExchange/CrossEntropyLoss",
+    "other_methods_dtype": "float32",
+    "percentile_method": "linear",
+    "pilot_seeds": [
+      0
+    ],
+    "primary_score": "refnorm_max_score",
+    "protocol_id": "llmdm_scale_stratified_v1",
+    "reference": "full_multiscale_logged_utility_evaluator_only",
+    "split": "model_scale_grouped_utility_percentile",
+    "target_model_scale": 1000,
+    "target_training_steps": 19500,
+    "threshold_ties": "include_all",
+    "training_normalization": "visible_data_only",
+    "uncertainty": "sample_sd_ddof1_and_se",
+    "utility_percentiles": [
+      0.0,
+      40.0
+    ],
+    "utility_transform": "negative_loss"
+  }
+}

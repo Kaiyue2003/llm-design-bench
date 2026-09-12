@@ -82,6 +82,12 @@ Do not run two Colab sessions against the same backup directory. File locks are
 local to `/content`; the notebook does not claim distributed locking on Drive.
 The helper is tested on local filesystems, not a guarantee of Drive/FUSE behavior.
 
+Archives are full-state snapshots, not incremental backups, and old snapshots
+are not automatically deleted. Check available Drive storage before a campaign
+and monitor the backup folder's size. Space usage grows as results accumulate;
+a backup error stops the running job and preserves evidence for review. Do not
+assume a free Drive account can hold the entire campaign's repeated snapshots.
+
 If the runtime disappears, the latest unsaved work can still be lost. A dispatch
 without a completion record requires inspection and an explicit
 `INFRASTRUCTURE_RETRY_REASON`. Keep the same frozen seed and method settings.
