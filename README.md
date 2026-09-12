@@ -41,6 +41,11 @@ observations (26 in the fixed-1B subset) and complete budgets for our 19 methods
 The notebook pins code/data versions, defaults to training disabled, and backs
 up explicitly launched runs to Drive.
 
+The [Colab batch workflow](docs/COLAB_BATCH.md) runs the selected methods and seeds
+sequentially, skips verified completed jobs and preserves an explicit pilot-review
+gate. It can be added to an existing Colab session without changing the frozen
+package or discarding results.
+
 Install directly from GitHub:
 
 ```bash

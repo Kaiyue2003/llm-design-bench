@@ -1,5 +1,10 @@
 # First-batch LLM-DM experiments on Colab
 
+For multiple methods/seeds, use the [batch workflow](COLAB_BATCH.md): one pilot
+queue, one combined human review, then one formal queue. It reuses the same frozen
+experiment and verified existing results. This page describes the original
+single-job launcher, which remains available for targeted runs and diagnosis.
+
 Use [LLMDM_Colab.ipynb](../notebooks/LLMDM_Colab.ipynb). This notebook is a launcher for the frozen
 first-batch release, not a second implementation of data splitting or methods.
 Its repository checkout is pinned to a full commit, and its data-recipes checkout
