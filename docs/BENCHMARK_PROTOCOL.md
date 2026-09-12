@@ -5,6 +5,10 @@ This document defines the stable contract for methods evaluated by
 procedures, but they must obey the same data-access, candidate, and reporting
 rules.
 
+The agreed LLM-DM experiment is specified in [LLMDM_PROTOCOL.md](LLMDM_PROTOCOL.md),
+including the frozen-data/config workflow and durable attempt artifacts. The
+historical publication-v1 settings and results remain separate.
+
 ## Objective convention
 
 Every task exposes a maximization utility. If the original objective is a loss,
@@ -39,18 +43,19 @@ candidate batch.
 
 ## Data-mixture settings
 
-The primary data-mixture experiment uses all available logged model scales and
-exposes observations in the global 0th through 40th utility percentiles. It
-evaluates mixture recommendations at the target fidelity:
+The primary data-mixture experiment uses all available logged model scales,
+selecting the 0th through 40th utility percentiles **within each scale** and then
+merging in source row order. Linear interpolation and inclusive boundaries keep
+all cutoff ties. It evaluates mixture recommendations at the target fidelity:
 
 ```text
 model scale:    1B (1000 million parameters)
 training steps: 19,500
 ```
 
-The fixed-1B experiment uses the same utility convention, percentile rule, and
-target fidelity, but filters the logged dataset to the 1B scale before making
-the percentile split. It is an ablation rather than the primary setting.
+The fixed-1B experiment takes only the 1B rows of the already-frozen main visible
+set, without a new split. It uses the same utility convention and target
+fidelity. It is an ablation rather than the primary setting.
 
 For methods originally defined without context variables, adding model scale
 and training steps is a multi-fidelity adaptation and must be identified as
@@ -67,8 +72,9 @@ dimension. The framework does not copy candidates to fill a short batch and
 does not silently remove duplicates. Duplicate and unique candidate counts are
 reported as method behavior.
 
-`D(best)` or Best Logged is an evaluation reference. It is not treated as a
-128-candidate generative method when reporting candidate medians or diversity.
+`D(best)` is an observed-data reference, not a method. The separate Best Logged
+method returns exactly 128 candidates, repeating visible designs when necessary;
+its recommendations are evaluated at target fidelity like other methods.
 
 ## Random seeds
 
@@ -94,14 +100,14 @@ the mean, sample standard deviation, and standard error
 standard error = sample standard deviation / sqrt(8)
 ```
 
-Deterministic references may be evaluated once and explicitly marked
-deterministic; they must not be presented as eight independent stochastic
-runs.
+Seed 0 is a full-configuration pilot, excluded from formal statistics/ranking.
+Deterministic methods are marked as such; eight identical executions must not
+be presented as eight independent stochastic trainings.
 
 ## Normalization and comparison
 
-Raw target-fidelity utility and the corresponding original objective are the
-primary cross-setting metrics. A reference-normalized score is
+The primary statistic is each seed's maximum reference-normalized utility;
+raw target-fidelity utility/loss and median scores are retained. The score is
 
 ```text
 (utility - reference minimum) / (reference maximum - reference minimum)
@@ -109,8 +115,8 @@ primary cross-setting metrics. A reference-normalized score is
 
 and is not clipped. Scores above one are allowed.
 
-Comparisons between multi-scale and fixed-1B settings must use the same
-target-fidelity normalization reference. Setting-local normalized scores may be
+Comparisons between multi-scale and fixed-1B settings use the same full
+multiscale logged utility reference. Setting-local normalized scores may be
 reported for diagnostics but must not be compared across settings as if their
 denominators were identical. The hidden reference is evaluation-only and is
 never exposed to a method.

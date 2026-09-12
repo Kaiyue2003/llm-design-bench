@@ -2,24 +2,32 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
+from llm_design_bench.evaluation.run_artifacts import (
+    atomic_bytes,
+    atomic_json,
+    result_directory_lock,
+)
 from llm_design_bench.evaluation.seed_runner import (
+    DEFAULT_SEED_BENCHMARK_CONFIG,
     RESULT_SCHEMA_VERSION,
     MethodSpec,
     SeedBenchmarkConfig,
+    merge_result_rows,
     reference_normalize,
     run_method_seed_benchmark,
     summarize_seed_results,
+    validate_existing_result_config,
 )
 from llm_design_bench.problem import OfflineProblem
-
 
 LEGACY_PUBLICATION_SOURCE = "legacy_publication_v1"
 
@@ -94,8 +102,25 @@ def run_benchmark_suite(
     tasks: Sequence[BenchmarkTaskSpec],
     methods: Sequence[MethodSpec | str],
     *,
-    config: SeedBenchmarkConfig = SeedBenchmarkConfig(),
+    config: SeedBenchmarkConfig = DEFAULT_SEED_BENCHMARK_CONFIG,
     metadata: Mapping[str, Any] | None = None,
+) -> UnifiedBenchmarkResult:
+    """Run a suite; artifact-backed suites exclusively reserve their result directory."""
+    if config.save_artifacts:
+        with result_directory_lock(config.results_dir):
+            validate_existing_result_config(config)
+            return _run_benchmark_suite_locked(
+                tasks, methods, config=config, metadata=metadata
+            )
+    return _run_benchmark_suite_locked(tasks, methods, config=config, metadata=metadata)
+
+
+def _run_benchmark_suite_locked(
+    tasks: Sequence[BenchmarkTaskSpec],
+    methods: Sequence[MethodSpec | str],
+    *,
+    config: SeedBenchmarkConfig,
+    metadata: Mapping[str, Any] | None,
 ) -> UnifiedBenchmarkResult:
     """Run registered methods over tasks and paired seeds, then write one report.
 
@@ -126,6 +151,7 @@ def run_benchmark_suite(
                 dataset_seed=trial.dataset_seed,
                 split_seed=trial.split_seed,
                 normalization_reference_id=task_spec.normalization_reference_id,
+                task_id=task_spec.task_id,
             )
             result = run_method_seed_benchmark(
                 trial.evaluator_task,
@@ -150,12 +176,20 @@ def run_benchmark_suite(
                 reference_high=reference_high,
             )
             frames.append(frame)
+            if config.save_artifacts:
+                write_unified_report(
+                    pd.concat(frames, ignore_index=True),
+                    config.results_dir,
+                    metadata=metadata,
+                    config=config,
+                )
 
     per_seed = pd.concat(frames, ignore_index=True)
     return write_unified_report(
         per_seed,
         config.results_dir,
         metadata=metadata,
+        config=config if config.save_artifacts else None,
     )
 
 
@@ -164,11 +198,23 @@ def write_unified_report(
     results_dir: str | Path,
     *,
     metadata: Mapping[str, Any] | None = None,
+    config: SeedBenchmarkConfig | None = None,
 ) -> UnifiedBenchmarkResult:
     """Validate unified per-seed rows and write CSV, JSON, Markdown, and LaTeX."""
 
     _validate_unified_rows(per_seed)
     output = Path(results_dir)
+    existing = output / "method_seed_results.csv"
+    if config is not None and existing.exists():
+        per_seed = merge_result_rows(
+            pd.read_csv(existing),
+            per_seed,
+            # Every current row has already passed the attempt-level policy;
+            # repeated report generation merely resumes that immutable result.
+            resume=True,
+            infrastructure_retry_reason=config.infrastructure_retry_reason,
+        )
+        _validate_unified_rows(per_seed)
     ordered = _order_per_seed(per_seed)
     summary = summarize_seed_results(ordered)
     summary = _add_task_ranks(summary)
@@ -177,21 +223,27 @@ def write_unified_report(
     resolved_metadata = _report_metadata(ordered, metadata)
 
     output.mkdir(parents=True, exist_ok=True)
-    ordered.to_csv(output / "method_seed_results.csv", index=False)
-    summary.to_csv(output / "method_seed_summary.csv", index=False)
-    ranks.to_csv(output / "rank_summary.csv", index=False)
-    d_best.to_csv(output / "d_best_summary.csv", index=False)
-    (output / "run_metadata.json").write_text(
-        json.dumps(resolved_metadata, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
+    for name, frame in (
+        ("method_seed_results.csv", ordered),
+        ("method_seed_summary.csv", summary),
+        ("rank_summary.csv", ranks),
+        ("d_best_summary.csv", d_best),
+    ):
+        atomic_bytes(
+            output / name, frame.to_csv(index=False).encode("utf-8"), replace=True
+        )
+    atomic_json(output / "run_metadata.json", resolved_metadata, replace=True)
+    atomic_bytes(
+        output / "README.md",
+        render_unified_markdown(summary, ranks, d_best, resolved_metadata).encode(
+            "utf-8"
+        ),
+        replace=True,
     )
-    (output / "README.md").write_text(
-        render_unified_markdown(summary, ranks, d_best, resolved_metadata),
-        encoding="utf-8",
-    )
-    (output / "benchmark_table.tex").write_text(
-        render_unified_latex(summary, ranks, d_best, resolved_metadata),
-        encoding="utf-8",
+    atomic_bytes(
+        output / "benchmark_table.tex",
+        render_unified_latex(summary, ranks, d_best, resolved_metadata).encode("utf-8"),
+        replace=True,
     )
     return UnifiedBenchmarkResult(
         per_seed=ordered,
@@ -255,9 +307,7 @@ def load_legacy_publication_results(
     converted["experiment_id"] = experiment_id
     converted["run_id"] = converted["optimizer"]
     converted["method_id"] = converted["optimizer"]
-    converted["method_seed"] = converted["optimizer_seed"].fillna(
-        converted["seed"]
-    )
+    converted["method_seed"] = converted["optimizer_seed"].fillna(converted["seed"])
     converted["dataset_seed"] = converted["task_seed"]
     converted["split_seed"] = np.nan
     converted["task_id"] = converted["task"]
@@ -302,9 +352,7 @@ def load_legacy_publication_results(
         "bdi": ["legacy_api", "rbf_kernel", "multi_fidelity"],
     }
     converted["family"] = converted["method_id"].map(families)
-    converted["implementation_kind"] = converted["method_id"].map(
-        implementation_kinds
-    )
+    converted["implementation_kind"] = converted["method_id"].map(implementation_kinds)
     converted["adaptations_json"] = converted["method_id"].map(
         lambda method_id: _json_dumps(adaptations.get(method_id, ["legacy_api"]))
     )
@@ -367,7 +415,7 @@ def aggregate_d_best(per_seed: pd.DataFrame) -> pd.DataFrame:
         first = group.iloc[0]
         row = {column: first[column] for column in identity}
         row["normalization_reference_id"] = first["normalization_reference_id"]
-        row["trials"] = int(len(group))
+        row["trials"] = len(group)
         for source, prefix in (
             ("d_best_utility", "raw_utility"),
             ("refnorm_d_best_score", "refnorm_score"),
@@ -383,7 +431,8 @@ def aggregate_d_best(per_seed: pd.DataFrame) -> pd.DataFrame:
 
 
 def summarize_method_ranks(summary: pd.DataFrame) -> pd.DataFrame:
-    successful = summary[summary["refnorm_max_score_n"] > 0].copy()
+    eligible = summary.get("rank_eligible", summary["refnorm_max_score_n"] > 0)
+    successful = summary[eligible].copy()
     group_columns = [
         "experiment_id",
         "run_id",
@@ -394,6 +443,7 @@ def summarize_method_ranks(summary: pd.DataFrame) -> pd.DataFrame:
         requested_runs=("requested_runs", "sum"),
         successful_runs=("successful_runs", "sum"),
         failed_runs=("failed_runs", "sum"),
+        missing_runs=("missing_runs", "sum"),
     )
     rank_statistics = successful.groupby(
         group_columns,
@@ -420,6 +470,7 @@ def summarize_method_ranks(summary: pd.DataFrame) -> pd.DataFrame:
             "requested_runs",
             "successful_runs",
             "failed_runs",
+            "missing_runs",
         ]
     ]
 
@@ -449,6 +500,10 @@ def render_unified_markdown(
         "| " + " | ".join(header) + " |",
         "| " + " | ".join(["---", *["---:" for _ in tasks], "---:"]) + " |",
     ]
+    if metadata.get("phases") == ["pilot"]:
+        lines.insert(
+            2, "Pilot validation only; these are not formal eight-seed results.\n"
+        )
     d_best_cells = [
         _format_score_row(
             d_best[d_best["task_id"] == task["task_id"]],
@@ -484,6 +539,7 @@ def render_unified_markdown(
 
     total_requested = int(summary["requested_runs"].sum())
     total_failed = int(summary["failed_runs"].sum())
+    total_missing = int(summary["missing_runs"].sum())
     lines.extend(
         [
             "",
@@ -491,9 +547,11 @@ def render_unified_markdown(
             "",
             f"- Requested method runs: {total_requested}",
             f"- Failed method runs: {total_failed}",
+            f"- Missing method runs: {total_missing}",
             f"- Candidate budget per run: K={metadata.get('candidate_budget', 'mixed')}",
             "- `D(best)` is an evaluation reference and is excluded from method ranks.",
-            "- A cell suffix `[successful/requested]` appears when a method has failed seeds.",
+            "- A cell suffix `[successful/requested]` marks failed or missing required seeds.",
+            "- Incomplete required seed sets and pilot runs are not eligible for method ranks.",
             "",
             "## Method provenance",
             "",
@@ -546,9 +604,11 @@ def render_unified_latex(
         "% Requires: \\usepackage{booktabs,graphicx,rotating}",
         "\\begin{sidewaystable*}[t]",
         "\\centering",
-        "\\caption{Reference-normalized maximum utility. Values are mean "
-        "$\\pm$ standard error across successful seeds; $\\mathcal{D}$(best) "
-        "is excluded from method ranks.}",
+        (
+            "\\caption{Reference-normalized maximum utility. Values are mean "
+            "$\\pm$ standard error across successful seeds; $\\mathcal{D}$(best) "
+            "is excluded from method ranks.}"
+        ),
         "\\label{tab:unified-offline-bbo}",
         "\\resizebox{\\textwidth}{!}{%",
         f"\\begin{{tabular}}{{{columns}}}",
@@ -556,6 +616,11 @@ def render_unified_latex(
         " & ".join(header) + " \\\\",
         "\\midrule",
     ]
+    if metadata.get("phases") == ["pilot"]:
+        lines[3] = (
+            "\\caption{Pilot validation only, not formal eight-seed results. "
+            "Reference-normalized maximum utility; pilot runs are not ranked.}"
+        )
     d_best_cells = [
         _format_latex_score(
             d_best[d_best["task_id"] == task["task_id"]],
@@ -587,16 +652,19 @@ def render_unified_latex(
             _latex_escape(method["method_display_name"])
             + " & "
             + " & ".join(cells)
-            + f" & {rank_text} \\\\")
+            + f" & {rank_text} \\\\"
+        )
     lines.extend(
         [
             "\\bottomrule",
             "\\end{tabular}%",
             "}",
             "\\par\\vspace{0.5em}",
-            "\\footnotesize Full sample SD, SE, failure, runtime, diversity, "
-            "novelty, configuration, and provenance fields are stored in the "
-            "machine-readable result artifacts.",
+            (
+                "\\footnotesize Full sample SD, SE, failure, runtime, diversity, "
+                "novelty, configuration, and provenance fields are stored in the "
+                "machine-readable result artifacts."
+            ),
             "\\end{sidewaystable*}",
             "",
         ]
@@ -651,9 +719,10 @@ def _validate_unified_rows(per_seed: pd.DataFrame) -> None:
         raise ValueError(
             f"schema_version must be {RESULT_SCHEMA_VERSION} for every row"
         )
-    if per_seed["result_source"].isna().any() or (
-        per_seed["result_source"].astype(str).str.len() == 0
-    ).any():
+    if (
+        per_seed["result_source"].isna().any()
+        or (per_seed["result_source"].astype(str).str.len() == 0).any()
+    ):
         raise ValueError("result_source must not be empty")
     if not set(per_seed["status"]).issubset({"success", "failed"}):
         raise ValueError("status must be success or failed")
@@ -682,9 +751,9 @@ def _validate_unified_rows(per_seed: pd.DataFrame) -> None:
         "requested_method_config_json",
         "method_config_json",
     ]
-    method_conflicts = per_seed.groupby("run_id", dropna=False)[
-        method_fields
-    ].nunique(dropna=False)
+    method_conflicts = per_seed.groupby("run_id", dropna=False)[method_fields].nunique(
+        dropna=False
+    )
     if (method_conflicts != 1).any().any():
         raise ValueError("each run_id must have consistent method metadata")
     budget_conflicts = per_seed.groupby(
@@ -714,9 +783,7 @@ def _validate_unified_rows(per_seed: pd.DataFrame) -> None:
     score_columns = list(_score_columns())
     numeric_scores = per_seed[score_columns].apply(pd.to_numeric, errors="coerce")
     successful = per_seed["status"] == "success"
-    if not np.isfinite(
-        numeric_scores.loc[successful].to_numpy(dtype=float)
-    ).all():
+    if not np.isfinite(numeric_scores.loc[successful].to_numpy(dtype=float)).all():
         raise ValueError("successful rows must contain finite utility scores")
     failed = ~successful
     available_failed_scores = per_seed.loc[failed, score_columns].notna()
@@ -731,8 +798,7 @@ def _order_per_seed(per_seed: pd.DataFrame) -> pd.DataFrame:
         for index, task_id in enumerate(dict.fromkeys(ordered["task_id"]))
     }
     run_order = {
-        run_id: index
-        for index, run_id in enumerate(dict.fromkeys(ordered["run_id"]))
+        run_id: index for index, run_id in enumerate(dict.fromkeys(ordered["run_id"]))
     }
     ordered["_task_order"] = ordered["task_id"].map(task_order)
     ordered["_run_order"] = ordered["run_id"].map(run_order)
@@ -746,11 +812,15 @@ def _order_per_seed(per_seed: pd.DataFrame) -> pd.DataFrame:
 def _add_task_ranks(summary: pd.DataFrame) -> pd.DataFrame:
     ranked = summary.copy()
     ranked["task_rank"] = np.nan
-    successful = ranked["refnorm_max_score_n"] > 0
-    ranked.loc[successful, "task_rank"] = ranked[successful].groupby(
-        ["experiment_id", "suite", "task_id"],
-        dropna=False,
-    )["refnorm_max_score_mean"].rank(method="average", ascending=False)
+    successful = ranked.get("rank_eligible", ranked["refnorm_max_score_n"] > 0)
+    ranked.loc[successful, "task_rank"] = (
+        ranked[successful]
+        .groupby(
+            ["experiment_id", "suite", "task_id"],
+            dropna=False,
+        )["refnorm_max_score_mean"]
+        .rank(method="average", ascending=False)
+    )
     return ranked
 
 
@@ -766,7 +836,7 @@ def _report_metadata(
     )
     resolved: dict[str, Any] = {
         "schema_version": RESULT_SCHEMA_VERSION,
-        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "created_at_utc": datetime.now(UTC).isoformat(),
         "experiment_ids": sorted(
             str(value) for value in per_seed["experiment_id"].unique()
         ),
@@ -783,12 +853,18 @@ def _report_metadata(
         "table_uncertainty": "standard_error",
         "d_best_ranked": False,
         "failed_runs_retained": True,
+        "incomplete_seed_sets_ranked": False,
     }
+    if "phase" in per_seed:
+        resolved["phases"] = sorted(str(value) for value in per_seed["phase"].unique())
+    if "required_seeds_json" in per_seed:
+        resolved["required_seed_sets"] = [
+            json.loads(value)
+            for value in per_seed["required_seeds_json"].dropna().unique()
+        ]
     for key, value in dict(metadata or {}).items():
         if key in resolved and resolved[key] != value:
-            raise ValueError(
-                f"report metadata may not override reserved field {key!r}"
-            )
+            raise ValueError(f"report metadata may not override reserved field {key!r}")
         resolved[key] = value
     return resolved
 
@@ -830,11 +906,15 @@ def _format_score_row(
     mean = float(item[mean_column])
     uncertainty = float(item[uncertainty_column])
     if not math.isfinite(mean):
+        if include_runs and item.get("phase") == "formal":
+            return f"-- [{int(item['successful_runs'])}/{int(item['requested_runs'])}]"
         return "--"
     value = f"{mean:.3f}"
     if math.isfinite(uncertainty):
         value += f" +/- {uncertainty:.3f}"
-    if include_runs and int(item["failed_runs"]) > 0:
+    if include_runs and (
+        int(item["failed_runs"]) > 0 or int(item.get("missing_runs", 0)) > 0
+    ):
         value += f" [{int(item['successful_runs'])}/{int(item['requested_runs'])}]"
     return value
 
@@ -849,6 +929,7 @@ def _format_latex_score(
         row,
         mean_column=mean_column,
         uncertainty_column=uncertainty_column,
+        include_runs="failed_runs" in row.columns,
     )
     if value == "--":
         return value

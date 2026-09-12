@@ -70,6 +70,28 @@ the CSV retains both SD and SE.
 task, then reports mean and median task rank. A method with no successful run
 on a task is absent from that task's ranking; its failure counts remain visible.
 
+For frozen LLM-DM runs, `phase` and `required_seeds_json` impose a stricter rule:
+pilots are not ranked, and a formal method must have successful seeds 38-45
+before receiving a rank. The summary also retains `missing_runs` and marks
+incomplete coverage in both Markdown and LaTeX.
+
+## Durable frozen-protocol attempts
+
+The dedicated [LLM-DM workflow](LLMDM_PROTOCOL.md) enables evaluator-owned
+per-attempt persistence. This adds `phase`, `required_seeds_json`,
+`provenance_json`, `logical_fingerprint`, `artifact_relative_dir`,
+`environment_json`, and raw loss statistics to per-seed rows. The additive
+fields do not reconstruct missing artifacts for historical results.
+
+Each attempt contains `manifest.json`, `candidates.npz` saved before any oracle
+call, `evaluation.npz`, and `result.json`. The completion row records candidate
+and evaluation file hashes. Reuse verifies hashes, shapes, dtype, target context,
+utilities, refnorm values and aggregate consistency. Failed/interrupted attempts
+remain available and never silently become a different seed or configuration.
+The relative artifact path supports copying an entire results directory between
+machines. Aggregate reports are updated under a single-writer suite lock;
+independent shards may be appended sequentially under the same frozen plan.
+
 ## D(best)
 
 `d_best_summary.csv` is computed once per task/seed after verifying that every

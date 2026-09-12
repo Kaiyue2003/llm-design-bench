@@ -28,6 +28,12 @@ JAX/Neural Tangents runtime; see
 
 ## Installation
 
+For the agreed LLM data-mixture experiment (scale-stratified visible data,
+fixed-1B subset ablation, frozen configs and per-candidate artifacts), use the
+dedicated [LLM-DM protocol workflow](docs/LLMDM_PROTOCOL.md). Its prepare/freeze
+commands do not train models; execution is a separate explicit command. The
+historical publication table remains unchanged.
+
 Install directly from GitHub:
 
 ```bash

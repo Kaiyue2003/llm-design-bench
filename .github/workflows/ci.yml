@@ -32,6 +32,7 @@ jobs:
           llm-design-bench-offline --help
           llm-design-bench-report --help
           llm-design-bench-suite --help
+          llm-design-bench-llmdm --help
           llm-design-bench-synthetic --help
 
   package:

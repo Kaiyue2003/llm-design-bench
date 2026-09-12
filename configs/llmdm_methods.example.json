@@ -1,0 +1,5 @@
+[
+  {"method_id": "best_logged", "kwargs": {}},
+  {"method_id": "random_search", "kwargs": {}},
+  {"method_id": "sobol", "kwargs": {}}
+]
