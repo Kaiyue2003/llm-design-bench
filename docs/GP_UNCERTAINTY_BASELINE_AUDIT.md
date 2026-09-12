@@ -23,7 +23,10 @@ configuration. These method IDs must therefore retain the **adaptation** label.
 
 ## Shared exact GP
 
-`bo_qei` and `ga_on_gp` use one native PyTorch exact Gaussian Process:
+`bo_qei` and `ga_on_gp` share a GPyTorch exact Gaussian Process (GPyTorch
+1.15.2 and linear_operator 0.6.1). The immutable `llmdm_forward_v1` release
+used a handwritten PyTorch GP; its pinned checkout remains historical and must
+not be mixed with the new `llmdm_forward_gpytorch_v2` experiment.
 
 - design coordinates and optional fidelity context are standardized together;
 - maximization utility is standardized once;
@@ -33,9 +36,19 @@ configuration. These method IDs must therefore retain the **adaptation** label.
 - Cholesky solves are used for posterior mean and covariance;
 - posterior factorization increases diagonal jitter only when required.
 
-The implementation is intentionally local and has no BoTorch or GPyTorch
-runtime dependency. This keeps the install surface small, but means it is not
-the BoTorch implementation and numerical parity should not be inferred.
+The backend uses GPyTorch `ExactGP`, `ZeroMean`, an ARD `RBFKernel` wrapped in
+`ScaleKernel`, `GaussianLikelihood`, and `ExactMarginalLogLikelihood`.
+See the [official regression tutorial](https://docs.gpytorch.ai/en/stable/examples/01_Exact_GPs/Simple_GP_Regression.html).
+The optimizer retains the original log-space hyperparameters, clamps and total
+negative marginal log likelihood. Training covariance includes observation
+noise plus explicit numerical jitter; candidate acquisition uses the latent
+function posterior, not noisy observation predictions. Dense exact solves and
+joint covariance are retained, without fast predictive variance approximations.
+
+qEI candidate optimization remains our PyTorch adaptation, not a BoTorch
+implementation. Fixed-hyperparameter numerical checks do not imply identical
+optimization trajectories or paper-exact replication. BDI's separate RBF
+kernel-ridge adaptation is not a Gaussian Process and is unchanged.
 
 ## BO-qEI adaptation
 
@@ -51,7 +64,7 @@ objective remains reproducible and its gradients do not change solely because
 of resampling. The full candidate batch is optimized together through the
 common simplex or box mapping.
 
-Differences from a possible paper implementation include the local GP,
+Differences from a possible paper implementation include the GP configuration,
 gradient optimizer, initialization mix, stopping rule, and shared defaults.
 The public paper artifacts do not pin these choices for LLM-DM.
 

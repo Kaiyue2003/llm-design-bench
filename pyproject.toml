@@ -26,6 +26,8 @@ classifiers = [
 ]
 dependencies = [
     "bayeso-benchmarks>=0.2.0",
+    "gpytorch==1.15.2",
+    "linear_operator==0.6.1",
     "matplotlib>=3.8",
     "numpy>=1.26",
     "pandas>=2.2",

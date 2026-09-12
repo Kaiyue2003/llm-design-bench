@@ -34,7 +34,15 @@ dedicated [LLM-DM protocol workflow](docs/LLMDM_PROTOCOL.md). Its prepare/freeze
 commands do not train models; execution is a separate explicit command. The
 historical publication table remains unchanged.
 
-For the frozen first batch, open [the Colab notebook](notebooks/LLMDM_Colab.ipynb)
+For a **fresh GPyTorch experiment**, use
+[LLMDM_GPyTorch_Colab.ipynb](notebooks/LLMDM_GPyTorch_Colab.ipynb) and the
+[automated Colab guide](docs/COLAB_GPYTORCH.md). It prepares a version-pinned
+environment, runs all selected full-budget pilots, asks for one explicit pilot
+review, then queues every formal seed automatically. New results are isolated
+from the original experiment; no v1 result is reused. The dataset and method
+budgets stay unchanged.
+
+For the historical frozen first batch, open [the Colab notebook](notebooks/LLMDM_Colab.ipynb)
 and follow the [Colab guide](docs/COLAB.md). The
 [release inputs](experiments/llmdm_forward_v1/README.md) contain 184 shared visible
 observations (26 in the fixed-1B subset) and complete budgets for our 19 methods.

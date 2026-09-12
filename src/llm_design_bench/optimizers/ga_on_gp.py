@@ -18,7 +18,6 @@ from llm_design_bench.optimizers.torch_utils import (
 )
 from llm_design_bench.problem import MethodResult, OfflineProblem, RunContext
 
-
 ROOT_GP_COMMIT = "d23f14fe30d53f1fc4423ce006056672d0353906"
 
 
@@ -36,11 +35,11 @@ class GradientAscentOnGPMethod(OfflineBBOMethod):
         ),
         source_commit=ROOT_GP_COMMIT,
         description=(
-            "Exact RBF Gaussian Process posterior mean optimized by plain "
+            "GPyTorch exact RBF Gaussian Process posterior mean optimized by plain "
             "gradient ascent from mixed logged and random starts."
         ),
         adaptations=(
-            "native_pytorch_exact_gp",
+            "gpytorch_exact_gp",
             "paper_baseline_code_not_public",
             "model_scale_and_training_step_context",
             "generic_simplex_and_box_spaces",

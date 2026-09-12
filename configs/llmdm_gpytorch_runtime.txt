@@ -1,0 +1,6 @@
+# GP backend pins for llmdm_forward_gpytorch_v2.
+# Colab's preinstalled CUDA Torch is constrained separately to its exact version.
+# The first runtime contract records the numerical stack and is checked on resume.
+# Each attempt additionally saves the complete installed-package inventory.
+gpytorch==1.15.2
+linear_operator==0.6.1

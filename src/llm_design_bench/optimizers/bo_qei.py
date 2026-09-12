@@ -25,7 +25,7 @@ from llm_design_bench.problem import MethodResult, OfflineProblem, RunContext
 
 @register_method()
 class BayesianOptimizationQEiMethod(OfflineBBOMethod):
-    """Joint Monte Carlo qEI optimized through a native exact PyTorch GP."""
+    """Joint Monte Carlo qEI optimized through a GPyTorch exact GP."""
 
     metadata = MethodMetadata(
         method_id="bo_qei",
@@ -36,10 +36,11 @@ class BayesianOptimizationQEiMethod(OfflineBBOMethod):
         source_commit="botorch-v0.17.0-formulation",
         description=(
             "Joint Monte Carlo q-Expected Improvement over a learned exact "
-            "RBF Gaussian Process."
+            "RBF Gaussian Process implemented with GPyTorch."
         ),
         adaptations=(
-            "native_pytorch_gp_and_qei",
+            "gpytorch_exact_gp",
+            "native_pytorch_joint_qei",
             "model_scale_and_training_step_context",
             "generic_simplex_and_box_spaces",
             "shared_config_due_unpublished_llm_dm_hyperparameters",

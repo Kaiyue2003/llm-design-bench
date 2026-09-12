@@ -501,8 +501,10 @@ def test_adaptation_metadata_is_explicit() -> None:
     ga_on_gp = make_method("ga_on_gp").metadata
     mc_dropout = make_method("mc_dropout").metadata
     assert bo_qei.display_name == "BO-qEI adaptation"
-    assert "native_pytorch_gp_and_qei" in bo_qei.adaptations
+    assert "gpytorch_exact_gp" in bo_qei.adaptations
+    assert "native_pytorch_joint_qei" in bo_qei.adaptations
     assert ga_on_gp.display_name == "GA on GP adaptation"
+    assert "gpytorch_exact_gp" in ga_on_gp.adaptations
     assert ga_on_gp.source_commit
     assert mc_dropout.display_name == "MC-Dropout adaptation"
     assert {
