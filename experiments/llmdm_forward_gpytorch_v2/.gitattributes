@@ -1,0 +1,5 @@
+# Preserve immutable published file hashes on Windows and Linux.
+*.json -text whitespace=trailing-space,space-before-tab,cr-at-eol
+*.txt -text
+data/*.json -text whitespace=trailing-space,space-before-tab,cr-at-eol
+data/*.npz -text

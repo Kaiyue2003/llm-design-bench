@@ -1,0 +1,43 @@
+{
+  "artifact_sha256": {
+    "data/manifest.json": "8ace01695e662db3ef42a080d6cc6b54435af9ba417f01baef43347f770c30d7",
+    "data/reference.npz": "031f8001f709ad7aef85962c035aba541d0123d83ba999a3275041bf0c758599",
+    "data/visible.npz": "021b0fba9bcc5f2dbfb5f51cdec647f9ab37d3cad7ff0da8241dbf1685a913d7",
+    "methods.json": "790870022373b2c7f26e1a1db03e6e80e86118acb8f53803b8d70bb8907dcc40",
+    "plan.json": "a790d547f179d8117e90631577211e87eef5dabd2b2aedced94f3cee9ae306ed",
+    "runtime-constraints.txt": "5a97a9926d6272293c89cdd90171d0fef3f7037e41d8514195787cef286ef9dd"
+  },
+  "code_commit": "9d70e1458239142353e34cc596ba2b8b8764871d",
+  "counts": {
+    "empty_histories": 18,
+    "fixed_1b_visible": 26,
+    "main_visible": 184,
+    "methods": 19,
+    "source_rows": 472,
+    "usable_logged": 454
+  },
+  "data_manifest_id": "a27d497d18b2a476cbcc5d09651ba6e98a6618c78e1d22569c02b0de8858f8bc",
+  "experiment_id": "llmdm_forward_gpytorch_v2",
+  "gp_backend": {
+    "factorization": "dense_cholesky",
+    "implementation": "gpytorch_exact_gp",
+    "kernel": "scaled_ard_rbf",
+    "mean": "zero",
+    "methods": [
+      "ga_on_gp",
+      "bo_qei"
+    ],
+    "packages": {
+      "gpytorch": "1.15.2",
+      "linear_operator": "0.6.1"
+    },
+    "posterior": "latent"
+  },
+  "package_source_sha256": "84cadd2e3106a0f1b547aa49560f0f96418475739a8b7134b7259da28a11dcec",
+  "plan_id": "1e097b0f5f554982ac5029a28b66337dfa22cfd9a309da200523202eea786b8c",
+  "protocol_id": "llmdm_scale_stratified_v1",
+  "result_policy": "fresh_experiment_no_v1_result_reuse",
+  "runtime_policy": "preserve_colab_torch_and_lock_first_runtime_contract",
+  "schema_version": 1,
+  "upstream_commit": "37269969a0957448d51622e0c083977bc5d260e8"
+}

@@ -1,0 +1,73 @@
+[
+  {"method_id": "best_logged", "kwargs": {}},
+  {"method_id": "random_search", "kwargs": {}},
+  {"method_id": "sobol", "kwargs": {}},
+  {
+    "method_id": "offline_mlp",
+    "kwargs": {"hidden_size": 128, "epochs": 200, "batch_size": 64, "particle_steps": 200}
+  },
+  {
+    "method_id": "standard_ga",
+    "kwargs": {"hidden_size": 128, "surrogate_epochs": 200, "batch_size": 64, "solver_steps": 200}
+  },
+  {
+    "method_id": "coms",
+    "kwargs": {"hidden_size": 128, "epochs": 200, "batch_size": 64, "adversarial_steps": 20, "particle_steps": 200}
+  },
+  {"method_id": "bdi", "kwargs": {"steps": 200}},
+  {"method_id": "ga_on_gp", "kwargs": {"gp_training_steps": 200, "solver_steps": 200}},
+  {"method_id": "bo_qei", "kwargs": {"gp_training_steps": 200, "acquisition_steps": 200, "mc_samples": 128}},
+  {
+    "method_id": "cma_es",
+    "kwargs": {"hidden_size": 128, "ensemble_size": 5, "surrogate_epochs": 200, "batch_size": 64, "population_size": 16, "generations": 100}
+  },
+  {
+    "method_id": "reinforce",
+    "kwargs": {"hidden_size": 128, "ensemble_size": 5, "surrogate_epochs": 200, "batch_size": 64, "iterations": 200, "reinforce_batch_size": 512}
+  },
+  {
+    "method_id": "mc_dropout",
+    "kwargs": {"hidden_size": 128, "epochs": 200, "batch_size": 64, "dropout_probability": 0.1, "mc_samples": 32, "particle_steps": 200}
+  },
+  {
+    "method_id": "roma",
+    "kwargs": {"hidden_size": 64, "surrogate_epochs": 100, "batch_size": 64, "weight_perturbation_steps": 5, "adaptation_steps": 10, "solver_steps": 100}
+  },
+  {
+    "method_id": "ict",
+    "kwargs": {"hidden_size": 128, "surrogate_epochs": 200, "batch_size": 64, "surrogate_learning_rate": 0.001, "adaptation_steps": 100, "solver_steps": 100}
+  },
+  {
+    "method_id": "tri_mentoring",
+    "kwargs": {"hidden_size": 128, "surrogate_epochs": 200, "batch_size": 64, "surrogate_learning_rate": 0.001, "solver_steps": 100, "neighbor_samples": 10}
+  },
+  {
+    "method_id": "ltr",
+    "kwargs": {"hidden_size": 128, "surrogate_epochs": 100, "list_length": 32, "lists_per_epoch": 256, "batch_size": 32, "solver_steps": 200}
+  },
+  {
+    "method_id": "match_opt",
+    "kwargs": {"embedding_dim": 8, "surrogate_epochs": 200, "batch_size": 64, "bucket_count": 32, "quadrature_nodes": 5, "solver_steps": 200}
+  },
+  {
+    "method_id": "pgs",
+    "kwargs": {"hidden_size": 128, "surrogate_epochs": 200, "batch_size": 64, "rl_steps": 10000, "solver_steps": 50}
+  },
+  {
+    "method_id": "spade",
+    "kwargs": {
+      "diff_hidden": 128,
+      "diff_t_dim": 32,
+      "diff_epochs": 100,
+      "diff_batch": 64,
+      "diff_steps": 100,
+      "calib_mc_samples": 4,
+      "calib_mc_steps": 10,
+      "acq_mc_samples": 64,
+      "acq_mc_steps": 50,
+      "ea_pop": 128,
+      "ea_elite": 64,
+      "ea_gens": 100
+    }
+  }
+]
