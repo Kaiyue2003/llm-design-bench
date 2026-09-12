@@ -1,6 +1,6 @@
 # First-batch LLM-DM experiments on Colab
 
-Use `notebooks/LLMDM_Colab.ipynb`. This notebook is a launcher for the frozen
+Use [LLMDM_Colab.ipynb](../notebooks/LLMDM_Colab.ipynb). This notebook is a launcher for the frozen
 first-batch release, not a second implementation of data splitting or methods.
 Its repository checkout is pinned to a full commit, and its data-recipes checkout
 to `37269969a0957448d51622e0c083977bc5d260e8`. The saved plan also checks installed
@@ -36,7 +36,7 @@ The three kernel/GP methods still use **float64**. Neural methods default to CUD
 and float32, without mixed precision. Select a method's CPU/GPU device type before
 its pilot and keep it for that method's formal runs.
 
-The notebook records and compares critical package versions and GPU model against
+The notebook records and compares Python, CUDA/cuDNN, critical package versions and GPU model against
 the first run of a method. An environment change requires explicit review; do not
 silently pool timings from different GPUs. Full installed packages, hardware,
 dtype, source, candidates and scores are also saved by the evaluator. Exact

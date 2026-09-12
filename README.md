@@ -34,6 +34,13 @@ dedicated [LLM-DM protocol workflow](docs/LLMDM_PROTOCOL.md). Its prepare/freeze
 commands do not train models; execution is a separate explicit command. The
 historical publication table remains unchanged.
 
+For the frozen first batch, open [the Colab notebook](notebooks/LLMDM_Colab.ipynb)
+and follow the [Colab guide](docs/COLAB.md). The
+[release inputs](experiments/llmdm_forward_v1/README.md) contain 184 shared visible
+observations (26 in the fixed-1B subset) and complete budgets for our 19 methods.
+The notebook pins code/data versions, defaults to training disabled, and backs
+up explicitly launched runs to Drive.
+
 Install directly from GitHub:
 
 ```bash
