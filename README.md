@@ -16,8 +16,8 @@ package uses `utility = -objective`, so a larger utility is always better.
 
 | Suite | Designs | Logged dataset | Methods |
 | --- | --- | --- | --- |
-| Data mixture | Five-domain simplex plus model scale and training steps | Published `data-recipes` runs | Best Logged, random search, Sobol, Offline MLP, COM, BDI |
-| Synthetic BBO | Box-bounded continuous vectors | Seeded uniform samples over each function's bounds | Best Logged, COM, BDI |
+| Data mixture | Five-domain simplex plus model scale and training steps | Published `data-recipes` runs | All 14 registered offline methods; legacy random/Sobol runners |
+| Synthetic BBO | Box-bounded continuous vectors | Seeded uniform samples over each function's bounds | All 14 registered offline methods |
 
 The synthetic suite covers Many Local Minima, Bowl-Shaped, Plate-Shaped,
 Valley-Shaped, Steep Ridges/Drops, and Other test problems. COM is a
@@ -26,11 +26,34 @@ that uses differentiable RBF kernel regression instead of the original legacy
 JAX/Neural Tangents runtime; see [Method Notes](docs/METHODS.md) for the exact
 mechanisms and limitations.
 
-The unified runnable registry currently exposes `best_logged`,
-`offline_mlp`, `coms`, and `bdi`. A separate
-integration catalog defines the requirements for CbAS, MINs, DDOM, GABO, GTG,
-RGD, BONET, DEMO, ROOT, and SPADE without presenting unfinished ports as
-runnable methods.
+The runnable PyTorch registry contains `best_logged`, `offline_mlp`, `coms`,
+`bdi`, `cbas`, `mins`, `ddom`, `gabo`, `gtg`, `rgd`, `bonet`, `demo`, `root`,
+and `spade`. The ten additional methods are **continuous PyTorch adaptations**,
+with source revisions and algorithmic substitutions recorded in
+[Additional Methods](docs/ADDITIONAL_METHODS.md). They are not claims of
+checkpoint compatibility or reproduction of the original papers' tables.
+
+The [uploaded simulation results](reference_results/additional_methods_integration/README.md)
+include all 14 methods across ten tasks and eight seeds (1,120 runs), comparison
+tables, raw per-seed scores, and downloadable input/candidate arrays. An
+independent replay matched all 1,120 runs exactly. These are two-epoch integration
+results; the page records the training budgets, source revisions and limitations.
+
+Run every method twice in Docker and verify the saved data and candidates:
+
+```bash
+docker compose run --build --rm all-methods-smoke
+```
+
+Run the eight-seed, ten-task suite with all methods:
+
+```bash
+docker compose run --build --rm all-methods
+```
+
+The full suite trains models and can take substantially longer than the smoke
+check. Results, exact input arrays, candidates, configuration, and file hashes
+are persisted under `results/docker/`.
 
 ## Installation
 

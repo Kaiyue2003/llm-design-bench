@@ -64,3 +64,19 @@ jobs:
           --particle-steps 2
           --bdi-steps 2
           --results-dir /tmp/smoke
+      - name: Replay all fourteen PyTorch methods
+        env:
+          IMAGE_REF: ${{ fromJSON(steps.metadata.outputs.json).tags[0] }}
+        run: >-
+          docker run --rm
+          --volume "$RUNNER_TEMP/all-methods:/results"
+          --env RUN_RESULTS_DIR=/results
+          "$IMAGE_REF"
+          /app/docker/reproduce_all_methods_smoke.sh
+      - name: Save reproducibility artifacts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: all-methods-replay
+          path: ${{ runner.temp }}/all-methods
+          if-no-files-found: ignore

@@ -6,6 +6,7 @@ from llm_design_bench.optimizers import (
     make_method,
     method_names,
     planned_method_names,
+    list_method_blueprints,
 )
 from llm_design_bench.problem import (
     OfflineProblem,
@@ -72,8 +73,8 @@ def test_registered_pytorch_methods_run_on_box_space(method_id, kwargs) -> None:
     assert get_method_metadata(method_id).implementation_framework == "pytorch"
 
 
-def test_planned_catalog_is_not_the_runnable_registry() -> None:
-    assert set(planned_method_names()) == {
+def test_additional_catalog_tracks_implemented_adaptations() -> None:
+    assert {blueprint.method_id for blueprint in list_method_blueprints()} == {
         "bonet",
         "cbas",
         "ddom",
@@ -86,9 +87,9 @@ def test_planned_catalog_is_not_the_runnable_registry() -> None:
         "spade",
     }
     assert {"best_logged", "offline_mlp", "coms", "bdi"}.issubset(method_names())
-    assert "spade" not in method_names()
-    with pytest.raises(KeyError, match="unknown method"):
-        make_method("spade")
+    assert planned_method_names() == ()
+    assert "spade" in method_names()
+    assert all(blueprint.status.value == "implemented_adaptation" for blueprint in list_method_blueprints())
 
 
 def test_tensorflow_origin_is_disclosed_for_com_port() -> None:

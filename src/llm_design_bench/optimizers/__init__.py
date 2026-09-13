@@ -34,8 +34,15 @@ from llm_design_bench.optimizers.unified_baselines import (
     UnifiedCOM,
     UnifiedOfflineMLP,
 )
+from llm_design_bench.optimizers.adaptive_generative import CbAS, MINs
+from llm_design_bench.optimizers.diffusion_methods import DDOM, RGD, DEMO
+from llm_design_bench.optimizers.trajectory_methods import BONET, GTG
+from llm_design_bench.optimizers.gabo import GABO
+from llm_design_bench.optimizers.root import ROOT
+from llm_design_bench.optimizers.spade import SPADE
 
 __all__ = [
+    "CbAS", "MINs", "DDOM", "RGD", "DEMO", "BONET", "GTG", "GABO", "ROOT", "SPADE",
     "BackwardDistillationOptimizer",
     "BestLoggedOptimizer",
     "ConservativeObjectiveModelOptimizer",

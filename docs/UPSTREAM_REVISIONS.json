@@ -1,0 +1,203 @@
+{
+  "cbas": {
+    "method_id": "cbas",
+    "display_name": "CbAS",
+    "family": "inverse_generative",
+    "implementation_kind": "lightweight_adaptation",
+    "source_url": "https://github.com/dhbrookes/CbAS",
+    "source_commit": "725805a2bd889084a2a9e9032d24d409fe4d7e61",
+    "paper_url": "https://proceedings.mlr.press/v97/brookes19a.html",
+    "original_framework": "TensorFlow",
+    "implementation_framework": "pytorch",
+    "optional_dependencies": [],
+    "config_schema_version": 1,
+    "description": "iterative adaptive-threshold conditioning with density-ratio weights",
+    "adaptations": [
+      "independent continuous PyTorch implementation; paper-result parity not established",
+      "train-only standardized box/ALR features and explicit fidelity conditioning",
+      "Gaussian conditional VAE for continuous designs",
+      "decoder density ratio uses the shared latent draw; log ratio clipped to +/-20"
+    ]
+  },
+  "mins": {
+    "method_id": "mins",
+    "display_name": "MINs",
+    "family": "inverse_generative",
+    "implementation_kind": "lightweight_adaptation",
+    "source_url": "https://github.com/rail-berkeley/design-baselines",
+    "source_commit": "785dbcfa58107bfcc426257a1c2e69d7f71c3c27",
+    "paper_url": "https://proceedings.neurips.cc/paper/2020/hash/373e4c5d8edfa8b74fd4b6791d0cf6dc-Abstract.html",
+    "original_framework": "TensorFlow",
+    "implementation_framework": "pytorch",
+    "optional_dependencies": [],
+    "config_schema_version": 1,
+    "description": "conditional inverse generator trained to model designs given utility",
+    "adaptations": [
+      "independent continuous PyTorch implementation; paper-result parity not established",
+      "train-only standardized box/ALR features and explicit fidelity conditioning",
+      "weighted conditional GAN with mismatched-pair negatives",
+      "finite target-utility search ranked by ensemble LCB and discriminator plausibility"
+    ]
+  },
+  "ddom": {
+    "method_id": "ddom",
+    "display_name": "DDOM",
+    "family": "inverse_generative",
+    "implementation_kind": "lightweight_adaptation",
+    "source_url": "https://github.com/siddarthk97/ddom",
+    "source_commit": "fb3d0558cf1af153568b6fa7902c0505356821dc",
+    "paper_url": "https://proceedings.mlr.press/v202/krishnamoorthy23a.html",
+    "original_framework": "PyTorch",
+    "implementation_framework": "pytorch",
+    "optional_dependencies": [],
+    "config_schema_version": 1,
+    "description": "classifier-free diffusion of designs conditioned on utility",
+    "adaptations": [
+      "independent continuous PyTorch implementation; paper-result parity not established",
+      "train-only standardized box/ALR features and explicit fidelity conditioning",
+      "cosine discrete VP schedule and deterministic DDIM replace the upstream continuous SDE solver",
+      "exponential utility reweighting instead of histogram-smoothed weights"
+    ]
+  },
+  "gabo": {
+    "method_id": "gabo",
+    "display_name": "GABO",
+    "family": "hybrid",
+    "implementation_kind": "lightweight_adaptation",
+    "source_url": "https://github.com/michael-s-yao/gabo",
+    "source_commit": "61a44c09b22645c21f06394dc04983507404eda9",
+    "paper_url": "https://openreview.net/forum?id=3RxcarQFRn",
+    "original_framework": "PyTorch",
+    "implementation_framework": "pytorch",
+    "optional_dependencies": [],
+    "config_schema_version": 1,
+    "description": "Bayesian optimization in GAN latent space with source-critic regularization",
+    "adaptations": [
+      "independent continuous PyTorch implementation; paper-result parity not established",
+      "train-only standardized box/ALR features and explicit fidelity conditioning",
+      "conditional VAE latent representation with an adversarial Wasserstein source critic",
+      "finite-grid dual coefficient; exact RBF GP with median lengthscale and sequential analytic EI instead of BoTorch qEI"
+    ]
+  },
+  "gtg": {
+    "method_id": "gtg",
+    "display_name": "GTG",
+    "family": "trajectory_model",
+    "implementation_kind": "lightweight_adaptation",
+    "source_url": "https://github.com/dbsxodud-11/GTG",
+    "source_commit": "448f20635b3e484d446ffe091d1861136068fc8c",
+    "paper_url": "https://proceedings.neurips.cc/paper_files/paper/2024/hash/98904db124b2a2463e8c59ec33fc7150-Abstract-Conference.html",
+    "original_framework": "PyTorch",
+    "implementation_framework": "pytorch",
+    "optional_dependencies": [],
+    "config_schema_version": 1,
+    "description": "guided diffusion over synthetic improvement trajectories",
+    "adaptations": [
+      "independent continuous PyTorch implementation; paper-result parity not established",
+      "train-only standardized box/ALR features and explicit fidelity conditioning",
+      "within-fidelity nearest-neighbor improving trajectories",
+      "flattened trajectory MLP diffusion instead of temporal U-Net; mean-return CFG and anchored start"
+    ]
+  },
+  "rgd": {
+    "method_id": "rgd",
+    "display_name": "RGD",
+    "family": "inverse_generative",
+    "implementation_kind": "lightweight_adaptation",
+    "source_url": "https://github.com/GGchen1997/RGD",
+    "source_commit": "c8ab225e09999534651e27be634921af5f2ef002",
+    "paper_url": "https://arxiv.org/abs/2410.00983",
+    "original_framework": "PyTorch",
+    "implementation_framework": "pytorch",
+    "optional_dependencies": [],
+    "config_schema_version": 1,
+    "description": "proxy-guided design diffusion with iterative proxy refinement",
+    "adaptations": [
+      "independent continuous PyTorch implementation; paper-result parity not established",
+      "train-only standardized box/ALR features and explicit fidelity conditioning",
+      "cosine VP diffusion with a compact Gaussian ensemble proxy",
+      "midpoint probability-flow likelihood with a seeded Hutchinson trace and terminal t=.98",
+      "clipped reverse-KL proxy refinement; normalized gradients on denoised samples"
+    ]
+  },
+  "bonet": {
+    "method_id": "bonet",
+    "display_name": "BONET",
+    "family": "trajectory_model",
+    "implementation_kind": "lightweight_adaptation",
+    "source_url": "https://github.com/siddarthk97/bonet",
+    "source_commit": "14b506a695c168dea6ddaae8867cef41859fe716",
+    "paper_url": "https://proceedings.mlr.press/v202/mashkaria23a.html",
+    "original_framework": "PyTorch",
+    "implementation_framework": "pytorch",
+    "optional_dependencies": [],
+    "config_schema_version": 1,
+    "description": "autoregressive generation from regret-budget-conditioned trajectories",
+    "adaptations": [
+      "independent continuous PyTorch implementation; paper-result parity not established",
+      "train-only standardized box/ALR features and explicit fidelity conditioning",
+      "within-fidelity bootstrap-sorted trajectories and Gaussian causal transformer",
+      "strictly offline rollout updates regret using a trained proxy instead of online oracle evaluations"
+    ]
+  },
+  "demo": {
+    "method_id": "demo",
+    "display_name": "DEMO",
+    "family": "inverse_generative",
+    "implementation_kind": "lightweight_adaptation",
+    "source_url": "https://github.com/mila-iqia/Design-Editing-for-Offline-MBO",
+    "source_commit": "3f02bec3a64e19b0dd36884b258ac014fd1bf0ec",
+    "paper_url": "https://openreview.net/forum?id=OPFnpl7KiF",
+    "original_framework": "PyTorch",
+    "implementation_framework": "pytorch",
+    "optional_dependencies": [],
+    "config_schema_version": 1,
+    "description": "diffusion-based design editing toward higher target utility",
+    "adaptations": [
+      "independent continuous PyTorch implementation; paper-result parity not established",
+      "train-only standardized box/ALR features and explicit fidelity conditioning",
+      "surrogate-gradient pseudo-targets and target-distribution diffusion fine-tuning",
+      "partial cosine noising and DDIM editing replace the upstream VP-SDE/Heun solver"
+    ]
+  },
+  "root": {
+    "method_id": "root",
+    "display_name": "ROOT",
+    "family": "transport",
+    "implementation_kind": "lightweight_adaptation",
+    "source_url": "https://github.com/cuong-dm/ROOT",
+    "source_commit": "d23f14fe30d53f1fc4423ce006056672d0353906",
+    "paper_url": "https://papers.nips.cc/paper_files/paper/2025/hash/8e357df853b7352fe91d92c83e2f90b2-Abstract-Conference.html",
+    "original_framework": "PyTorch",
+    "implementation_framework": "pytorch",
+    "optional_dependencies": [],
+    "config_schema_version": 1,
+    "description": "probabilistic bridge translating low-score designs into high-score designs",
+    "adaptations": [
+      "independent continuous PyTorch implementation; paper-result parity not established",
+      "train-only standardized box/ALR features and explicit fidelity conditioning",
+      "linear Brownian bridge with displacement objective and analytic stochastic reverse transitions",
+      "within-fidelity quantile pairing and compact time-conditioned MLP"
+    ]
+  },
+  "spade": {
+    "method_id": "spade",
+    "display_name": "SPADE",
+    "family": "forward_surrogate",
+    "implementation_kind": "lightweight_adaptation",
+    "source_url": "https://github.com/HarryYoung2018/spade",
+    "source_commit": "586151bbb56e246f93ca97ce33f79887a13161bd",
+    "paper_url": "https://arxiv.org/abs/2605.11246",
+    "original_framework": "PyTorch",
+    "implementation_framework": "pytorch",
+    "optional_dependencies": [],
+    "config_schema_version": 1,
+    "description": "conditional diffusion surrogate with calibration, support-proximity regularization, and conservative acquisition search",
+    "adaptations": [
+      "independent continuous PyTorch implementation; paper-result parity not established",
+      "train-only standardized box/ALR features and explicit fidelity conditioning",
+      "scalar conditional diffusion with moment/rank and support-proximity training losses",
+      "cosine schedule, compact MLP, exact torch kNN, and seeded evolutionary LCB search"
+    ]
+  }
+}

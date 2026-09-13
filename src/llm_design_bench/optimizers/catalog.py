@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 
 from llm_design_bench.optimizers.base import MethodFamily
@@ -10,11 +10,12 @@ class IntegrationStatus(str, Enum):
     PLANNED = "planned"
     PORT_IN_PROGRESS = "port_in_progress"
     PARITY_VALIDATED = "parity_validated"
+    IMPLEMENTED_ADAPTATION = "implemented_adaptation"
 
 
 @dataclass(frozen=True)
 class MethodBlueprint:
-    """Integration requirements for a method that is not yet runnable."""
+    """Integration requirements and implementation status for a method."""
 
     method_id: str
     display_name: str
@@ -85,7 +86,7 @@ _BLUEPRINTS = {
             family=MethodFamily.HYBRID,
             mechanism="Bayesian optimization in GAN latent space with source-critic regularization",
             required_components=(
-                "GAN",
+                "conditional VAE latent representation",
                 "source critic",
                 "latent Gaussian process",
                 "acquisition optimizer",
@@ -137,6 +138,7 @@ _BLUEPRINTS = {
                 "regret-budget conditioning",
             ),
             paper_url="https://proceedings.mlr.press/v202/mashkaria23a.html",
+            source_url="https://github.com/siddarthk97/bonet",
             original_framework="PyTorch",
         ),
         MethodBlueprint(
@@ -186,25 +188,33 @@ _BLUEPRINTS = {
                 "evolutionary search",
             ),
             paper_url="https://arxiv.org/abs/2605.11246",
-            original_framework=None,
+            source_url="https://github.com/HarryYoung2018/spade",
+            original_framework="PyTorch",
         ),
     )
 }
 
 
 def planned_method_names() -> tuple[str, ...]:
-    return tuple(sorted(_BLUEPRINTS))
+    return tuple(sorted(name for name, blueprint in _BLUEPRINTS.items()
+                        if blueprint.status in {IntegrationStatus.PLANNED, IntegrationStatus.PORT_IN_PROGRESS}))
 
 
 def list_method_blueprints() -> tuple[MethodBlueprint, ...]:
-    return tuple(_BLUEPRINTS[name] for name in planned_method_names())
+    return tuple(_BLUEPRINTS[name] for name in sorted(_BLUEPRINTS))
 
 
 def get_method_blueprint(method_id: str) -> MethodBlueprint:
     try:
         return _BLUEPRINTS[method_id]
     except KeyError as exc:
-        available = ", ".join(planned_method_names())
+        available = ", ".join(sorted(_BLUEPRINTS))
         raise KeyError(
-            f"unknown planned method {method_id!r}; available methods: {available}"
+            f"unknown catalog method {method_id!r}; available methods: {available}"
         ) from exc
+
+
+# Component equations and end-to-end contracts are tested. Full upstream
+# architecture/checkpoint and published-table parity are separate claims.
+_BLUEPRINTS = {name: replace(blueprint, status=IntegrationStatus.IMPLEMENTED_ADAPTATION)
+               for name, blueprint in _BLUEPRINTS.items()}

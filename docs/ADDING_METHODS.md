@@ -86,7 +86,7 @@ probabilistic-bridge solvers each need targeted parity tests.
 | CbAS | conditional VAE, probabilistic surrogate ensemble, adaptive threshold, density-ratio weights |
 | MINs | conditional inverse GAN, discriminator, target-utility search |
 | DDOM | design diffusion, utility conditioning, classifier-free guidance |
-| GABO | GAN, source critic, latent GP, acquisition optimizer |
+| GABO | VAE latent representation, adversarial source critic, latent GP, acquisition optimizer |
 | GTG | trajectory builder, conditional trajectory diffusion, return guidance |
 | RGD | design diffusion, proxy guidance, diffusion-based proxy refinement |
 | BONET | trajectory builder, autoregressive transformer, regret budget |

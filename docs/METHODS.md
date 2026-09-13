@@ -62,14 +62,14 @@ Design-Bench dependencies. It should therefore be described as a BDI
 adaptation when reporting results. The reference implementation is the
 authors' [`GGchen1997/BDI`](https://github.com/GGchen1997/BDI) repository.
 
-## Planned inverse and diffusion methods
+## Additional inverse, diffusion, trajectory, and transport methods
 
-CbAS, MINs, DDOM, GABO, GTG, RGD, BONET, DEMO, ROOT, and SPADE are represented
-by `MethodBlueprint` entries in the integration catalog. They are not
-registered as runnable methods until a PyTorch implementation has component
-parity tests and an end-to-end benchmark test. See
-[Adding an Offline Method](ADDING_METHODS.md) for the required components and
-porting checklist.
+CbAS, MINs, DDOM, GABO, GTG, RGD, BONET, DEMO, ROOT, and SPADE are runnable
+PyTorch integrations. The catalog marks them `implemented_adaptation`;
+`parity_validated` is reserved for separately established upstream parity.
+The new implementations cover both continuous box and simplex domains,
+including fidelity context. See [Additional Methods](ADDITIONAL_METHODS.md)
+for their mechanisms, source pins, deviations, settings and validation scope.
 
 ## Reference-normalized utility
 

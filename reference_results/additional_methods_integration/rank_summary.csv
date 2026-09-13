@@ -1,0 +1,15 @@
+optimizer,mean_rank,median_rank,tasks
+best_logged,3.3,2.0,10
+coms,5.55,5.0,10
+bdi,4.0,3.0,10
+offline_mlp,5.45,5.25,10
+cbas,7.2,7.5,10
+mins,6.0,4.5,10
+ddom,12.2,13.0,10
+gabo,6.2,7.0,10
+gtg,11.2,12.0,10
+rgd,11.7,13.0,10
+bonet,8.9,9.5,10
+demo,6.7,6.5,10
+root,9.7,10.5,10
+spade,6.9,6.0,10

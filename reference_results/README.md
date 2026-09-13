@@ -1,8 +1,7 @@
 # Reference Results
 
-These files are compact snapshots from the documented seed-38 runs. They are
-included so that users can compare a fresh checkout with a known result without
-committing every generated plot.
+These files are snapshots from the documented single-seed and eight-seed runs.
+Each experiment directory records its own configuration and interpretation.
 
 - `data_recipes/` contains the online-style baseline and offline MLP/COM/BDI
   CSV summaries and plots.
@@ -11,6 +10,10 @@ committing every generated plot.
 - `publication/` contains the eight-seed Best Logged/COM/BDI raw runs,
   aggregate summaries, explicit seed manifest, GitHub table, and Overleaf-ready
   LaTeX table for the data-mixture and selected synthetic tasks.
+- [`additional_methods_integration/`](additional_methods_integration/README.md)
+  contains all fourteen methods' 1,120 short-budget simulation results, score
+  tables, source/configuration records, and the exact native and Docker replay
+  artifacts. These two-epoch runs validate integration and reproducibility.
 
 The source of truth for commands and caveats is
 [`docs/REPRODUCING.md`](../docs/REPRODUCING.md). Small floating-point differences

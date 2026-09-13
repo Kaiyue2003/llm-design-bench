@@ -1,9 +1,12 @@
 from pathlib import Path
+import json
 
 import typer
 
 from llm_design_bench.evaluation.publication_runner import (
     DEFAULT_PUBLICATION_SEEDS,
+    ALL_METHOD_ORDER,
+    METHOD_ORDER,
     PUBLICATION_SYNTHETIC_FUNCTIONS,
     PublicationBenchmarkConfig,
     run_publication_benchmarks,
@@ -15,6 +18,11 @@ app = typer.Typer(add_completion=False)
 
 @app.command()
 def benchmark(
+    method: list[str] | None = typer.Option(None, "--method", help="Registered method ID; repeat to select several."),
+    all_methods: bool = typer.Option(False, "--all-methods", help="Run all fourteen integrated PyTorch methods."),
+    method_config: Path | None = typer.Option(None, "--method-config", help="JSON object mapping method IDs to constructor settings."),
+    method_steps: int = typer.Option(50, min=1, help="Search/sampling steps for the ten additional methods."),
+    device: str = typer.Option("cpu", help="PyTorch method device: cpu or cuda."),
     seed: list[int] | None = typer.Option(
         None,
         "--seed",
@@ -38,7 +46,7 @@ def benchmark(
     metric_index: int = typer.Option(4, min=0, max=10, help="Data Recipes metric index."),
     logged_samples: int = typer.Option(256, min=8, help="Logged samples per synthetic task."),
     recommendations: int = typer.Option(128, min=1, help="Final candidate batch size K."),
-    epochs: int = typer.Option(100, min=1, help="COM training epochs."),
+    epochs: int = typer.Option(100, min=1, help="Training epochs for neural methods."),
     particle_steps: int = typer.Option(100, min=1, help="COM particle search steps."),
     bdi_steps: int = typer.Option(100, min=1, help="BDI distillation steps."),
     train_min_percentile: float = typer.Option(
@@ -69,8 +77,17 @@ def benchmark(
         help="Output directory for raw data, summaries, Markdown, LaTeX, and metadata.",
     ),
 ) -> None:
+    if all_methods and method:
+        raise typer.BadParameter("use either --all-methods or --method")
+    configs = json.loads(method_config.read_text(encoding="utf-8")) if method_config else {}
+    if not isinstance(configs, dict) or any(not isinstance(value, dict) for value in configs.values()):
+        raise typer.BadParameter("method config must map method IDs to objects")
     frame = run_publication_benchmarks(
         PublicationBenchmarkConfig(
+            methods=ALL_METHOD_ORDER if all_methods else tuple(method) if method else METHOD_ORDER,
+            method_configs=configs,
+            method_steps=method_steps,
+            device=device,
             seeds=tuple(seed) if seed else DEFAULT_PUBLICATION_SEEDS,
             functions=tuple(function) if function else PUBLICATION_SYNTHETIC_FUNCTIONS,
             data_recipes_root=data_recipes_root,
