@@ -1,0 +1,442 @@
+{
+  "bdi_steps": 2,
+  "code_git_commit": "4cfe57c75b7cc5f2595167d45c601025b365c614",
+  "code_git_dirty": true,
+  "code_sha256": "e5e31abcf027cbea2a983758de17b5886dfd0e4462761ec1256e9b919e2cba3c",
+  "confidence_interval": "two_sided_95_percent_student_t",
+  "config_fingerprint": "73887ec2c977ac2d",
+  "created_at_utc": "2026-09-10T05:19:23.565297+00:00",
+  "data_asset_sha256": {
+    "opt_algos/benchmarks.py": "cfcd1a8b02670cc1a41f07c60e679cd8b93da0ab0009630462b4357a066f8e8c",
+    "opt_algos/bopt_utils.py": "f005fc4445e6197957dd57468223cb83971b03026fe9f54a0b5bc99d1c07ff28",
+    "opt_algos/botorch/eimf copy.py": "90ea5b4974be66e6f2eee31b9f255017a0fe3298e7299904d07bc33f0ac01e7e",
+    "opt_algos/botorch/eimf.py": "aa8bbd25a4cf532122db3dd4df1f021ad505021a3cac197fd298e4b7c9dc9eee",
+    "opt_algos/botorch/sweep.py": "60d425aa3bc2c603d4cea4e25ed2343ce2383b3e2965229673d696619efb6baf",
+    "opt_algos/botorch/train_eikg.py": "1df063bc1713011e6ee2968d44f20ba31501f8efa3ed8a105f983841f2c56269",
+    "opt_algos/custom_bo/bopt_utils.py": "42e17c5ebaec7a6751dae94dd6d95e6d16b6620f955a6c6933cbd3c2950dbf0b",
+    "opt_algos/custom_bo/eval_ei_optimizer.py": "c954bd8b927a7946a8739dfdeee6494fd27220d708f249bb94e5b2b6d8fa52cc",
+    "opt_algos/custom_bo/misc_utils.py": "1d0296dcd39a11a5a30f48c5bd730c288124c920af73eabe692a87d45fc47fcd",
+    "opt_algos/data_model.py": "d991b786c3a21f48459374821a001a293e8985c775c59c070daa2b1a37e310cf",
+    "opt_algos/data_models/20250119_174726_j8mad2i5/checkpoints/checkpoint_epoch_24.pt": "c3ff6eb0874ac73d36f6e7922dcbc300e4a7137125e8f6ac2b40495fb127b30d",
+    "opt_algos/data_models/20250119_174726_j8mad2i5/checkpoints/checkpoint_latest.pt": "022d0327d3872e2ff70e41877d3bb26a03f7e73ab7381830a39b1db050f14e66",
+    "opt_algos/data_models/20250119_174726_j8mad2i5/config.json": "c8917ab2fb164c8fb48c3997b6a628e877bf0358475d13546aaf203fead6e7d5",
+    "opt_algos/data_models/20250119_174726_j8mad2i5/feature_mask.json": "178ca27dcc424723109967e016ead013cb61f1789b9bc0366a2ad8dd97084356",
+    "opt_algos/data_models/20250119_174726_j8mad2i5/wandb_run.txt": "539370fbc12912da1fc8a76abdde20b8becf1b9c194344589420490a61ab24aa",
+    "opt_algos/eval_ei_optimizer.py": "d3c4332c736602100b27fe40974eca176a537089579a79fa3d8ed768879fd308",
+    "opt_algos/misc_utils.py": "8584ab9e79081273e4f9e2a91b8a0d9a7f19bac2d0e066c661b837a208a27ee4",
+    "opt_algos/old/data_generation.py": "5e556de181e76e226bb34e99c33908c9eee82edc5561c548fc7e71beb988b1db",
+    "opt_algos/optimizers.py": "647f0c6b02d7218e04a7dc6f49ee2c901d2f2eb42b578c699dd87bf832c562c6",
+    "opt_algos/plot.py": "00b25314f17e8f984d1f6ed018c6d7e160e5a1fb52a42bcc768bd698a68304e3",
+    "opt_algos/sweep.py": "a329b1981a6812495895d0e34529ed1c8ca3a447ba9d3fb86f3ecc1a2a59cc1b",
+    "opt_algos/tests.py": "a8ea772e085acc5e4aa84af9762c3860f69d8e657523bc9efe3374b8d302f6f7",
+    "results/data_mixing_runs.pkl": "ef90f34fb544b9d0e15aaac41bae8867fc52467e5fb42330788e6705147fafac"
+  },
+  "data_mixture_metric": "stack_exchange_cross_entropy",
+  "data_mixture_metric_index": 4,
+  "data_recipes_git_commit": "37269969a0957448d51622e0c083977bc5d260e8",
+  "data_recipes_git_dirty": false,
+  "dependency_versions": {
+    "bayeso-benchmarks": "0.2.0",
+    "llm-design-bench": "0.1.0",
+    "numpy": "2.4.6",
+    "pandas": "3.0.3",
+    "scikit-learn": "1.8.0",
+    "torch": "2.12.0"
+  },
+  "deterministic_algorithms": true,
+  "device": "cpu",
+  "epochs": 2,
+  "include_data_mixture": true,
+  "logged_samples": 32,
+  "method_configs": {
+    "bdi": {
+      "max_support_points": 32
+    },
+    "best_logged": {},
+    "bonet": {
+      "hidden_size": 16,
+      "trajectory_count": 16,
+      "trajectory_length": 4
+    },
+    "cbas": {
+      "adaptation_epochs": 1,
+      "ensemble_size": 2,
+      "hidden_size": 16,
+      "population_size": 32
+    },
+    "coms": {
+      "adversarial_steps": 2,
+      "hidden_size": 16
+    },
+    "ddom": {
+      "diffusion_steps": 16,
+      "hidden_size": 16
+    },
+    "demo": {
+      "diffusion_steps": 16,
+      "editing_epochs": 2,
+      "hidden_size": 16,
+      "pseudo_samples": 16
+    },
+    "gabo": {
+      "acquisition_restarts": 4,
+      "acquisition_steps": 3,
+      "critic_steps": 2,
+      "hidden_size": 16,
+      "initial_points": 8
+    },
+    "gtg": {
+      "diffusion_steps": 16,
+      "hidden_size": 16,
+      "trajectory_count": 16,
+      "trajectory_length": 4
+    },
+    "mins": {
+      "hidden_size": 16,
+      "target_grid_size": 3
+    },
+    "offline_mlp": {
+      "hidden_size": 16
+    },
+    "rgd": {
+      "diffusion_steps": 16,
+      "hidden_size": 16,
+      "likelihood_samples": 4,
+      "likelihood_steps": 4,
+      "refinement_candidates": 4,
+      "refinement_rounds": 1
+    },
+    "root": {
+      "hidden_size": 16
+    },
+    "spade": {
+      "calibration_samples": 2,
+      "calibration_steps": 3,
+      "diffusion_steps": 16,
+      "hidden_size": 16,
+      "mc_samples": 4,
+      "sampling_steps": 4
+    }
+  },
+  "method_provenance": {
+    "bdi": {
+      "adaptations": [
+        "finite RBF kernel replaces the official infinite-width NTK",
+        "explicit multi-fidelity context conditioning"
+      ],
+      "config_schema_version": 1,
+      "description": "PyTorch RBF-kernel adaptation of bidirectional distillation.",
+      "display_name": "BDI",
+      "family": "forward_surrogate",
+      "implementation_framework": "pytorch",
+      "implementation_kind": "lightweight_adaptation",
+      "method_id": "bdi",
+      "optional_dependencies": [],
+      "original_framework": "JAX",
+      "paper_url": "https://proceedings.neurips.cc/paper_files/paper/2022/hash/bd391cf5bdc4b63674d6da3edc1bde0d-Abstract.html",
+      "source_commit": null,
+      "source_url": "https://github.com/GGchen1997/BDI"
+    },
+    "best_logged": {
+      "adaptations": [],
+      "config_schema_version": 1,
+      "description": "Returns the highest-utility distinct designs in visible logged data.",
+      "display_name": "Best Logged",
+      "family": "reference",
+      "implementation_framework": "pytorch",
+      "implementation_kind": "native_baseline",
+      "method_id": "best_logged",
+      "optional_dependencies": [],
+      "original_framework": "PyTorch",
+      "paper_url": null,
+      "source_commit": null,
+      "source_url": null
+    },
+    "bonet": {
+      "adaptations": [
+        "independent continuous PyTorch implementation; paper-result parity not established",
+        "train-only standardized box/ALR features and explicit fidelity conditioning",
+        "within-fidelity bootstrap-sorted trajectories and Gaussian causal transformer",
+        "strictly offline rollout updates regret using a trained proxy instead of online oracle evaluations"
+      ],
+      "config_schema_version": 1,
+      "description": "autoregressive generation from regret-budget-conditioned trajectories",
+      "display_name": "BONET",
+      "family": "trajectory_model",
+      "implementation_framework": "pytorch",
+      "implementation_kind": "lightweight_adaptation",
+      "method_id": "bonet",
+      "optional_dependencies": [],
+      "original_framework": "PyTorch",
+      "paper_url": "https://proceedings.mlr.press/v202/mashkaria23a.html",
+      "source_commit": "14b506a695c168dea6ddaae8867cef41859fe716",
+      "source_url": "https://github.com/siddarthk97/bonet"
+    },
+    "cbas": {
+      "adaptations": [
+        "independent continuous PyTorch implementation; paper-result parity not established",
+        "train-only standardized box/ALR features and explicit fidelity conditioning",
+        "Gaussian conditional VAE for continuous designs",
+        "decoder density ratio uses the shared latent draw; log ratio clipped to +/-20"
+      ],
+      "config_schema_version": 1,
+      "description": "iterative adaptive-threshold conditioning with density-ratio weights",
+      "display_name": "CbAS",
+      "family": "inverse_generative",
+      "implementation_framework": "pytorch",
+      "implementation_kind": "lightweight_adaptation",
+      "method_id": "cbas",
+      "optional_dependencies": [],
+      "original_framework": "TensorFlow",
+      "paper_url": "https://proceedings.mlr.press/v97/brookes19a.html",
+      "source_commit": "725805a2bd889084a2a9e9032d24d409fe4d7e61",
+      "source_url": "https://github.com/dhbrookes/CbAS"
+    },
+    "coms": {
+      "adaptations": [
+        "explicit multi-fidelity context conditioning",
+        "continuous simplex and box search spaces"
+      ],
+      "config_schema_version": 1,
+      "description": "PyTorch conservative objective-model adaptation.",
+      "display_name": "COM",
+      "family": "forward_surrogate",
+      "implementation_framework": "pytorch",
+      "implementation_kind": "lightweight_adaptation",
+      "method_id": "coms",
+      "optional_dependencies": [],
+      "original_framework": "TensorFlow",
+      "paper_url": "https://proceedings.mlr.press/v139/trabucco21a.html",
+      "source_commit": null,
+      "source_url": "https://github.com/rail-berkeley/design-baselines"
+    },
+    "ddom": {
+      "adaptations": [
+        "independent continuous PyTorch implementation; paper-result parity not established",
+        "train-only standardized box/ALR features and explicit fidelity conditioning",
+        "cosine discrete VP schedule and deterministic DDIM replace the upstream continuous SDE solver",
+        "exponential utility reweighting instead of histogram-smoothed weights"
+      ],
+      "config_schema_version": 1,
+      "description": "classifier-free diffusion of designs conditioned on utility",
+      "display_name": "DDOM",
+      "family": "inverse_generative",
+      "implementation_framework": "pytorch",
+      "implementation_kind": "lightweight_adaptation",
+      "method_id": "ddom",
+      "optional_dependencies": [],
+      "original_framework": "PyTorch",
+      "paper_url": "https://proceedings.mlr.press/v202/krishnamoorthy23a.html",
+      "source_commit": "fb3d0558cf1af153568b6fa7902c0505356821dc",
+      "source_url": "https://github.com/siddarthk97/ddom"
+    },
+    "demo": {
+      "adaptations": [
+        "independent continuous PyTorch implementation; paper-result parity not established",
+        "train-only standardized box/ALR features and explicit fidelity conditioning",
+        "surrogate-gradient pseudo-targets and target-distribution diffusion fine-tuning",
+        "partial cosine noising and DDIM editing replace the upstream VP-SDE/Heun solver"
+      ],
+      "config_schema_version": 1,
+      "description": "diffusion-based design editing toward higher target utility",
+      "display_name": "DEMO",
+      "family": "inverse_generative",
+      "implementation_framework": "pytorch",
+      "implementation_kind": "lightweight_adaptation",
+      "method_id": "demo",
+      "optional_dependencies": [],
+      "original_framework": "PyTorch",
+      "paper_url": "https://openreview.net/forum?id=OPFnpl7KiF",
+      "source_commit": "3f02bec3a64e19b0dd36884b258ac014fd1bf0ec",
+      "source_url": "https://github.com/mila-iqia/Design-Editing-for-Offline-MBO"
+    },
+    "gabo": {
+      "adaptations": [
+        "independent continuous PyTorch implementation; paper-result parity not established",
+        "train-only standardized box/ALR features and explicit fidelity conditioning",
+        "conditional VAE latent representation with an adversarial Wasserstein source critic",
+        "finite-grid dual coefficient; exact RBF GP with median lengthscale and sequential analytic EI instead of BoTorch qEI"
+      ],
+      "config_schema_version": 1,
+      "description": "Bayesian optimization in GAN latent space with source-critic regularization",
+      "display_name": "GABO",
+      "family": "hybrid",
+      "implementation_framework": "pytorch",
+      "implementation_kind": "lightweight_adaptation",
+      "method_id": "gabo",
+      "optional_dependencies": [],
+      "original_framework": "PyTorch",
+      "paper_url": "https://openreview.net/forum?id=3RxcarQFRn",
+      "source_commit": "61a44c09b22645c21f06394dc04983507404eda9",
+      "source_url": "https://github.com/michael-s-yao/gabo"
+    },
+    "gtg": {
+      "adaptations": [
+        "independent continuous PyTorch implementation; paper-result parity not established",
+        "train-only standardized box/ALR features and explicit fidelity conditioning",
+        "within-fidelity nearest-neighbor improving trajectories",
+        "flattened trajectory MLP diffusion instead of temporal U-Net; mean-return CFG and anchored start"
+      ],
+      "config_schema_version": 1,
+      "description": "guided diffusion over synthetic improvement trajectories",
+      "display_name": "GTG",
+      "family": "trajectory_model",
+      "implementation_framework": "pytorch",
+      "implementation_kind": "lightweight_adaptation",
+      "method_id": "gtg",
+      "optional_dependencies": [],
+      "original_framework": "PyTorch",
+      "paper_url": "https://proceedings.neurips.cc/paper_files/paper/2024/hash/98904db124b2a2463e8c59ec33fc7150-Abstract-Conference.html",
+      "source_commit": "448f20635b3e484d446ffe091d1861136068fc8c",
+      "source_url": "https://github.com/dbsxodud-11/GTG"
+    },
+    "mins": {
+      "adaptations": [
+        "independent continuous PyTorch implementation; paper-result parity not established",
+        "train-only standardized box/ALR features and explicit fidelity conditioning",
+        "weighted conditional GAN with mismatched-pair negatives",
+        "finite target-utility search ranked by ensemble LCB and discriminator plausibility"
+      ],
+      "config_schema_version": 1,
+      "description": "conditional inverse generator trained to model designs given utility",
+      "display_name": "MINs",
+      "family": "inverse_generative",
+      "implementation_framework": "pytorch",
+      "implementation_kind": "lightweight_adaptation",
+      "method_id": "mins",
+      "optional_dependencies": [],
+      "original_framework": "TensorFlow",
+      "paper_url": "https://proceedings.neurips.cc/paper/2020/hash/373e4c5d8edfa8b74fd4b6791d0cf6dc-Abstract.html",
+      "source_commit": "785dbcfa58107bfcc426257a1c2e69d7f71c3c27",
+      "source_url": "https://github.com/rail-berkeley/design-baselines"
+    },
+    "offline_mlp": {
+      "adaptations": [
+        "explicit multi-fidelity context conditioning"
+      ],
+      "config_schema_version": 1,
+      "description": "PyTorch MLP surrogate followed by gradient search in design space.",
+      "display_name": "Offline MLP",
+      "family": "forward_surrogate",
+      "implementation_framework": "pytorch",
+      "implementation_kind": "native_baseline",
+      "method_id": "offline_mlp",
+      "optional_dependencies": [],
+      "original_framework": "PyTorch",
+      "paper_url": null,
+      "source_commit": null,
+      "source_url": null
+    },
+    "rgd": {
+      "adaptations": [
+        "independent continuous PyTorch implementation; paper-result parity not established",
+        "train-only standardized box/ALR features and explicit fidelity conditioning",
+        "cosine VP diffusion with a compact Gaussian ensemble proxy",
+        "midpoint probability-flow likelihood with a seeded Hutchinson trace and terminal t=.98",
+        "clipped reverse-KL proxy refinement; normalized gradients on denoised samples"
+      ],
+      "config_schema_version": 1,
+      "description": "proxy-guided design diffusion with iterative proxy refinement",
+      "display_name": "RGD",
+      "family": "inverse_generative",
+      "implementation_framework": "pytorch",
+      "implementation_kind": "lightweight_adaptation",
+      "method_id": "rgd",
+      "optional_dependencies": [],
+      "original_framework": "PyTorch",
+      "paper_url": "https://arxiv.org/abs/2410.00983",
+      "source_commit": "c8ab225e09999534651e27be634921af5f2ef002",
+      "source_url": "https://github.com/GGchen1997/RGD"
+    },
+    "root": {
+      "adaptations": [
+        "independent continuous PyTorch implementation; paper-result parity not established",
+        "train-only standardized box/ALR features and explicit fidelity conditioning",
+        "linear Brownian bridge with displacement objective and analytic stochastic reverse transitions",
+        "within-fidelity quantile pairing and compact time-conditioned MLP"
+      ],
+      "config_schema_version": 1,
+      "description": "probabilistic bridge translating low-score designs into high-score designs",
+      "display_name": "ROOT",
+      "family": "transport",
+      "implementation_framework": "pytorch",
+      "implementation_kind": "lightweight_adaptation",
+      "method_id": "root",
+      "optional_dependencies": [],
+      "original_framework": "PyTorch",
+      "paper_url": "https://papers.nips.cc/paper_files/paper/2025/hash/8e357df853b7352fe91d92c83e2f90b2-Abstract-Conference.html",
+      "source_commit": "d23f14fe30d53f1fc4423ce006056672d0353906",
+      "source_url": "https://github.com/cuong-dm/ROOT"
+    },
+    "spade": {
+      "adaptations": [
+        "independent continuous PyTorch implementation; paper-result parity not established",
+        "train-only standardized box/ALR features and explicit fidelity conditioning",
+        "scalar conditional diffusion with moment/rank and support-proximity training losses",
+        "cosine schedule, compact MLP, exact torch kNN, and seeded evolutionary LCB search"
+      ],
+      "config_schema_version": 1,
+      "description": "conditional diffusion surrogate with calibration, support-proximity regularization, and conservative acquisition search",
+      "display_name": "SPADE",
+      "family": "forward_surrogate",
+      "implementation_framework": "pytorch",
+      "implementation_kind": "lightweight_adaptation",
+      "method_id": "spade",
+      "optional_dependencies": [],
+      "original_framework": "PyTorch",
+      "paper_url": "https://arxiv.org/abs/2605.11246",
+      "source_commit": "586151bbb56e246f93ca97ce33f79887a13161bd",
+      "source_url": "https://github.com/HarryYoung2018/spade"
+    }
+  },
+  "method_steps": 3,
+  "methods": [
+    "best_logged",
+    "coms",
+    "bdi",
+    "offline_mlp",
+    "cbas",
+    "mins",
+    "ddom",
+    "gabo",
+    "gtg",
+    "rgd",
+    "bonet",
+    "demo",
+    "root",
+    "spade"
+  ],
+  "observed_range": "minimum_and_maximum_seed_estimates",
+  "particle_steps": 2,
+  "platform": "Windows-10-10.0.26200-SP0",
+  "python": "3.11.15",
+  "recommendations": 8,
+  "seeds": [
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45
+  ],
+  "selection_policy": "Performance-selected union of prior single-seed COM and BDI category winners; descriptive comparison only.",
+  "synthetic_functions": [
+    "ackley",
+    "schaffer2",
+    "sum_different_powers",
+    "matyas",
+    "power_sum",
+    "rosenbrock",
+    "michalewicz",
+    "hartmann6",
+    "shekel"
+  ],
+  "table1_style_uncertainty": "standard_error_over_independent_seeds",
+  "torch_threads": 1,
+  "train_max_percentile": 40.0,
+  "train_min_percentile": 0.0,
+  "trial_count": 8,
+  "uncertainty": "sample_standard_deviation_ddof_1"
+}

@@ -1,0 +1,35 @@
+{
+  "scope": "two-epoch integration simulations; original-paper parity not established",
+  "implementation_commit": "4cfe57c75b7cc5f2595167d45c601025b365c614",
+  "implementation_code_sha256": "e5e31abcf027cbea2a983758de17b5886dfd0e4462761ec1256e9b919e2cba3c",
+  "config_fingerprint": "73887ec2c977ac2d",
+  "native_replay": {
+    "verified_rows": 1120,
+    "replay_rows": 1120,
+    "atol": 0.0,
+    "rtol": 0.0,
+    "status": "passed"
+  },
+  "docker_replay": {
+    "verified_rows": 28,
+    "replay_rows": 28,
+    "atol": 0.0,
+    "rtol": 0.0,
+    "status": "passed"
+  },
+  "aggregate_tables_recomputed_from_raw": true,
+  "files_sha256": {
+    "d_best_summary.csv": "259106d23f5bd83459377b47b3fd9afc2fdea1723156df839259c3816b3d8866",
+    "method_settings.json": "7115b9da9e901115caa039bc59c9e34a7385f62a6ff2e9026505ff097c6c70cb",
+    "rank_summary.csv": "4f88afc56d74095806547dbeb81cc31b6dc3d87d2c4e9dcf781b20822c459b2f",
+    "raw_runs.csv": "f5785772a85434d76b7e36b63d6023f7bd7d9186778fe8acc292aafbcee9e54a",
+    "replay_verification.json": "a0fd44fe63cfffbb4f095e0728762875e43bc7de6e61966a4d761bdead62af07",
+    "reproduction_artifacts.zip": "1c44113ccd15d22425e3f7b45aef3e80cdb3840fb3483404dbe7574aa7caac44",
+    "run_metadata.json": "52b15e8850ab7e05898f34ef8b4ab4b2db0ae811ca121c6980617063a87efaa3",
+    "seed_manifest.csv": "a15efaa1f1d17a27f7c4ba687132c6b1655e54d959a1d87c2ec62ccd20317774",
+    "seeded_benchmark_ranges.tex": "40d29bf95ee4e7a94b35ae981d0bd62b2bd9178f343ab3e927642e856a8939cc",
+    "seeded_benchmark_table.tex": "4399265b9aadf7cfa18144eb0ffb8300e9ffe0c683f9d6e2e1ede2274297c0c6",
+    "seeded_benchmark_table_se.tex": "87f7d80d0a51da040764528aafff475ccf8ef747a6335f03f5c3ec8061d492b2",
+    "task_summary.csv": "9ddaac617d743befb238a8cd5466b1eb458b08d4db3c6bf761c795d95d894058"
+  }
+}

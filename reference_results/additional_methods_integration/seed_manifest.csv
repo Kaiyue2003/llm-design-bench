@@ -1,0 +1,81 @@
+suite,task,display_name,seed,task_seed,optimizer_seed
+data_mixture,data_recipes_stack_exchange,LLM-DM,38,,38
+data_mixture,data_recipes_stack_exchange,LLM-DM,39,,39
+data_mixture,data_recipes_stack_exchange,LLM-DM,40,,40
+data_mixture,data_recipes_stack_exchange,LLM-DM,41,,41
+data_mixture,data_recipes_stack_exchange,LLM-DM,42,,42
+data_mixture,data_recipes_stack_exchange,LLM-DM,43,,43
+data_mixture,data_recipes_stack_exchange,LLM-DM,44,,44
+data_mixture,data_recipes_stack_exchange,LLM-DM,45,,45
+synthetic,ackley,Ackley,38,38.0,38
+synthetic,ackley,Ackley,39,39.0,39
+synthetic,ackley,Ackley,40,40.0,40
+synthetic,ackley,Ackley,41,41.0,41
+synthetic,ackley,Ackley,42,42.0,42
+synthetic,ackley,Ackley,43,43.0,43
+synthetic,ackley,Ackley,44,44.0,44
+synthetic,ackley,Ackley,45,45.0,45
+synthetic,hartmann6,Hartmann 6-D,38,38.0,38
+synthetic,hartmann6,Hartmann 6-D,39,39.0,39
+synthetic,hartmann6,Hartmann 6-D,40,40.0,40
+synthetic,hartmann6,Hartmann 6-D,41,41.0,41
+synthetic,hartmann6,Hartmann 6-D,42,42.0,42
+synthetic,hartmann6,Hartmann 6-D,43,43.0,43
+synthetic,hartmann6,Hartmann 6-D,44,44.0,44
+synthetic,hartmann6,Hartmann 6-D,45,45.0,45
+synthetic,matyas,Matyas,38,38.0,38
+synthetic,matyas,Matyas,39,39.0,39
+synthetic,matyas,Matyas,40,40.0,40
+synthetic,matyas,Matyas,41,41.0,41
+synthetic,matyas,Matyas,42,42.0,42
+synthetic,matyas,Matyas,43,43.0,43
+synthetic,matyas,Matyas,44,44.0,44
+synthetic,matyas,Matyas,45,45.0,45
+synthetic,michalewicz,Michalewicz,38,38.0,38
+synthetic,michalewicz,Michalewicz,39,39.0,39
+synthetic,michalewicz,Michalewicz,40,40.0,40
+synthetic,michalewicz,Michalewicz,41,41.0,41
+synthetic,michalewicz,Michalewicz,42,42.0,42
+synthetic,michalewicz,Michalewicz,43,43.0,43
+synthetic,michalewicz,Michalewicz,44,44.0,44
+synthetic,michalewicz,Michalewicz,45,45.0,45
+synthetic,power_sum,Power Sum,38,38.0,38
+synthetic,power_sum,Power Sum,39,39.0,39
+synthetic,power_sum,Power Sum,40,40.0,40
+synthetic,power_sum,Power Sum,41,41.0,41
+synthetic,power_sum,Power Sum,42,42.0,42
+synthetic,power_sum,Power Sum,43,43.0,43
+synthetic,power_sum,Power Sum,44,44.0,44
+synthetic,power_sum,Power Sum,45,45.0,45
+synthetic,rosenbrock,Rosenbrock,38,38.0,38
+synthetic,rosenbrock,Rosenbrock,39,39.0,39
+synthetic,rosenbrock,Rosenbrock,40,40.0,40
+synthetic,rosenbrock,Rosenbrock,41,41.0,41
+synthetic,rosenbrock,Rosenbrock,42,42.0,42
+synthetic,rosenbrock,Rosenbrock,43,43.0,43
+synthetic,rosenbrock,Rosenbrock,44,44.0,44
+synthetic,rosenbrock,Rosenbrock,45,45.0,45
+synthetic,schaffer2,Schaffer N. 2,38,38.0,38
+synthetic,schaffer2,Schaffer N. 2,39,39.0,39
+synthetic,schaffer2,Schaffer N. 2,40,40.0,40
+synthetic,schaffer2,Schaffer N. 2,41,41.0,41
+synthetic,schaffer2,Schaffer N. 2,42,42.0,42
+synthetic,schaffer2,Schaffer N. 2,43,43.0,43
+synthetic,schaffer2,Schaffer N. 2,44,44.0,44
+synthetic,schaffer2,Schaffer N. 2,45,45.0,45
+synthetic,shekel,Shekel,38,38.0,38
+synthetic,shekel,Shekel,39,39.0,39
+synthetic,shekel,Shekel,40,40.0,40
+synthetic,shekel,Shekel,41,41.0,41
+synthetic,shekel,Shekel,42,42.0,42
+synthetic,shekel,Shekel,43,43.0,43
+synthetic,shekel,Shekel,44,44.0,44
+synthetic,shekel,Shekel,45,45.0,45
+synthetic,sum_different_powers,Sum of Different Powers,38,38.0,38
+synthetic,sum_different_powers,Sum of Different Powers,39,39.0,39
+synthetic,sum_different_powers,Sum of Different Powers,40,40.0,40
+synthetic,sum_different_powers,Sum of Different Powers,41,41.0,41
+synthetic,sum_different_powers,Sum of Different Powers,42,42.0,42
+synthetic,sum_different_powers,Sum of Different Powers,43,43.0,43
+synthetic,sum_different_powers,Sum of Different Powers,44,44.0,44
+synthetic,sum_different_powers,Sum of Different Powers,45,45.0,45

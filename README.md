@@ -33,6 +33,12 @@ with source revisions and algorithmic substitutions recorded in
 [Additional Methods](docs/ADDITIONAL_METHODS.md). They are not claims of
 checkpoint compatibility or reproduction of the original papers' tables.
 
+The [uploaded simulation results](reference_results/additional_methods_integration/README.md)
+include all 14 methods across ten tasks and eight seeds (1,120 runs), comparison
+tables, raw per-seed scores, and downloadable input/candidate arrays. An
+independent replay matched all 1,120 runs exactly. These are two-epoch integration
+results; the page records the training budgets, source revisions and limitations.
+
 Run every method twice in Docker and verify the saved data and candidates:
 
 ```bash

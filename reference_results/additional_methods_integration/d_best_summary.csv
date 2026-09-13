@@ -1,0 +1,11 @@
+suite,task,display_name,category,category_display_name,mean_score,std_score,min_score,max_score,mean_raw_utility,std_raw_utility,trials,se_score,range_score,ci95_low_score,ci95_high_score
+data_mixture,data_recipes_stack_exchange,LLM-DM,data_mixture,Data Mixture,0.881195741757863,0.0,0.881195741757863,0.881195741757863,-1.154164433479309,0.0,8,0.0,0.0,0.881195741757863,0.881195741757863
+synthetic,ackley,Ackley,many_local_minima,Many Local Minima,1.0,0.0,1.0,1.0,-11.670527406530486,3.306315567024297,8,0.0,0.0,1.0,1.0
+synthetic,schaffer2,Schaffer N. 2,many_local_minima,Many Local Minima,1.0,0.0,1.0,1.0,-0.3870317671316254,0.08355368714828347,8,0.0,0.0,1.0,1.0
+synthetic,sum_different_powers,Sum of Different Powers,bowl_shaped,Bowl-Shaped,1.0,0.0,1.0,1.0,-0.018105090243339318,0.023314267425574183,8,0.0,0.0,1.0,1.0
+synthetic,matyas,Matyas,plate_shaped,Plate-Shaped,1.0,0.0,1.0,1.0,-0.36606545673519714,0.31259597727843574,8,0.0,0.0,1.0,1.0
+synthetic,power_sum,Power Sum,plate_shaped,Plate-Shaped,1.0,0.0,1.0,1.0,-79.65374630754802,61.54703114704952,8,0.0,0.0,1.0,1.0
+synthetic,rosenbrock,Rosenbrock,valley_shaped,Valley-Shaped,1.0,0.0,1.0,1.0,-2.0332455945961514,2.8738724320927003,8,0.0,0.0,1.0,1.0
+synthetic,michalewicz,Michalewicz,steep_ridges_drops,Steep Ridges/Drops,1.0,0.0,1.0,1.0,1.150937626084362,0.18862783164872463,8,0.0,0.0,1.0,1.0
+synthetic,hartmann6,Hartmann 6-D,other,Other,1.0,0.0,1.0,1.0,1.7446802831503558,0.4709713500577239,8,0.0,0.0,1.0,1.0
+synthetic,shekel,Shekel,other,Other,1.0,0.0,1.0,1.0,0.8210590668677132,0.23771633536028705,8,0.0,0.0,1.0,1.0

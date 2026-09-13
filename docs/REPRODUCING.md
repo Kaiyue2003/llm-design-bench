@@ -4,6 +4,11 @@ The committed files under `reference_results/` are comparison artifacts, not
 inputs to the benchmark. Fresh runs are always written to the ignored
 `results/` directory.
 
+For the ten additional methods and their uploaded 1,120-run simulation snapshot,
+see [Additional-method simulation results](../reference_results/additional_methods_integration/README.md).
+That page includes the frozen two-epoch settings and commands to extract and
+verify both independent native runs and both Docker runs.
+
 For the pinned one-command container workflow, use:
 
 ```bash

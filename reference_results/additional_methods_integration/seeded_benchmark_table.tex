@@ -1,0 +1,37 @@
+% Requires: \usepackage{booktabs,graphicx,rotating}
+\begin{sidewaystable*}[t]
+\centering
+\caption{Reference-normalized maximum score (100th percentile of $K=8$ recommendations). Values are mean $\pm$ sample SD across 8 independent seeds. Higher is better; bold and underlined entries denote the best and second-best mean per task.}
+\label{tab:seeded-publication-benchmark}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccccccccc}
+\toprule
+Method & \multicolumn{1}{c}{Data Mixture} & \multicolumn{2}{c}{Many Local Minima} & \multicolumn{1}{c}{Bowl-Shaped} & \multicolumn{2}{c}{Plate-Shaped} & \multicolumn{1}{c}{Valley-Shaped} & \multicolumn{1}{c}{Steep Ridges/Drops} & \multicolumn{2}{c}{Other} & \multicolumn{2}{c}{Rank} \\
+\cmidrule(lr){2-2} \cmidrule(lr){3-4} \cmidrule(lr){5-5} \cmidrule(lr){6-7} \cmidrule(lr){8-8} \cmidrule(lr){9-9} \cmidrule(lr){10-11} \cmidrule(lr){12-13}
+ & LLM-DM & Ackley & Schaffer N. 2 & Sum of Different Powers & Matyas & Power Sum & Rosenbrock & Michalewicz & Hartmann 6-D & Shekel & Mean & Median \\
+\midrule
+$\mathcal{D}$ (best) & $0.881 \pm 0.000$ & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ & -- & -- \\
+\midrule
+Best Logged & $0.976 \pm 0.000$ & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ & $\mathbf{1.000 \pm 0.000}$ & $\mathbf{1.000 \pm 0.000}$ & $\mathbf{1.000 \pm 0.000}$ & $\mathbf{1.000 \pm 0.000}$ & $\mathbf{1.000 \pm 0.000}$ & $1.000 \pm 0.000$ & 3.30 & 2.00 \\
+COM & $0.979 \pm 0.002$ & $0.903 \pm 0.235$ & $0.859 \pm 0.306$ & $0.993 \pm 0.009$ & $0.999 \pm 0.004$ & $0.999 \pm 0.001$ & $1.000 \pm 0.001$ & $0.905 \pm 0.251$ & $0.973 \pm 0.113$ & $0.932 \pm 0.262$ & 5.55 & 5.00 \\
+BDI & $0.979 \pm 0.002$ & $0.952 \pm 0.230$ & $0.810 \pm 0.276$ & $0.996 \pm 0.005$ & $\underline{1.000 \pm 0.007}$ & $\underline{1.000 \pm 0.001}$ & $\underline{1.000 \pm 0.001}$ & $\underline{0.930 \pm 0.245}$ & $\underline{0.975 \pm 0.103}$ & $1.075 \pm 0.257$ & 4.00 & 3.00 \\
+Offline MLP & $0.979 \pm 0.002$ & $0.903 \pm 0.235$ & $0.859 \pm 0.306$ & $0.993 \pm 0.009$ & $0.999 \pm 0.004$ & $0.999 \pm 0.001$ & $1.000 \pm 0.001$ & $0.905 \pm 0.251$ & $0.973 \pm 0.113$ & $0.932 \pm 0.262$ & 5.45 & 5.25 \\
+CbAS & $0.985 \pm 0.011$ & $0.795 \pm 0.873$ & $0.896 \pm 0.464$ & $0.959 \pm 0.067$ & $0.993 \pm 0.012$ & $0.996 \pm 0.007$ & $0.992 \pm 0.007$ & $0.662 \pm 0.353$ & $0.469 \pm 0.260$ & $0.836 \pm 0.363$ & 7.20 & 7.50 \\
+MINs & $0.967 \pm 0.002$ & $1.136 \pm 0.476$ & $\underline{1.983 \pm 1.174}$ & $\mathbf{1.007 \pm 0.017}$ & $0.999 \pm 0.005$ & $0.983 \pm 0.011$ & $0.996 \pm 0.003$ & $0.244 \pm 0.258$ & $0.307 \pm 0.210$ & $\mathbf{1.603 \pm 1.387}$ & 6.00 & 4.50 \\
+DDOM & $\underline{1.003 \pm 0.002}$ & $0.066 \pm 0.034$ & $0.534 \pm 0.237$ & $-0.179 \pm 0.189$ & $0.950 \pm 0.014$ & $0.639 \pm 0.462$ & $0.831 \pm 0.053$ & $0.017 \pm 0.048$ & $0.048 \pm 0.039$ & $0.211 \pm 0.212$ & 12.20 & 13.00 \\
+GABO & $0.969 \pm 0.003$ & $\mathbf{1.220 \pm 0.710}$ & $\mathbf{2.255 \pm 2.052}$ & $\underline{1.006 \pm 0.021}$ & $0.998 \pm 0.005$ & $0.986 \pm 0.009$ & $0.995 \pm 0.006$ & $0.334 \pm 0.288$ & $0.281 \pm 0.162$ & $\underline{1.321 \pm 0.697}$ & 6.20 & 7.00 \\
+GTG & $1.003 \pm 0.003$ & $0.117 \pm 0.047$ & $0.535 \pm 0.239$ & $-0.139 \pm 0.215$ & $0.950 \pm 0.013$ & $0.885 \pm 0.040$ & $0.839 \pm 0.036$ & $0.097 \pm 0.274$ & $0.036 \pm 0.040$ & $0.260 \pm 0.169$ & 11.20 & 12.00 \\
+RGD & $\mathbf{1.004 \pm 0.001}$ & $0.057 \pm 0.060$ & $0.536 \pm 0.239$ & $-0.169 \pm 0.202$ & $0.950 \pm 0.014$ & $0.882 \pm 0.043$ & $0.820 \pm 0.071$ & $0.000 \pm 0.000$ & $0.070 \pm 0.040$ & $0.213 \pm 0.221$ & 11.70 & 13.00 \\
+BONET & $0.970 \pm 0.010$ & $0.591 \pm 0.626$ & $1.004 \pm 0.629$ & $0.839 \pm 0.235$ & $0.841 \pm 0.300$ & $0.995 \pm 0.006$ & $0.971 \pm 0.050$ & $0.382 \pm 0.400$ & $0.216 \pm 0.142$ & $1.290 \pm 0.759$ & 8.90 & 9.50 \\
+DEMO & $0.985 \pm 0.007$ & $\underline{1.189 \pm 0.861}$ & $0.774 \pm 0.332$ & $0.947 \pm 0.082$ & $0.992 \pm 0.013$ & $0.993 \pm 0.006$ & $0.998 \pm 0.003$ & $0.915 \pm 0.258$ & $0.919 \pm 0.464$ & $0.739 \pm 0.373$ & 6.70 & 6.50 \\
+ROOT & $0.979 \pm 0.008$ & $0.483 \pm 0.507$ & $0.843 \pm 0.457$ & $0.804 \pm 0.109$ & $0.948 \pm 0.071$ & $0.994 \pm 0.009$ & $0.924 \pm 0.101$ & $0.670 \pm 0.407$ & $0.219 \pm 0.191$ & $0.642 \pm 0.335$ & 9.70 & 10.50 \\
+SPADE & $0.977 \pm 0.009$ & $0.890 \pm 0.493$ & $1.710 \pm 2.302$ & $0.916 \pm 0.095$ & $0.998 \pm 0.005$ & $0.998 \pm 0.003$ & $0.967 \pm 0.064$ & $0.856 \pm 0.480$ & $0.716 \pm 0.287$ & $0.937 \pm 0.366$ & 6.90 & 6.00 \\
+\bottomrule
+\end{tabular}%
+}
+\par\vspace{0.5em}
+\begin{minipage}{0.98\textwidth}
+\footnotesize
+Scores use the full logged reference range: $\bigl(u_{\max}^{\mathrm{cand}}-u_{\min}^{\mathcal{D}}\bigr) / \bigl(u_{\max}^{\mathcal{D}}-u_{\min}^{\mathcal{D}}\bigr)$. Scores above one indicate improvement over the logged maximum. Seeds: 38, 39, 40, 41, 42, 43, 44, 45. For LLM-DM, $\mathcal{D}$ (best) uses the recorded logged fidelity, whereas method recommendations are evaluated at the target 1B/19,500-step fidelity. Task selection and implementation adaptations are recorded in the accompanying run manifest. Results for additional methods do not establish published-result parity.
+\end{minipage}
+\end{sidewaystable*}
