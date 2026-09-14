@@ -1,0 +1,3 @@
+# Preserve the exported CSV bytes, including line endings, for SHA256 verification.
+method_seed_results.csv -text
+method_seed_summary.csv -text

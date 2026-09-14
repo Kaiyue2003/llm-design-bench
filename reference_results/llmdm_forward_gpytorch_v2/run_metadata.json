@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "archive_kind": "formal_result_snapshot",
+  "experiment_id": "llmdm_forward_gpytorch_v2_formal",
+  "phase": "formal",
+  "setting": "multi_scale",
+  "task_id": "data_recipes_stack_exchange",
+  "protocol_id": "llmdm_scale_stratified_v1",
+  "code_commit": "9d70e1458239142353e34cc596ba2b8b8764871d",
+  "upstream_commit": "37269969a0957448d51622e0c083977bc5d260e8",
+  "package_source_sha256": "84cadd2e3106a0f1b547aa49560f0f96418475739a8b7134b7259da28a11dcec",
+  "plan_id": "1e097b0f5f554982ac5029a28b66337dfa22cfd9a309da200523202eea786b8c",
+  "data_manifest_id": "a27d497d18b2a476cbcc5d09651ba6e98a6618c78e1d22569c02b0de8858f8bc",
+  "frozen_inputs": {
+    "path_base": "this_directory",
+    "release": "../../experiments/llmdm_forward_gpytorch_v2/release.json",
+    "plan": "../../experiments/llmdm_forward_gpytorch_v2/plan.json",
+    "data_manifest": "../../experiments/llmdm_forward_gpytorch_v2/data/manifest.json",
+    "method_budgets": "use_frozen_plan_without_modification",
+    "result_policy": "fresh_experiment_no_v1_result_reuse"
+  },
+  "files": {
+    "method_seed_results.csv": {
+      "sha256": "8a98934cd6da1b0e8612e6df96c4dd7f4111c482a6bc6efa604ce65ce7d1b3a0",
+      "bytes": 3775898,
+      "rows": 152,
+      "columns": 70
+    },
+    "method_seed_summary.csv": {
+      "sha256": "96edb7a3f74bcc08e2b6bf5b4450dab0986626f28b7e9ec7cb1879e877752123",
+      "bytes": 45715,
+      "rows": 19,
+      "columns": 104
+    }
+  },
+  "csv_preservation": "byte_for_byte_copy_of_supplied_exports_no_reencoding_or_reserialization",
+  "coverage": {
+    "methods": 19,
+    "method_seeds": [38, 39, 40, 41, 42, 43, 44, 45],
+    "expected_final_results": 152,
+    "successful_final_results": 152,
+    "failed_final_results": 0,
+    "missing_final_results": 0,
+    "pilot_results_included": false,
+    "fixed_1b_results_included": false,
+    "scope_note": "Final selected results only, not a complete historical attempt ledger."
+  },
+  "data": {
+    "source_rows": 472,
+    "empty_histories": 18,
+    "usable_logged": 454,
+    "main_visible": 184,
+    "fixed_1b_visible": 26,
+    "objective": "eval/RedPajamaStackExchange/CrossEntropyLoss",
+    "objective_name": "stack_exchange_cross_entropy",
+    "utility_transform": "negative_loss",
+    "optimization_direction": "maximize",
+    "domain_order": [
+      "RedPajamaWikipedia",
+      "RedPajamaStackExchange",
+      "RedPajamaGithub",
+      "RedPajamaArXiv",
+      "RedPajamaBook"
+    ],
+    "context_order": ["model_scale", "training_steps"],
+    "target_context": [1000.0, 19500.0],
+    "target_model_label": "1B",
+    "split": {
+      "group_by": "model_scale",
+      "min_percentile": 0.0,
+      "max_percentile": 40.0,
+      "bounds": "inclusive",
+      "quantile_method": "linear",
+      "tie_rule": "keep_all_equal_to_cutoff",
+      "checkpoint_selection": "last_history_row",
+      "fixed_1b": "subset_of_main_visible_without_resplitting"
+    },
+    "fixed_across_methods_and_seeds": true
+  },
+  "evaluation": {
+    "kind": "data_recipes_simulator",
+    "real_llm_pretraining_performed": false,
+    "candidate_budget": 128,
+    "duplicates_allowed": true,
+    "unique_candidate_rounding_decimals": 12,
+    "primary_metric": "refnorm_max_score",
+    "aggregation": "best_candidate_per_seed_then_mean_across_eight_seeds",
+    "table_uncertainty": "sample_standard_deviation",
+    "standard_deviation_ddof": 1,
+    "standard_error_retained_in_csv": true,
+    "ranking": "descending_refnorm_max_score_mean_with_average_tie_ranks",
+    "normalization_reference_id": "llmdm_a27d497d18b2a476cbcc5d09651ba6e98a6618c78e1d22569c02b0de8858f8bc_full_logged",
+    "reference_min_utility": -3.630530834197998,
+    "reference_max_utility": -0.8202966451644897,
+    "reference_fidelity_note": "Full logged observations at recorded fidelities, not all reevaluated at target fidelity."
+  },
+  "recorded_runtime": {
+    "python": "3.13.15 (main, Aug  6 2026, 11:06:22) [GCC 13.3.0]",
+    "platform": "Linux-6.6.122+-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "logical_cpu_count": 12,
+    "torch": "2.11.0+cu128",
+    "numpy": "2.1.3",
+    "cuda_runtime": "12.8",
+    "cudnn_version": 91900,
+    "gpu_for_cuda_methods": {
+      "name": "NVIDIA A100-SXM4-80GB",
+      "total_memory_bytes": 85094825984
+    },
+    "torch_threads": 1,
+    "deterministic_algorithms": false,
+    "cudnn_benchmark": false,
+    "cudnn_deterministic": false,
+    "float32_matmul_precision": "highest",
+    "full_inventory_source": "method_seed_results.csv:environment_json"
+  },
+  "execution_policy": {
+    "cpu_methods": ["best_logged", "random_search", "sobol", "bdi", "ga_on_gp", "bo_qei"],
+    "cuda_methods": [
+      "offline_mlp", "standard_ga", "coms", "cma_es", "reinforce",
+      "mc_dropout", "roma", "ict", "tri_mentoring", "ltr", "match_opt", "pgs", "spade"
+    ],
+    "float64_methods": ["bdi", "ga_on_gp", "bo_qei"],
+    "other_methods_dtype": "float32",
+    "mixed_precision": false,
+    "oracle_device": "cpu",
+    "method_seconds_scope": "Successful method execution only; excludes oracle evaluation, backup overhead and interrupted work."
+  },
+  "gp_backend": {
+    "methods": ["ga_on_gp", "bo_qei"],
+    "implementation": "gpytorch_exact_gp",
+    "factorization": "dense_cholesky",
+    "kernel": "scaled_ard_rbf",
+    "mean": "zero",
+    "posterior": "latent",
+    "packages": {"gpytorch": "1.15.2", "linear_operator": "0.6.1"},
+    "bdi_note": "BDI is a separate RBF kernel-ridge adaptation, not an original JAX/Neural Tangents reproduction."
+  },
+  "infrastructure_retries": [
+    {
+      "run_id": "roma",
+      "method_seed": 41,
+      "reason": "User reported restarting Colab after a connection failure. Restored the original frozen plan; reviewed dispatch with no completion and empty stdout. Retry the same RoMA formal seed 41.",
+      "artifact_relative_dir": "runs/llmdm_forward_gpytorch_v2_formal-fdce92b505/data_recipes_stack_exchange-9d7935e5e2/roma-b0c27fca74/seed-41/attempt-0002"
+    },
+    {
+      "run_id": "roma",
+      "method_seed": 45,
+      "reason": "User reported network disconnection and a Colab runtime restart. Restored the original v2 backup; reviewed RoMA seed 45 dispatch with no completion or stdout log. Retry the same seed and frozen config.",
+      "artifact_relative_dir": "runs/llmdm_forward_gpytorch_v2_formal-fdce92b505/data_recipes_stack_exchange-9d7935e5e2/roma-b0c27fca74/seed-45/attempt-0001"
+    }
+  ],
+  "audit": {
+    "scope": "csv_consistency_only",
+    "raw_artifacts_verified": false,
+    "checks": [
+      "csv_bytes_sha256_and_shape",
+      "unique_19_by_8_successful_final_seed_coverage",
+      "frozen_method_configs_provenance_device_dtype_and_target",
+      "negative_loss_utility_and_fixed_reference_normalization",
+      "18_metrics_count_mean_sample_sd_and_se_recomputed_from_seed_rows",
+      "ranks_and_readme_table_match_summary",
+      "recorded_infrastructure_retry_reasons_retained"
+    ],
+    "regression_test": "../../tests/test_gpytorch_reference_results.py",
+    "limitations": [
+      "No candidate/evaluation NPZ, result manifests, attempt journals or Colab job logs were supplied with these CSVs.",
+      "Declared artifact hashes were not checked against actual raw artifact bytes here.",
+      "CSV summaries cannot independently verify candidate simplex constraints or recompute oracle metrics from candidate vectors.",
+      "No training rerun, oracle call, budget retuning or new data split was performed for this archive."
+    ]
+  },
+  "raw_artifact_storage": {
+    "included_in_this_directory": false,
+    "location": "Operator's plan-specific Google Drive backup; retain full snapshots separately.",
+    "artifact_relative_dir_base": "restored_formal_results_directory",
+    "public_download_url": null
+  }
+}
