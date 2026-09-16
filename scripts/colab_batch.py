@@ -13,6 +13,7 @@ compatibility tests. Only one notebook may write a STATE/BACKUPS pair.
 
 from __future__ import annotations
 
+import ast
 import csv
 import hashlib
 import importlib.metadata
@@ -20,6 +21,7 @@ import json
 import math
 import platform
 import sys
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -75,6 +77,98 @@ def _finite(value: Any) -> bool:
     if isinstance(value, list):
         return all(_finite(item) for item in value)
     return not isinstance(value, float) or math.isfinite(value)
+
+
+def _same_json_value(actual: Any, expected: Any) -> bool:
+    """Compare JSON meaning without treating true as the number 1."""
+    if isinstance(expected, bool):
+        return type(actual) is bool and actual == expected
+    if isinstance(expected, (int, float)):
+        return (
+            type(actual) in (int, float)
+            and _finite(actual)
+            and _finite(expected)
+            and actual == expected
+        )
+    if isinstance(expected, dict):
+        return (
+            isinstance(actual, dict)
+            and actual.keys() == expected.keys()
+            and all(
+                _same_json_value(actual[key], value)
+                for key, value in expected.items()
+            )
+        )
+    if isinstance(expected, list):
+        return (
+            isinstance(actual, list)
+            and len(actual) == len(expected)
+            and all(
+                _same_json_value(left, right)
+                for left, right in zip(actual, expected)
+            )
+        )
+    return type(actual) is type(expected) and actual == expected
+
+
+def _csv_integer(value: str) -> Decimal:
+    """Accept integer-valued CSV notation without rounding through float."""
+    try:
+        number = Decimal(value)
+    except InvalidOperation as exc:
+        raise ValueError("not an integer") from exc
+    if not number.is_finite() or number != number.to_integral_value():
+        raise ValueError("not a finite integer")
+    return number
+
+
+def _csv_value_matches(value: str, expected: Any, *, json_field: bool) -> bool:
+    if expected is None:
+        return value == ""
+    if json_field and isinstance(expected, str):
+        return _same_json_value(json.loads(value), json.loads(expected))
+    if isinstance(expected, (dict, list)):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            # pandas exports artifact_sha256 as a Python dict repr in existing
+            # releases. Parse literals only; never execute CSV cell contents.
+            parsed = ast.literal_eval(value)
+        return _same_json_value(parsed, expected)
+    if isinstance(expected, bool):
+        return value in ({"True", "true"} if expected else {"False", "false"})
+    if isinstance(expected, int):
+        return _csv_integer(value) == expected
+    if isinstance(expected, float):
+        actual = float(value)
+        return math.isfinite(actual) and math.isfinite(expected) and math.isclose(
+            actual, expected, rel_tol=1e-12, abs_tol=1e-12
+        )
+    return isinstance(expected, str) and value == expected
+
+
+def _verify_csv_result(csv_row: dict[str, str], result: dict[str, Any]) -> None:
+    """Check every saved result field; allow extra report-only CSV columns."""
+    for field, expected in result.items():
+        if field not in csv_row:
+            raise ValueError(f"result CSV is missing column: {field}")
+        if field == "artifact_dir":
+            # Restoring a snapshot relocates this absolute display path. The
+            # relative path is checked against the latest attempt separately.
+            continue
+        try:
+            matches = _csv_value_matches(
+                csv_row[field], expected, json_field=field.endswith("_json")
+            )
+        except (ValueError, TypeError, SyntaxError) as exc:
+            raise ValueError(
+                f"invalid result CSV value: {field}; inspect before resuming"
+            ) from exc
+        if not matches:
+            raise ValueError(
+                f"result CSV differs from verified result.json: {field}; "
+                "inspect before resuming (no automatic repair or retraining)"
+            )
 
 
 class BatchRunner:
@@ -307,7 +401,7 @@ class BatchRunner:
         records = []
         if path.exists():
             with path.open(newline="", encoding="utf-8") as stream:
-                reader = csv.DictReader(stream)
+                reader = csv.DictReader(stream, strict=True)
                 required = {
                     "task_id",
                     "run_id",
@@ -316,23 +410,56 @@ class BatchRunner:
                     "status",
                     "artifact_relative_dir",
                 }
-                if not required.issubset(reader.fieldnames or []):
-                    raise ValueError("result CSV lacks the frozen-protocol schema")
-                records = [
-                    row
-                    for row in reader
-                    if row["task_id"] == TASK_IDS[job["setting"]]
-                    and row["run_id"] == job["run_id"]
-                    and row["method_seed"] == str(job["seed"])
-                ]
+                try:
+                    fields = reader.fieldnames or []
+                    missing = required.difference(fields)
+                    if missing:
+                        raise ValueError(
+                            f"result CSV lacks required columns: {sorted(missing)}"
+                        )
+                    duplicates = {
+                        field for field in fields if fields.count(field) > 1
+                    }
+                    if duplicates or "" in fields:
+                        raise ValueError(
+                            "result CSV has duplicate/empty headers: "
+                            f"{sorted(duplicates)}"
+                        )
+                    for record in reader:
+                        if None in record:
+                            raise ValueError(
+                                f"result CSV has extra cells at line {reader.line_num}"
+                            )
+                        absent = [
+                            key for key, value in record.items() if value is None
+                        ]
+                        if absent:
+                            raise ValueError(f"result CSV has missing cells: {absent}")
+                        if (
+                            record["task_id"] != TASK_IDS[job["setting"]]
+                            or record["run_id"] != job["run_id"]
+                        ):
+                            continue
+                        try:
+                            seed = _csv_integer(record["method_seed"])
+                        except ValueError as exc:
+                            raise ValueError("invalid result CSV method_seed") from exc
+                        if seed == job["seed"]:
+                            records.append(record)
+                except csv.Error as exc:
+                    raise ValueError(
+                        f"malformed result CSV at line {reader.line_num}"
+                    ) from exc
         if not records:
             if completion is not None or attempts:
                 raise RuntimeError(
-                    "prior attempt exists without a result row; inspect/restore"
+                    "prior attempt exists without a result row in CSV; inspect/restore"
                 )
             return None
-        if len(records) != 1 or records[0]["phase"] != job["phase"]:
-            raise ValueError("duplicate result rows or mismatched phase")
+        if len(records) != 1:
+            raise ValueError("duplicate result CSV rows for task_id/run_id/method_seed")
+        if records[0]["phase"] != job["phase"]:
+            raise ValueError("result CSV phase differs from the requested job")
         if records[0]["status"] != "success":
             raise RuntimeError("failed attempt requires inspection; no automatic retry")
         if completion is None or completion.get("status") != "success":
@@ -380,6 +507,7 @@ class BatchRunner:
             not isinstance(peak, (float, int)) or not math.isfinite(peak) or peak < 0
         ):
             raise ValueError("missing or invalid peak GPU allocation")
+        _verify_csv_result(records[0], row)
         return row
 
     def preview(self, methods=None, settings=("multi_scale",), phase="pilot"):

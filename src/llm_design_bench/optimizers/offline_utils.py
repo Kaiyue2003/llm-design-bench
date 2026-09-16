@@ -39,10 +39,25 @@ def set_seed(seed: int) -> None:
 
 
 def offline_data(task, device: str = "cpu") -> OfflineData:
-    features = batch_features(task.logged_x, task, device=device)
+    """Prepare legacy optimizer data without changing multi-sample scaling."""
     utility = torch.as_tensor(task.logged_y, dtype=torch.float32, device=device)
+    if utility.ndim != 1:
+        raise ValueError("logged utility must be a one-dimensional array")
+    if utility.numel() == 0:
+        raise ValueError("logged dataset must contain at least one utility")
+    if not torch.isfinite(utility).all():
+        raise ValueError("logged utility must contain only finite values")
+    features = batch_features(task.logged_x, task, device=device)
+    if len(utility) != len(features):
+        raise ValueError("logged dataset must contain one utility per feature row")
+
     utility_mean = utility.mean()
-    utility_std = utility.std().clamp_min(1e-6)
+    # Preserve the historical sample std for n >= 2; std() is undefined at n = 1.
+    utility_std = (
+        utility.std().clamp_min(1e-6)
+        if utility.numel() > 1
+        else utility.new_tensor(1e-6)
+    )
     return OfflineData(
         features=features,
         utility=(utility - utility_mean) / utility_std,

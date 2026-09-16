@@ -41,6 +41,17 @@ search.
 Only the evaluator may call the oracle, after a method has returned its final
 candidate batch.
 
+`OfflineBBOMethod.run` gives each invocation an isolated input copy via
+`OfflineProblem.to(..., copy=True)`: tensors and the design space are cloned,
+and `ProblemMetadata` is deep-copied, including nested dictionaries and lists
+in `extra`. Method-local edits therefore do not change the evaluator's metadata
+or the inputs to subsequent methods/seeds, even if the method raises an error.
+Metadata should contain descriptive values compatible with Python `deepcopy`;
+copy failures are not silently replaced by shared references.
+Direct calls with `copy=False` retain shared metadata and design-space objects;
+they are not an isolation boundary. This is protection against accidental
+in-place edits, not a security sandbox for untrusted method code.
+
 ## Data-mixture settings
 
 The primary data-mixture experiment uses all available logged model scales,

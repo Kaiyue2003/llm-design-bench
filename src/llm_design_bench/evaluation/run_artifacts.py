@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import importlib.metadata
 import json
+import math
 import os
 import platform
 import re
@@ -66,6 +67,29 @@ def file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _verify_saved_statistic(
+    row: Mapping[str, Any], field: str, expected: float | int
+) -> None:
+    """Require a finite numeric summary; integer counts must match exactly."""
+    actual = row.get(field)
+    try:
+        matches = (
+            type(actual) in (int, float)
+            and math.isfinite(actual)
+            and (
+                actual == expected
+                if isinstance(expected, int)
+                else np.isclose(float(actual), expected, rtol=1e-12, atol=1e-12)
+            )
+        )
+    except OverflowError:
+        matches = False
+    if not matches:
+        raise ValueError(
+            f"saved statistic {field} is missing, invalid, or disagrees with raw artifacts"
+        )
+
+
 def verify_successful_attempt(
     path: str | Path,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -98,7 +122,11 @@ def verify_successful_attempt(
     count = int(logical["candidate_budget"])
     dimension = int(logical["design_space"]["dimension"])
     dtype = logical["dtype"].removeprefix("torch.")
-    if candidates.shape != (count, dimension) or str(candidates.dtype) != dtype:
+    if (
+        count < 1
+        or candidates.shape != (count, dimension)
+        or str(candidates.dtype) != dtype
+    ):
         raise ValueError(
             "saved candidate shape or dtype violates the logical configuration"
         )
@@ -114,10 +142,11 @@ def verify_successful_attempt(
                 raise ValueError(
                     "saved evaluation has invalid shape or non-finite values"
                 )
-        if (
+        negative_loss = (
             json.loads(logical["problem_metadata_json"]).get("utility_transform")
             == "negative_loss"
-        ) and (
+        )
+        if negative_loss and (
             "raw_loss" not in archive
             or not np.array_equal(archive["raw_loss"], -utility)
         ):
@@ -146,6 +175,22 @@ def verify_successful_attempt(
                 raise ValueError(
                     "saved aggregate score disagrees with candidate evaluation"
                 )
+    if negative_loss:
+        loss = -utility
+        for statistic, reduction in (
+            ("min", np.min),
+            ("median", np.median),
+            ("mean", np.mean),
+        ):
+            _verify_saved_statistic(row, f"raw_{statistic}_loss", float(reduction(loss)))
+
+    # Match seed_runner._candidate_diagnostics exactly, including the saved
+    # dtype: casting float32 candidates before rounding can change the count.
+    unique_count = len(np.unique(np.round(candidates, decimals=12), axis=0))
+    _verify_saved_statistic(row, "unique_candidate_count", unique_count)
+    _verify_saved_statistic(row, "unique_candidate_fraction", unique_count / count)
+    if not 0.0 <= row["unique_candidate_fraction"] <= 1.0:
+        raise ValueError("saved statistic unique_candidate_fraction must be in [0, 1]")
     return manifest, row
 
 

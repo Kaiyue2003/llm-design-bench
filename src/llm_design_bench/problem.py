@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any, Mapping
 
@@ -112,6 +113,12 @@ class OfflineProblem:
         *,
         copy: bool = False,
     ) -> "OfflineProblem":
+        """Convert tensors, optionally isolating all method-visible input data.
+
+        ``copy=True`` also clones the design space and deeply copies metadata,
+        including nested mutable values in ``extra``. With ``copy=False``,
+        metadata and the design space remain shared as before.
+        """
         dtype = dtype or self.train_designs.dtype
 
         def convert(value: torch.Tensor) -> torch.Tensor:
@@ -124,7 +131,7 @@ class OfflineProblem:
             train_utility=convert(self.train_utility),
             target_context=convert(self.target_context),
             design_space=self.design_space.clone() if copy else self.design_space,
-            metadata=self.metadata,
+            metadata=deepcopy(self.metadata) if copy else self.metadata,
         )
 
     @classmethod

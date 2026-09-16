@@ -55,19 +55,19 @@ def test_notebook_is_clean_and_every_code_cell_compiles():
     )
 
 
-def test_helper_revision_and_hashes_are_pinned_to_current_launcher(loader):
+def test_helper_revision_and_hashes_keep_published_release_contract(loader):
     assert re.fullmatch(r"[0-9a-f]{40}", loader.BATCH_REVISION)
     assert loader.BATCH_REVISION == "5f9bd5dc208d53f6f22684b76645168977ffd1b0"
-    for name in ("BATCH_SHA256", "SUPPORT_SHA256"):
-        assert re.fullmatch(r"[0-9a-f]{64}", getattr(loader, name))
-    for name, path in (
-        ("BATCH_SHA256", ROOT / "scripts/colab_batch.py"),
-        ("SUPPORT_SHA256", ROOT / "scripts/colab_support.py"),
-    ):
-        assert (
-            getattr(loader, name)
-            == hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
-        )
+    # Verified against scripts at the pinned commit, not the evolving working
+    # tree. Keep this historical notebook immutable until an explicit release.
+    # Download/cache hash enforcement is exercised independently below. Fixed
+    # expectations also work in source archives and shallow CI checkouts.
+    expected_hashes = {
+        "BATCH_SHA256": "459700324f4e71ebc5d5f1dc16a3a5fb4fcf910e0722fcfe1b5ce9efddeef0d9",
+        "SUPPORT_SHA256": "d607d5893fbf1b70b70d0d23762ba6394b727c620d564637a7463ed2f084b48e",
+    }
+    for name, expected in expected_hashes.items():
+        assert getattr(loader, name) == expected
 
 
 def test_importing_bootstrap_never_downloads_or_trains(monkeypatch):

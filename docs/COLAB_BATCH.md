@@ -103,6 +103,21 @@ Re-running the batch after a normal stop verifies and skips completed jobs. Afte
 a VM loss, first restore the original state from Drive. A known completed job
 whose record is missing from a restored older snapshot is blocked, not retrained.
 
+The current launcher also compares each `method_seed_results.csv` row with its
+verified `result.json`, including configuration, metrics and diagnostics. A
+mismatch, missing column or malformed CSV blocks preview, pilot verification and
+execution with an error identifying the field or structural problem. It does not
+rewrite results, repair the CSV or launch another training attempt. Preserve the
+files and inspect the discrepancy before resuming; this is a consistency check,
+not an independent recomputation of every metric from the candidate arrays.
+Equivalent numeric notation, JSON key order and the legacy hash-dictionary
+serialization are accepted. Restored absolute artifact paths may change; the
+relative path must still identify the latest verified attempt.
+
+Existing notebooks and the existing-session cell remain commit-pinned. A local
+launcher fix does not update a previously downloaded launcher automatically;
+notebook release pins must be updated explicitly in a separate release.
+
 Each actual child job still uses the original append-only journal and periodic,
 verified full-state snapshots. Skipped jobs do not start new subprocesses or
 create redundant archives. Old snapshots are not automatically deleted; monitor

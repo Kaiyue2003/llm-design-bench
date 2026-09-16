@@ -74,8 +74,8 @@ class OfflineBBOMethod(ABC):
     capabilities: ClassVar[MethodCapabilities] = MethodCapabilities()
 
     def run(self, problem: OfflineProblem, context: RunContext) -> MethodResult:
-        # Isolate runs from in-place changes made by a method. Frozen
-        # dataclasses do not otherwise prevent mutation of tensor contents.
+        # Isolate runs from in-place changes made by a method. Frozen dataclasses
+        # do not prevent mutation of tensor contents or nested metadata values.
         prepared = problem.to(context.device, context.dtype, copy=True)
         generator = context.make_generator()
         result = self.optimize(prepared, context=context, generator=generator)

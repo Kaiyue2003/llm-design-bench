@@ -10,6 +10,18 @@ designs live inside each function's box bounds.
 For synthetic minimization functions, the adapter defines
 `utility = -objective`. This lets every optimizer maximize the same quantity.
 
+### Legacy utility standardization
+
+The compatibility `OfflineMLPOptimizer`, `ConservativeObjectiveModelOptimizer`
+and `BackwardDistillationOptimizer` use `offline_utils.offline_data`. This helper
+requires a nonempty, finite one-dimensional utility array with one value per
+logged design. With two or more samples it retains the historical sample
+standard deviation (`n - 1` denominator), floored at `1e-6`. A single sample
+uses that same scale floor directly, producing a standardized utility of zero
+without an undefined sample variance. Constant utilities also remain finite.
+This boundary fix does not change the registered `OfflineBBOMethod` transforms,
+historical frozen plans or archived results.
+
 ## Offline MLP
 
 The MLP fits a two-hidden-layer ReLU network to standardized logged utilities.

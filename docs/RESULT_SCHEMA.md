@@ -92,6 +92,41 @@ The relative artifact path supports copying an entire results directory between
 machines. Aggregate reports are updated under a single-writer suite lock;
 independent shards may be appended sequentially under the same frozen plan.
 
+### Read-only statistics verification
+
+`verify_successful_attempt(attempt_directory)` also recomputes these required
+successful-result fields from the saved arrays:
+
+- For `utility_transform="negative_loss"`, `raw_min_loss`, `raw_median_loss`
+  and `raw_mean_loss` must match reductions of `-utility`. The saved `raw_loss`
+  array must already equal `-utility`. Other objective transforms do not require
+  loss statistics.
+- `unique_candidate_count` must exactly match the number of distinct rows after
+  `np.round(candidates, decimals=12)`, preserving the saved candidate dtype.
+- `unique_candidate_fraction` must match that count divided by the candidate
+  budget and lie in `[0, 1]`.
+
+Missing, nonnumeric, boolean or non-finite values are rejected with the field
+name. Floating summaries use `rtol=1e-12, atol=1e-12`; counts use exact equality.
+The validator never rewrites results, reruns a method or queries the oracle.
+Matching CSV and JSON statistics alone are insufficient if both disagree with
+the raw arrays. Verification of these fields does not independently recompute
+all other diagnostics, such as novelty or method-local training diagnostics.
+
+Auditing an old attempt with the current validator is separate from resuming
+its experiment. This API reads the existing manifest, JSON and NPZ directly and
+does not load a method plan or require the data-recipes runtime. It needs all
+four attempt files; the two archived CSVs alone are insufficient. Missing
+statistics are not backfilled automatically.
+
+All package `.py` files, including this validator, contribute to the frozen
+source fingerprint. Keep published plans and notebook pins unchanged when
+updating validation code: new code must not resume training under an old source
+fingerprint. Continuing the historical run requires its pinned code; running
+new experiments with changed code requires a separately frozen plan and pilot.
+Read-only verification of existing artifacts requires neither retraining nor
+editing their recorded provenance.
+
 ## D(best)
 
 `d_best_summary.csv` is computed once per task/seed after verifying that every

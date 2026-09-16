@@ -1,5 +1,6 @@
 import json
 import shutil
+from copy import deepcopy
 from dataclasses import replace
 
 import numpy as np
@@ -22,7 +23,8 @@ from llm_design_bench.evaluation.unified_report import (
     BenchmarkTrial,
     run_benchmark_suite,
 )
-from llm_design_bench.problem import OfflineProblem, ProblemMetadata
+from llm_design_bench.optimizers.base import OfflineBBOMethod
+from llm_design_bench.problem import MethodResult, OfflineProblem, ProblemMetadata
 from llm_design_bench.spaces import SimplexSpace
 
 
@@ -131,6 +133,75 @@ def test_explicit_resume_does_not_train_or_evaluate_twice(tmp_path, monkeypatch)
         result.per_seed.iloc[0]["raw_max_utility"]
         == first.per_seed.iloc[0]["raw_max_utility"]
     )
+
+
+@pytest.mark.parametrize("fail_first", [False, True])
+def test_method_metadata_mutation_cannot_change_evaluation_or_later_runs(
+    tmp_path, monkeypatch, fail_first
+):
+    import llm_design_bench.evaluation.seed_runner as runner
+
+    problem = _problem()
+    problem.metadata.extra.update(
+        domain_order=["a", "b"], nested={"visible_row_ids": [3, 7]}
+    )
+    original = deepcopy(problem.metadata)
+    observations = []
+
+    class MetadataProbe(OfflineBBOMethod):
+        def __init__(self, mutate):
+            self.mutate = mutate
+
+        def optimize(self, prepared, *, context, generator):
+            observations.append(deepcopy(prepared.metadata))
+            assert prepared.metadata == original
+            if self.mutate:
+                prepared.metadata.extra["utility_transform"] = "identity"
+                prepared.metadata.extra["domain_order"].reverse()
+                prepared.metadata.extra["nested"]["visible_row_ids"].append(999)
+                if fail_first and context.method_seed == 38:
+                    raise RuntimeError("intentional failure after metadata mutation")
+            return MethodResult(
+                candidates=prepared.train_designs[:1].repeat(context.candidate_budget, 1)
+            )
+
+    class MetadataCheckingEvaluator(Evaluator):
+        def predict(self, candidates):
+            assert problem.metadata == original
+            return super().predict(candidates)
+
+    # Substitute non-training probes without modifying the global registry.
+    monkeypatch.setattr(
+        runner,
+        "make_method",
+        lambda method_id, **kwargs: MetadataProbe(mutate=method_id == "random_search"),
+    )
+    evaluator = MetadataCheckingEvaluator(tmp_path)
+    result = run_method_seed_benchmark(
+        evaluator,
+        problem,
+        ["random_search", "best_logged"],
+        reference_utility=np.array([-4.0, -1.0]),
+        config=replace(_config(tmp_path), seeds=(38, 39)),
+    )
+
+    assert problem.metadata == original
+    assert observations == [original] * 4
+    expected_status = (
+        ["failed", "success", "success", "success"]
+        if fail_first
+        else ["success"] * 4
+    )
+    assert result.per_seed["status"].tolist() == expected_status
+    assert evaluator.calls == (3 if fail_first else 4)
+    for path in tmp_path.rglob("result.json"):
+        saved = _json(path)
+        assert json.loads(saved["problem_metadata_json"]) == original.extra
+        if saved["status"] == "success":
+            verify_successful_attempt(path.parent)
+            with np.load(path.with_name("evaluation.npz")) as archive:
+                np.testing.assert_array_equal(archive["raw_loss"], -archive["utility"])
+            assert saved["raw_min_loss"] == pytest.approx(2.2)
 
 
 @pytest.mark.parametrize("artifact", ["candidates.npz", "evaluation.npz"])

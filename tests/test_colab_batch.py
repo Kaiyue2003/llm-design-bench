@@ -144,6 +144,11 @@ def _write_success(state, *, logical_overrides=None, **job):
         "evaluation_seconds": 1.0,
         "total_seconds": 3.0,
         "peak_gpu_memory_bytes": 1024 if device == "cuda" else None,
+        "raw_min_loss": 2.0,
+        "raw_median_loss": 2.0,
+        "raw_mean_loss": 2.0,
+        "unique_candidate_count": 1,
+        "unique_candidate_fraction": 1 / 128,
     }
     for name, value in (("raw", -2.0), ("refnorm", 0.5)):
         for statistic in ("max", "median", "mean"):
@@ -389,6 +394,53 @@ def test_missing_or_corrupt_success_artifacts_never_rerun(
     with pytest.raises((ValueError, RuntimeError)):
         runner.run(methods=["offline_mlp"])
     assert not calls
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "raw_min_loss",
+        "raw_median_loss",
+        "raw_mean_loss",
+        "unique_candidate_count",
+        "unique_candidate_fraction",
+    ],
+)
+def test_matching_csv_and_result_with_wrong_statistics_still_block(
+    runner, monkeypatch, field
+):
+    def forbidden(*args, **kwargs):
+        pytest.fail("invalid statistics must not dispatch or retrain")
+
+    monkeypatch.setattr(batch, "run_job", forbidden)
+    directory, row = _save_job(runner, _job(runner))
+    row[field] += 1
+    _write_json(directory / "result.json", row)
+    csv_path = runner.state / "pilot" / "method_seed_results.csv"
+    with csv_path.open(newline="", encoding="utf-8") as stream:
+        reader = csv.DictReader(stream)
+        fields, records = reader.fieldnames, list(reader)
+    records[0][field] = str(row[field])
+    with csv_path.open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.DictWriter(stream, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(records)
+
+    before = {
+        path: path.read_bytes() if path.is_file() else None
+        for path in runner.state.parent.rglob("*")
+    }
+    preview = runner.preview(methods=["offline_mlp"])[0]
+    assert preview["status"] == "blocked" and field in preview["error"]
+    report = runner.pilot_report(methods=["offline_mlp"])[0]
+    assert report["status"] == "blocked" and field in report["error"]
+    with pytest.raises(RuntimeError, match=field):
+        runner.run(methods=["offline_mlp"])
+    after = {
+        path: path.read_bytes() if path.is_file() else None
+        for path in runner.state.parent.rglob("*")
+    }
+    assert after == before
 
 
 @pytest.mark.parametrize(
