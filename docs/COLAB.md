@@ -93,6 +93,23 @@ and monitor the backup folder's size. Space usage grows as results accumulate;
 a backup error stops the running job and preserves evidence for review. Do not
 assume a free Drive account can hold the entire campaign's repeated snapshots.
 
+### Snapshot size safety
+
+Restoration limits the sum of regular-file contents in a snapshot to 4 GiB
+(`4 * 1024**3` bytes), not the compressed `.tar.gz` size or the total size of
+all backups. The current development `scripts/colab_support.py` applies the
+same limit before archiving and checks actual member sizes again while packing,
+before publishing either the archive or its checksum. Exactly the limit is
+allowed; ignored `.lock` and `.pending-` files are excluded from the count.
+A size failure stops the job/queue without deleting local artifacts or older
+backups. Preserve them for inspection; do not bypass the restoration limit or
+remove experiment records just to continue.
+
+Historical notebooks still load their commit-pinned helpers. This development
+fix does not update those pins or retroactively protect their backup writer.
+Using it in a frozen workflow requires a separately reviewed launcher release,
+not replacing cached scripts or disabling source/hash checks in a running job.
+
 If the runtime disappears, the latest unsaved work can still be lost. A dispatch
 without a completion record requires inspection and an explicit
 `INFRASTRUCTURE_RETRY_REASON`. Keep the same frozen seed and method settings.

@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping, cast
 
 import numpy as np
 import torch
 
 from llm_design_bench.spaces import BoxSpace, DesignSpace, SimplexSpace
+
+if TYPE_CHECKING:
+    from llm_design_bench.tasks.base import Task
 
 
 @dataclass(frozen=True)
@@ -137,7 +140,7 @@ class OfflineProblem:
     @classmethod
     def from_task(
         cls,
-        task,
+        task: Task,
         *,
         design_space: DesignSpace | None = None,
         device: torch.device | str = "cpu",
@@ -210,7 +213,9 @@ class RunContext:
         object.__setattr__(self, "device", torch.device(self.device))
 
     def make_generator(self) -> torch.Generator:
-        generator_device = self.device if self.device.type in {"cpu", "cuda"} else "cpu"
+        # __post_init__ normalizes string inputs without narrowing the init type.
+        device = cast(torch.device, self.device)
+        generator_device = device if device.type in {"cpu", "cuda"} else "cpu"
         generator = torch.Generator(device=generator_device)
         generator.manual_seed(self.method_seed)
         return generator

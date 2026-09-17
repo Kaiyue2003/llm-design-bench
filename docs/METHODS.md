@@ -10,17 +10,15 @@ designs live inside each function's box bounds.
 For synthetic minimization functions, the adapter defines
 `utility = -objective`. This lets every optimizer maximize the same quantity.
 
-### Legacy utility standardization
+Methods receive `OfflineProblem` and `RunContext`, never the task's oracle.
+Use `make_method(...)` to construct a registered `OfflineBBOMethod`; only the
+evaluator scores its final candidates. The former task-taking optimizer
+classes and their execution runners have been retired from the current
+package. Historical behavior belongs to its recorded Git revision; see
+[reproduction and archive notes](REPRODUCING.md).
 
-The compatibility `OfflineMLPOptimizer`, `ConservativeObjectiveModelOptimizer`
-and `BackwardDistillationOptimizer` use `offline_utils.offline_data`. This helper
-requires a nonempty, finite one-dimensional utility array with one value per
-logged design. With two or more samples it retains the historical sample
-standard deviation (`n - 1` denominator), floored at `1e-6`. A single sample
-uses that same scale floor directly, producing a standardized utility of zero
-without an undefined sample variance. Constant utilities also remain finite.
-This boundary fix does not change the registered `OfflineBBOMethod` transforms,
-historical frozen plans or archived results.
+These notes describe the current registered methods. Formal experiment budgets
+come from the frozen plan, not merely from current constructor defaults.
 
 ## Offline MLP
 
@@ -72,7 +70,7 @@ methods are recorded in the
 
 ## BO-qEI
 
-The registered `bo_qei` method fits a native exact Gaussian Process with an
+The registered `bo_qei` method fits a GPyTorch exact Gaussian Process with an
 ARD RBF kernel to standardized design, model-scale, and training-step
 features. It jointly optimizes the requested candidate batch using a Monte
 Carlo estimate of q-Expected Improvement over the best logged standardized
@@ -351,9 +349,9 @@ implementation.
 
 The registered `coms` method receives only `OfflineProblem`, standardizes the
 logged design/fidelity features and utility, and returns unevaluated
-candidates. Oracle evaluation is performed later by the benchmark runner. The
-legacy `ConservativeObjectiveModelOptimizer` remains only for reproducing old
-result paths.
+candidates. Oracle evaluation is performed later by the benchmark runner.
+The former `ConservativeObjectiveModelOptimizer` belongs to historical code
+revisions and is not a second supported current implementation.
 
 ## BDI
 
@@ -374,8 +372,8 @@ authors' [`GGchen1997/BDI`](https://github.com/GGchen1997/BDI) repository.
 
 The registered `bdi` method uses the same oracle-separated contract and
 supports both simplex and box spaces. It records the RBF substitution in
-method provenance. The legacy `BackwardDistillationOptimizer` remains only
-for reproducing old result paths.
+method provenance. The former `BackwardDistillationOptimizer` belongs to
+historical code revisions, not the current method API.
 
 ## SPADE
 
@@ -419,8 +417,10 @@ from support training loss. No oracle is available until the method returns.
 
 See the [source audit](SPADE_SOURCE_AUDIT.md) for attribution, source differences,
 component comparisons and reduced integration smoke validation. Main experiments
-remain multi-scale logs to target 1B; fixed-1B is an ablation. Formal training
-still waits for the agreed method roster, including inverse methods.
+remain multi-scale logs to target 1B; fixed-1B is an ablation. The separate
+[GPyTorch v2 archive](../reference_results/llmdm_forward_gpytorch_v2/README.md)
+records the completed 19-method multi-scale run under its pinned source and
+plan; it does not contain fixed-1B results or every planned inverse method.
 
 ## Reference-normalized utility
 

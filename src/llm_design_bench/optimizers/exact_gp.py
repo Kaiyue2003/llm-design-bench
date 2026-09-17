@@ -37,7 +37,9 @@ class _ExactRBFModel(gpytorch.models.ExactGP):
             ),
         )
 
-    def forward(self, inputs: torch.Tensor) -> gpytorch.distributions.MultivariateNormal:
+    def forward(
+        self, inputs: torch.Tensor
+    ) -> gpytorch.distributions.MultivariateNormal:
         return gpytorch.distributions.MultivariateNormal(
             self.mean_module(inputs),
             self.covar_module(inputs),
@@ -175,9 +177,7 @@ def fit_exact_rbf_gp(
     feature_mean = features.mean(dim=0)
     feature_std = features.std(dim=0, unbiased=False).clamp_min(minimum_std)
     train_inputs = ((features - feature_mean) / feature_std).detach()
-    train_targets, utility_mean, utility_std = problem.standardized_utility(
-        minimum_std
-    )
+    train_targets, utility_mean, utility_std = problem.standardized_utility(minimum_std)
     train_targets = train_targets.detach()
 
     # GaussianLikelihood adds this variance at training observations. Using
@@ -217,10 +217,13 @@ def fit_exact_rbf_gp(
     with _exact_settings():
         for _ in range(training_steps):
             optimizer.zero_grad(set_to_none=True)
-            negative_log_likelihood = -marginal_log_likelihood(
-                model(train_inputs),
-                train_targets,
-            ) * problem.sample_count
+            negative_log_likelihood = (
+                -marginal_log_likelihood(
+                    model(train_inputs),
+                    train_targets,
+                )
+                * problem.sample_count
+            )
             negative_log_likelihood.backward()
             optimizer.step()
             with torch.no_grad():
@@ -229,10 +232,13 @@ def fit_exact_rbf_gp(
                 log_noise.clamp_(math.log(1e-8), math.log(1.0))
 
         with torch.no_grad():
-            final_nll = -marginal_log_likelihood(
-                model(train_inputs),
-                train_targets,
-            ) * problem.sample_count
+            final_nll = (
+                -marginal_log_likelihood(
+                    model(train_inputs),
+                    train_targets,
+                )
+                * problem.sample_count
+            )
             lengthscale = log_lengthscale.exp().reshape(-1).detach()
             output_scale = log_output_scale.exp().detach()
             noise = log_noise.exp().squeeze().detach()
@@ -274,9 +280,7 @@ def stable_posterior_cholesky(
     )
     current_jitter = jitter
     for _ in range(maximum_attempts):
-        factor, info = torch.linalg.cholesky_ex(
-            covariance + current_jitter * identity
-        )
+        factor, info = torch.linalg.cholesky_ex(covariance + current_jitter * identity)
         if int(info.max().detach().cpu()) == 0:
             return factor, current_jitter
         current_jitter *= 10.0

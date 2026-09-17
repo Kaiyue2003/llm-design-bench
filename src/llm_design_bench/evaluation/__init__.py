@@ -1,4 +1,3 @@
-from llm_design_bench.evaluation.runner import BenchmarkConfig, run_baselines
 from llm_design_bench.evaluation.seed_runner import (
     DEFAULT_METHOD_SEEDS,
     RESULT_SCHEMA_VERSION,
@@ -28,7 +27,6 @@ from llm_design_bench.evaluation.task_specs import (
 )
 
 __all__ = [
-    "BenchmarkConfig",
     "BenchmarkTaskSpec",
     "BenchmarkTrial",
     "DEFAULT_METHOD_SEEDS",
@@ -45,7 +43,6 @@ __all__ = [
     "reference_normalize",
     "render_unified_latex",
     "render_unified_markdown",
-    "run_baselines",
     "run_benchmark_suite",
     "run_method_seed_benchmark",
     "summarize_method_ranks",

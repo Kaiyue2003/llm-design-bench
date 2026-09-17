@@ -188,12 +188,8 @@ class BayesianOptimizationQEiMethod(OfflineBBOMethod):
                 "predicted_standardized_utility_mean": float(
                     posterior_mean.mean().cpu()
                 ),
-                "predicted_standardized_utility_max": float(
-                    posterior_mean.max().cpu()
-                ),
-                "posterior_standardized_std_mean": float(
-                    posterior_std.mean().cpu()
-                ),
+                "predicted_standardized_utility_max": float(posterior_mean.max().cpu()),
+                "posterior_standardized_std_mean": float(posterior_std.mean().cpu()),
             },
         )
 

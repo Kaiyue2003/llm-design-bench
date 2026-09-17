@@ -1,27 +1,22 @@
 import numpy as np
 
-from llm_design_bench.optimizers.random_search import DirichletRandomSearch
-from llm_design_bench.types import CandidateBatch
+from llm_design_bench.optimizers import make_method
+from llm_design_bench.problem import OfflineProblem, RunContext
+from toy_offline_task import ToyOfflineTask
 
 
-class ToyTask:
-    mixture_dim = 3
+def test_random_search_returns_unevaluated_simplex_candidates() -> None:
+    task = ToyOfflineTask()
+    result = make_method("random_search").run(
+        OfflineProblem.from_task(task),
+        RunContext(method_seed=7, candidate_budget=8),
+    )
 
-    def at_target_fidelity(self, mixtures: np.ndarray) -> CandidateBatch:
-        return CandidateBatch.at_fidelity(mixtures, 1, 1)
-
-    def predict(self, batch: CandidateBatch) -> np.ndarray:
-        target = np.array([0.7, 0.2, 0.1])
-        return -np.square(batch.mixtures - target).sum(axis=1)
-
-    def cost(self, batch: CandidateBatch) -> np.ndarray:
-        return np.ones(len(batch))
-
-
-def test_random_search_returns_simplex_candidates() -> None:
-    result = DirichletRandomSearch(queries=32, recommendations=8, seed=7).optimize(ToyTask())
-    assert len(result.queried) == 32
-    assert len(result.recommendations) == 8
-    assert np.allclose(result.queried.mixtures.sum(axis=1), 1.0)
-    assert (result.queried.mixtures >= 0).all()
-    assert result.cumulative_cost == 32.0
+    assert task.predict_calls == 0
+    designs = result.candidates.detach().cpu().numpy()
+    assert designs.shape == (8, task.mixture_dim)
+    np.testing.assert_allclose(designs.sum(axis=1), 1.0, atol=1e-6)
+    assert (designs >= 0).all()
+    batch = task.at_target_fidelity(designs)
+    assert np.isfinite(task.predict(batch)).all()
+    assert task.predict_calls == 1

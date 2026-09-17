@@ -30,9 +30,7 @@ class GradientAscentOnGPMethod(OfflineBBOMethod):
         display_name="GA on GP adaptation",
         family=MethodFamily.FORWARD_SURROGATE,
         implementation_kind=ImplementationKind.MULTI_FIDELITY_ADAPTATION,
-        source_url=(
-            "https://github.com/cuong-dm/ROOT/tree/main/gaussian_process"
-        ),
+        source_url=("https://github.com/cuong-dm/ROOT/tree/main/gaussian_process"),
         source_commit=ROOT_GP_COMMIT,
         description=(
             "GPyTorch exact RBF Gaussian Process posterior mean optimized by plain "
@@ -138,10 +136,15 @@ class GradientAscentOnGPMethod(OfflineBBOMethod):
             candidates = problem.design_space.from_unconstrained(parameters)
             prediction = gp.posterior_mean_standardized(problem, candidates)
             gradient = torch.autograd.grad(prediction.sum(), parameters)[0]
-            parameters = (parameters + step_size * gradient).detach().clamp(
-                -20.0,
-                20.0,
-            ).requires_grad_(True)
+            parameters = (
+                (parameters + step_size * gradient)
+                .detach()
+                .clamp(
+                    -20.0,
+                    20.0,
+                )
+                .requires_grad_(True)
+            )
 
         candidates = problem.design_space.from_unconstrained(parameters).detach()
         with torch.no_grad():

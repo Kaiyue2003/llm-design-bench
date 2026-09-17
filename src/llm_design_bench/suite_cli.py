@@ -110,9 +110,7 @@ def benchmark(
     if include_data_mixture:
         run_metadata.update(
             {
-                "data_mixture_setting": (
-                    "fixed_1b" if fixed_1b else "multi_scale"
-                ),
+                "data_mixture_setting": ("fixed_1b" if fixed_1b else "multi_scale"),
                 "data_mixture_metric_index": metric_index,
                 "train_min_percentile": train_min_percentile,
                 "train_max_percentile": train_max_percentile,

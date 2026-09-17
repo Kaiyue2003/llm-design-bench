@@ -16,16 +16,23 @@ import platform
 import re
 import sys
 import tempfile
-from collections.abc import Mapping
+from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, cast
 
 import numpy as np
+from numpy.typing import NDArray
 import torch
+
+from llm_design_bench.evaluation.artifact_types import (
+    AttemptManifest,
+    GPUEnvironment,
+    RunEnvironment,
+)
 
 
 def json_value(value: Any) -> Any:
@@ -48,7 +55,7 @@ def stable_fingerprint(value: Any) -> str:
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
-def array_fingerprint(value: np.ndarray | torch.Tensor) -> str:
+def array_fingerprint(value: NDArray[np.generic] | torch.Tensor) -> str:
     if isinstance(value, torch.Tensor):
         value = value.detach().cpu().numpy()
     array = np.ascontiguousarray(value)
@@ -75,11 +82,13 @@ def _verify_saved_statistic(
     try:
         matches = (
             type(actual) in (int, float)
-            and math.isfinite(actual)
+            and math.isfinite(cast(float, actual))
             and (
                 actual == expected
                 if isinstance(expected, int)
-                else np.isclose(float(actual), expected, rtol=1e-12, atol=1e-12)
+                else np.isclose(
+                    float(cast(float, actual)), expected, rtol=1e-12, atol=1e-12
+                )
             )
         )
     except OverflowError:
@@ -182,7 +191,9 @@ def verify_successful_attempt(
             ("median", np.median),
             ("mean", np.mean),
         ):
-            _verify_saved_statistic(row, f"raw_{statistic}_loss", float(reduction(loss)))
+            _verify_saved_statistic(
+                row, f"raw_{statistic}_loss", float(reduction(loss))
+            )
 
     # Match seed_runner._candidate_diagnostics exactly, including the saved
     # dtype: casting float32 candidates before rounding can change the count.
@@ -194,8 +205,8 @@ def verify_successful_attempt(
     return manifest, row
 
 
-def capture_environment(device: torch.device) -> dict[str, Any]:
-    gpu = None
+def capture_environment(device: torch.device) -> RunEnvironment:
+    gpu: GPUEnvironment | None = None
     if device.type == "cuda" and torch.cuda.is_available():
         props = torch.cuda.get_device_properties(device)
         gpu = {"name": props.name, "total_memory_bytes": props.total_memory}
@@ -208,7 +219,8 @@ def capture_environment(device: torch.device) -> dict[str, Any]:
         "numpy": np.__version__,
         "torch": torch.__version__,
         "cuda_runtime": torch.version.cuda,
-        "cudnn_version": torch.backends.cudnn.version(),
+        # PyTorch does not annotate this optional backend query.
+        "cudnn_version": cast(Callable[[], int | None], torch.backends.cudnn.version)(),
         "torch_threads": torch.get_num_threads(),
         "deterministic_algorithms": torch.are_deterministic_algorithms_enabled(),
         "cudnn_deterministic": torch.backends.cudnn.deterministic,
@@ -257,13 +269,15 @@ def atomic_bytes(path: Path, value: bytes, *, replace: bool = False) -> None:
             os.unlink(temporary)
 
 
-def atomic_npz(path: Path, **arrays: np.ndarray) -> None:
+def atomic_npz(path: Path, **arrays: NDArray[np.generic]) -> None:
     if path.exists():
         raise FileExistsError(f"refusing to overwrite artifact: {path}")
     fd, temporary = tempfile.mkstemp(prefix=".pending-", dir=path.parent)
     try:
         with os.fdopen(fd, "wb") as stream:
-            np.savez_compressed(stream, **arrays)
+            # NumPy's overload also names an allow_pickle kwarg; arbitrary archive
+            # keys cannot be represented by that overload. Values stay typed here.
+            cast(Callable[..., None], np.savez_compressed)(stream, **arrays)
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(temporary, path)
@@ -275,6 +289,19 @@ def atomic_npz(path: Path, **arrays: np.ndarray) -> None:
 def _component(value: str) -> str:
     readable = re.sub(r"[^A-Za-z0-9_.-]+", "-", value).strip(".-")[:64] or "unnamed"
     return readable + "-" + hashlib.sha256(value.encode("utf-8")).hexdigest()[:10]
+
+
+class _WindowsLocks(Protocol):
+    LK_NBLCK: int
+
+    def locking(self, fd: int, mode: int, nbytes: int) -> None: ...
+
+
+class _PosixLocks(Protocol):
+    LOCK_EX: int
+    LOCK_NB: int
+
+    def flock(self, fd: int, operation: int) -> None: ...
 
 
 class _ProcessLock:
@@ -289,11 +316,14 @@ class _ProcessLock:
             if os.name == "nt":
                 import msvcrt
 
-                msvcrt.locking(self.stream.fileno(), msvcrt.LK_NBLCK, 1)
+                windows_locks = cast(_WindowsLocks, msvcrt)
+                windows_locks.locking(self.stream.fileno(), windows_locks.LK_NBLCK, 1)
             else:
                 import fcntl
 
-                fcntl.flock(self.stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                # Describe the POSIX-only module also when mypy runs on Windows.
+                locks = cast(_PosixLocks, fcntl)
+                locks.flock(self.stream.fileno(), locks.LOCK_EX | locks.LOCK_NB)
         except OSError as exc:
             self.stream.close()
             raise RuntimeError(
@@ -306,7 +336,7 @@ class _ProcessLock:
 
 
 @contextmanager
-def result_directory_lock(directory: Path):
+def result_directory_lock(directory: Path) -> Iterator[None]:
     """Reject concurrent suite writers before any method training is started."""
     directory.mkdir(parents=True, exist_ok=True)
     lock = _ProcessLock(directory / ".suite.lock")
@@ -332,8 +362,8 @@ class RunAttempt:
         task_id: str,
         run_id: str,
         seed: int,
-        logical_config: Mapping[str, Any],
-        environment: Mapping[str, Any],
+        logical_config: Mapping[str, object],
+        environment: Mapping[str, object],
         resume: bool,
         infrastructure_retry_reason: str | None,
     ) -> RunAttempt:
@@ -382,24 +412,22 @@ class RunAttempt:
                     )
             attempt_path = directory / f"attempt-{len(attempts) + 1:04d}"
             attempt_path.mkdir(exist_ok=False)
-            atomic_json(
-                attempt_path / "manifest.json",
-                {
-                    "artifact_schema_version": 1,
-                    "created_at_utc": datetime.now(UTC).isoformat(),
-                    "logical_fingerprint": fingerprint,
-                    "logical_config": logical_config,
-                    "environment": environment,
-                    "infrastructure_retry_reason": infrastructure_retry_reason,
-                    "previous_attempt": str(attempts[-1]) if attempts else None,
-                },
-            )
+            new_manifest: AttemptManifest = {
+                "artifact_schema_version": 1,
+                "created_at_utc": datetime.now(UTC).isoformat(),
+                "logical_fingerprint": fingerprint,
+                "logical_config": logical_config,
+                "environment": environment,
+                "infrastructure_retry_reason": infrastructure_retry_reason,
+                "previous_attempt": str(attempts[-1]) if attempts else None,
+            }
+            atomic_json(attempt_path / "manifest.json", new_manifest)
             return cls(attempt_path, fingerprint, None, lock)
         except BaseException:
             lock.close()
             raise
 
-    def finish(self, row: Mapping[str, Any]) -> None:
+    def finish(self, row: Mapping[str, object]) -> None:
         try:
             atomic_json(self.path / "result.json", row)
         finally:

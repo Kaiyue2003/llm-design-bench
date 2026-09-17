@@ -61,14 +61,32 @@ def _box_problem() -> OfflineProblem:
 
 
 _METHOD_CONFIGS = (
-    ("spade", {"diff_hidden": 8, "diff_t_dim": 4, "diff_epochs": 2,
-               "calib_mc_steps": 2, "acq_mc_steps": 2, "acq_mc_samples": 2,
-               "ea_pop": 4, "ea_elite": 2, "ea_gens": 2}),
+    (
+        "spade",
+        {
+            "diff_hidden": 8,
+            "diff_t_dim": 4,
+            "diff_epochs": 2,
+            "calib_mc_steps": 2,
+            "acq_mc_steps": 2,
+            "acq_mc_samples": 2,
+            "ea_pop": 4,
+            "ea_elite": 2,
+            "ea_gens": 2,
+        },
+    ),
     (
         "pgs",
-        {"hidden_size": 16, "surrogate_epochs": 2, "batch_size": 2,
-         "rl_steps": 2, "cql_samples": 2, "trajectories_per_group": 2,
-         "top_fraction": 1.0, "solver_steps": 2},
+        {
+            "hidden_size": 16,
+            "surrogate_epochs": 2,
+            "batch_size": 2,
+            "rl_steps": 2,
+            "cql_samples": 2,
+            "trajectories_per_group": 2,
+            "top_fraction": 1.0,
+            "solver_steps": 2,
+        },
     ),
     (
         "match_opt",
@@ -77,16 +95,23 @@ _METHOD_CONFIGS = (
     (
         "ltr",
         {
-            "hidden_size": 8, "surrogate_epochs": 2, "batch_size": 2,
-            "list_length": 3, "lists_per_epoch": 3, "validation_lists": 2,
+            "hidden_size": 8,
+            "surrogate_epochs": 2,
+            "batch_size": 2,
+            "list_length": 3,
+            "lists_per_epoch": 3,
+            "validation_lists": 2,
             "solver_steps": 2,
         },
     ),
     (
         "roma",
         {
-            "hidden_size": 8, "surrogate_epochs": 2, "batch_size": 2,
-            "weight_perturbation_steps": 2, "adaptation_steps": 2,
+            "hidden_size": 8,
+            "surrogate_epochs": 2,
+            "batch_size": 2,
+            "weight_perturbation_steps": 2,
+            "adaptation_steps": 2,
             "solver_steps": 2,
         },
     ),

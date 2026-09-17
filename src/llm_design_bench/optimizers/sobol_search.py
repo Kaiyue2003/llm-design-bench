@@ -1,53 +1,15 @@
-import numpy as np
-from scipy.stats import qmc
 import torch
 
 from llm_design_bench.optimizers.base import (
-    EvaluationTrace,
     ImplementationKind,
     MethodCapabilities,
     MethodFamily,
     MethodMetadata,
     OfflineBBOMethod,
-    top_candidates,
 )
 from llm_design_bench.optimizers.registry import register_method
 from llm_design_bench.problem import MethodResult, OfflineProblem, RunContext
 from llm_design_bench.spaces import BoxSpace, SimplexSpace
-
-
-class SobolSearch:
-    def __init__(
-        self,
-        queries: int = 256,
-        recommendations: int = 128,
-        seed: int = 0,
-    ) -> None:
-        self.queries = queries
-        self.recommendations = recommendations
-        self.seed = seed
-
-    def optimize(self, task) -> EvaluationTrace:
-        unit_cube = qmc.Sobol(d=task.mixture_dim, scramble=True, seed=self.seed).random(
-            self.queries
-        )
-        clipped = np.clip(unit_cube, np.finfo(float).eps, None)
-        mixtures = clipped / clipped.sum(axis=1, keepdims=True)
-        queried = task.at_target_fidelity(mixtures)
-        utility = task.predict(queried)
-        recommendations, recommendation_utility = top_candidates(
-            queried,
-            utility,
-            self.recommendations,
-        )
-        return EvaluationTrace(
-            name="sobol",
-            recommendations=recommendations,
-            recommendation_utility=recommendation_utility,
-            queried=queried,
-            query_utility=utility,
-            query_cost=task.cost(queried),
-        )
 
 
 @register_method()

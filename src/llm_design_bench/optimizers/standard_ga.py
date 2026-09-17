@@ -136,8 +136,8 @@ class StandardGradientAscentMethod(OfflineBBOMethod):
             candidates = problem.design_space.from_unconstrained(parameters)
             prediction = ensemble.predict_standardized(problem, candidates)
             gradient = torch.autograd.grad(prediction.sum(), parameters)[0]
-            parameters = (parameters + step_size * gradient).detach().requires_grad_(
-                True
+            parameters = (
+                (parameters + step_size * gradient).detach().requires_grad_(True)
             )
 
         candidates = problem.design_space.from_unconstrained(parameters).detach()
@@ -159,12 +159,8 @@ class StandardGradientAscentMethod(OfflineBBOMethod):
                 "effective_step_size": step_size,
                 "logged_initializations": logged_count,
                 "random_initializations": random_count,
-                "predicted_standardized_utility_mean": float(
-                    prediction.mean().cpu()
-                ),
-                "predicted_standardized_utility_max": float(
-                    prediction.max().cpu()
-                ),
+                "predicted_standardized_utility_mean": float(prediction.mean().cpu()),
+                "predicted_standardized_utility_max": float(prediction.max().cpu()),
             },
         )
 

@@ -117,7 +117,9 @@ class SyntheticFunctionTask:
             spec = SYNTHETIC_FUNCTIONS[function_name]
         except KeyError as exc:
             available = ", ".join(sorted(SYNTHETIC_FUNCTIONS))
-            raise KeyError(f"unknown synthetic function {function_name!r}; available: {available}") from exc
+            raise KeyError(
+                f"unknown synthetic function {function_name!r}; available: {available}"
+            ) from exc
         if logged_samples <= 0:
             raise ValueError("logged_samples must be positive")
 
@@ -337,7 +339,9 @@ def _power_sum(designs: np.ndarray) -> np.ndarray:
 def _dixon_price(designs: np.ndarray) -> np.ndarray:
     result = (designs[:, 0] - 1.0) ** 2
     for index in range(1, designs.shape[1]):
-        result += (index + 1.0) * (2.0 * designs[:, index] ** 2 - designs[:, index - 1]) ** 2
+        result += (index + 1.0) * (
+            2.0 * designs[:, index] ** 2 - designs[:, index - 1]
+        ) ** 2
     return result
 
 
@@ -531,8 +535,10 @@ def _local_specs() -> dict[str, SyntheticFunctionSpec]:
             "Booth",
             "plate_shaped",
             [[-10.0, 10.0], [-10.0, 10.0]],
-            lambda designs: (designs[:, 0] + 2.0 * designs[:, 1] - 7.0) ** 2
-            + (2.0 * designs[:, 0] + designs[:, 1] - 5.0) ** 2,
+            lambda designs: (
+                (designs[:, 0] + 2.0 * designs[:, 1] - 7.0) ** 2
+                + (2.0 * designs[:, 0] + designs[:, 1] - 5.0) ** 2
+            ),
             [1.0, 3.0],
             0.0,
         ),
@@ -621,29 +627,62 @@ def _local_specs() -> dict[str, SyntheticFunctionSpec]:
 
 
 SYNTHETIC_FUNCTIONS: dict[str, SyntheticFunctionSpec] = {
-    "ackley": _bayeso_spec("ackley", "Ackley", "many_local_minima", lambda: bayeso.Ackley(2)),
+    "ackley": _bayeso_spec(
+        "ackley", "Ackley", "many_local_minima", lambda: bayeso.Ackley(2)
+    ),
     "bukin6": _bayeso_spec("bukin6", "Bukin N. 6", "many_local_minima", bayeso.Bukin6),
-    "drop_wave": _bayeso_spec("drop_wave", "Drop-Wave", "many_local_minima", bayeso.DropWave),
-    "eggholder": _bayeso_spec("eggholder", "Eggholder", "many_local_minima", bayeso.Eggholder),
-    "gramacy_lee_2012": _bayeso_spec("gramacy_lee_2012", "Gramacy & Lee (2012)", "many_local_minima", bayeso.GramacyAndLee2012),
-    "griewank": _bayeso_spec("griewank", "Griewank", "many_local_minima", lambda: bayeso.Griewank(2)),
-    "holder_table": _bayeso_spec("holder_table", "Holder Table", "many_local_minima", bayeso.HolderTable),
+    "drop_wave": _bayeso_spec(
+        "drop_wave", "Drop-Wave", "many_local_minima", bayeso.DropWave
+    ),
+    "eggholder": _bayeso_spec(
+        "eggholder", "Eggholder", "many_local_minima", bayeso.Eggholder
+    ),
+    "gramacy_lee_2012": _bayeso_spec(
+        "gramacy_lee_2012",
+        "Gramacy & Lee (2012)",
+        "many_local_minima",
+        bayeso.GramacyAndLee2012,
+    ),
+    "griewank": _bayeso_spec(
+        "griewank", "Griewank", "many_local_minima", lambda: bayeso.Griewank(2)
+    ),
+    "holder_table": _bayeso_spec(
+        "holder_table", "Holder Table", "many_local_minima", bayeso.HolderTable
+    ),
     "levy": _bayeso_spec("levy", "Levy", "many_local_minima", lambda: bayeso.Levy(2)),
-    "rastrigin": _bayeso_spec("rastrigin", "Rastrigin", "many_local_minima", lambda: bayeso.Rastrigin(2)),
+    "rastrigin": _bayeso_spec(
+        "rastrigin", "Rastrigin", "many_local_minima", lambda: bayeso.Rastrigin(2)
+    ),
     "shubert": _bayeso_spec("shubert", "Shubert", "many_local_minima", bayeso.Shubert),
-    "bohachevsky": _bayeso_spec("bohachevsky", "Bohachevsky 1", "bowl_shaped", bayeso.Bohachevsky),
+    "bohachevsky": _bayeso_spec(
+        "bohachevsky", "Bohachevsky 1", "bowl_shaped", bayeso.Bohachevsky
+    ),
     "sphere": _bayeso_spec("sphere", "Sphere", "bowl_shaped", lambda: bayeso.Sphere(2)),
-    "zakharov": _bayeso_spec("zakharov", "Zakharov", "plate_shaped", lambda: bayeso.Zakharov(2)),
-    "three_hump_camel": _bayeso_spec("three_hump_camel", "Three-Hump Camel", "valley_shaped", bayeso.ThreeHumpCamel),
-    "six_hump_camel": _bayeso_spec("six_hump_camel", "Six-Hump Camel", "valley_shaped", bayeso.SixHumpCamel),
-    "rosenbrock": _bayeso_spec("rosenbrock", "Rosenbrock", "valley_shaped", lambda: bayeso.Rosenbrock(2)),
-    "dejong5": _bayeso_spec("dejong5", "De Jong N. 5", "steep_ridges_drops", bayeso.DeJong5),
+    "zakharov": _bayeso_spec(
+        "zakharov", "Zakharov", "plate_shaped", lambda: bayeso.Zakharov(2)
+    ),
+    "three_hump_camel": _bayeso_spec(
+        "three_hump_camel", "Three-Hump Camel", "valley_shaped", bayeso.ThreeHumpCamel
+    ),
+    "six_hump_camel": _bayeso_spec(
+        "six_hump_camel", "Six-Hump Camel", "valley_shaped", bayeso.SixHumpCamel
+    ),
+    "rosenbrock": _bayeso_spec(
+        "rosenbrock", "Rosenbrock", "valley_shaped", lambda: bayeso.Rosenbrock(2)
+    ),
+    "dejong5": _bayeso_spec(
+        "dejong5", "De Jong N. 5", "steep_ridges_drops", bayeso.DeJong5
+    ),
     "easom": _bayeso_spec("easom", "Easom", "steep_ridges_drops", bayeso.Easom),
-    "michalewicz": _bayeso_spec("michalewicz", "Michalewicz", "steep_ridges_drops", bayeso.Michalewicz),
+    "michalewicz": _bayeso_spec(
+        "michalewicz", "Michalewicz", "steep_ridges_drops", bayeso.Michalewicz
+    ),
     "beale": _bayeso_spec("beale", "Beale", "other", bayeso.Beale),
     "branin": _bayeso_spec("branin", "Branin", "other", bayeso.Branin),
     "colville": _bayeso_spec("colville", "Colville", "other", bayeso.Colville),
-    "goldstein_price": _bayeso_spec("goldstein_price", "Goldstein-Price", "other", bayeso.GoldsteinPrice),
+    "goldstein_price": _bayeso_spec(
+        "goldstein_price", "Goldstein-Price", "other", bayeso.GoldsteinPrice
+    ),
     "hartmann3": _bayeso_spec("hartmann3", "Hartmann 3-D", "other", bayeso.Hartmann3D),
     "hartmann6": _bayeso_spec("hartmann6", "Hartmann 6-D", "other", bayeso.Hartmann6D),
 }

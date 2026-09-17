@@ -20,7 +20,11 @@ _TASKS: dict[str, TaskFactory] = {
 }
 _TASKS.update(
     {
-        f"synthetic-{name}": (lambda function_name=name, **kwargs: SyntheticFunctionTask(function_name, **kwargs))
+        f"synthetic-{name}": (
+            lambda function_name=name, **kwargs: SyntheticFunctionTask(
+                function_name, **kwargs
+            )
+        )
         for name in DEFAULT_SYNTHETIC_FUNCTIONS
     }
 )

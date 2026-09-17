@@ -1,9 +1,10 @@
 # Unified Result Schema
 
 New experiments use schema version 1 from
-`llm_design_bench.evaluation.unified_report`. The historical
-`publication_runner` remains available only to reproduce publication v1; it is
-not the execution path for newly registered methods.
+`llm_design_bench.evaluation.unified_report`. The historical publication-v1
+execution code is archived in Git rather than shipped in the current package.
+Read-only conversion of its saved results remains available; it does not run
+old methods or make those results comparable with the current protocol.
 
 ## Execution layers
 

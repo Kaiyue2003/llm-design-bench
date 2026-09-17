@@ -25,6 +25,6 @@ __all__ = [
 
 
 def main() -> None:
-    from llm_design_bench.cli import app
+    from llm_design_bench.llmdm_cli import app
 
     app()

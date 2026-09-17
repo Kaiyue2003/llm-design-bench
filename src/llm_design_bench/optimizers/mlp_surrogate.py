@@ -9,79 +9,10 @@ from llm_design_bench.optimizers.base import (
     MethodFamily,
     MethodMetadata,
 )
-from llm_design_bench.optimizers.offline_utils import (
-    MLPSurrogate,
-    design_parameters,
-    finalize_offline_trace,
-    fit_surrogate,
-    offline_data,
-    parameters_to_designs,
-    set_seed,
-    target_features,
-    unique_top_mixtures,
-)
+from llm_design_bench.optimizers.mlp_model import MLPSurrogate
 from llm_design_bench.optimizers.registry import register_method
 from llm_design_bench.optimizers.torch_utils import initialize_candidate_designs
 from llm_design_bench.problem import OfflineProblem, RunContext
-
-
-class OfflineMLPOptimizer:
-    def __init__(
-        self,
-        recommendations: int = 128,
-        seed: int = 0,
-        hidden_size: int = 128,
-        epochs: int = 100,
-        batch_size: int = 64,
-        learning_rate: float = 1e-3,
-        particle_steps: int = 100,
-        particle_learning_rate: float = 5e-2,
-        device: str = "cpu",
-    ) -> None:
-        self.recommendations = recommendations
-        self.seed = seed
-        self.hidden_size = hidden_size
-        self.epochs = epochs
-        self.batch_size = batch_size
-        self.learning_rate = learning_rate
-        self.particle_steps = particle_steps
-        self.particle_learning_rate = particle_learning_rate
-        self.device = device
-
-    def optimize(self, task):
-        set_seed(self.seed)
-        data = offline_data(task, device=self.device)
-        model = MLPSurrogate(
-            data.features.shape[1], hidden_size=self.hidden_size
-        ).to(self.device)
-        fit_surrogate(
-            model,
-            data,
-            epochs=self.epochs,
-            batch_size=self.batch_size,
-            learning_rate=self.learning_rate,
-        )
-
-        parameters = torch.nn.Parameter(
-            design_parameters(
-                unique_top_mixtures(task, self.recommendations),
-                task,
-                device=self.device,
-            )
-        )
-        optimizer = torch.optim.Adam([parameters], lr=self.particle_learning_rate)
-        for _ in range(self.particle_steps):
-            mixtures = parameters_to_designs(parameters, task)
-            loss = -model(target_features(mixtures, task)).mean()
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-        return finalize_offline_trace(
-            "offline_mlp",
-            task,
-            parameters_to_designs(parameters, task),
-        )
 
 
 @register_method()
@@ -147,12 +78,10 @@ class OfflineMLPMethod(FitThenProposeMethod):
     ) -> dict[str, float | int]:
         features = problem.train_features
         feature_mean = features.mean(dim=0)
-        feature_std = features.std(dim=0, unbiased=False).clamp_min(
-            self.minimum_std
-        )
+        feature_std = features.std(dim=0, unbiased=False).clamp_min(self.minimum_std)
         normalized_features = (features - feature_mean) / feature_std
-        standardized_utility, utility_mean, utility_std = (
-            problem.standardized_utility(self.minimum_std)
+        standardized_utility, utility_mean, utility_std = problem.standardized_utility(
+            self.minimum_std
         )
 
         # Linear layers initialize from Torch's global CPU generator. Fork it so
@@ -240,20 +169,14 @@ class OfflineMLPMethod(FitThenProposeMethod):
         candidates = problem.design_space.from_unconstrained(parameters).detach()
         with torch.no_grad():
             final_features = problem.features_at_target(candidates)
-            final_prediction = model(
-                (final_features - feature_mean) / feature_std
-            )
+            final_prediction = model((final_features - feature_mean) / feature_std)
         self._diagnostics = {
             "search": "gradient_ascent",
             "particle_steps": self.particle_steps,
             "logged_initializations": logged_count,
             "random_initializations": random_count,
-            "predicted_standardized_utility_mean": float(
-                final_prediction.mean().cpu()
-            ),
-            "predicted_standardized_utility_max": float(
-                final_prediction.max().cpu()
-            ),
+            "predicted_standardized_utility_mean": float(final_prediction.mean().cpu()),
+            "predicted_standardized_utility_max": float(final_prediction.max().cpu()),
         }
         return candidates
 

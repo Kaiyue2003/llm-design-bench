@@ -1,353 +1,193 @@
 # LLM Design Bench
 
-`llm-design-bench` is a reproducible Python benchmark for offline design
-optimization. It brings two experimental settings under one API:
+`llm-design-bench` is a Python benchmark for offline black-box optimization.
+Its primary experiment recommends LLM pre-training data mixtures using logged
+observations and the simulator from
+[`namkoong-lab/data-recipes`](https://github.com/namkoong-lab/data-recipes).
+Methods only see the shared visible dataset; the evaluator scores their final
+candidates at target fidelity.
 
-- LLM pre-training data-mixture optimization through the simulator and logged
-  runs from [`namkoong-lab/data-recipes`](https://github.com/namkoong-lab/data-recipes).
-- Continuous black-box optimization over 47 synthetic functions organized by
-  the SFU test-problem categories and backed, where available, by
-  [`bayeso-benchmarks`](https://github.com/jungtaekkim/bayeso-benchmarks).
+All tasks expose a maximization utility. For loss-minimization problems,
+`utility = -objective`, so a larger utility is always better.
 
-All tasks expose a maximization utility. For loss-minimization problems the
-package uses `utility = -objective`, so a larger utility is always better.
+## Current benchmark
 
-## What Is Included
+The formal LLM data-mixture experiment uses:
 
-| Suite | Designs | Logged dataset | Methods |
-| --- | --- | --- | --- |
-| Data mixture | Five-domain simplex plus model scale and training steps | Published `data-recipes` runs | Best Logged, Random Search, Sobol, Offline MLP, Standard GA adaptation, CMA-ES adaptation, REINFORCE adaptation, COMs adaptation, BDI adaptation |
-| Synthetic BBO | Box-bounded continuous vectors | Seeded uniform samples over each function's bounds | Best Logged, Random Search, Sobol, Offline MLP, Standard GA adaptation, CMA-ES adaptation, REINFORCE adaptation, COMs adaptation, BDI adaptation |
+- five mixture dimensions: Wikipedia, StackExchange, GitHub, ArXiv and Book;
+- utility percentiles 0-40 within each model scale, merged into one shared
+  visible dataset; model scale and training steps remain conditions;
+- target fidelity 1B / 19,500 training steps and StackExchange cross entropy;
+- exactly 128 candidates per method run;
+- one full-budget pilot with seed 0, followed by formal seeds 38-45;
+- a fixed-1B ablation that takes the 1B subset of the main visible data without
+  splitting again.
 
-The synthetic suite covers Many Local Minima, Bowl-Shaped, Plate-Shaped,
-Valley-Shaped, Steep Ridges/Drops, and Other test problems. The three standard
-additions and COMs are PyTorch adaptations. BDI is a lightweight adaptation
-that uses differentiable RBF kernel regression instead of the original legacy
-JAX/Neural Tangents runtime; see
-[Method Notes](docs/METHODS.md) for the exact mechanisms and limitations.
+The [GPyTorch v2 result archive](reference_results/llmdm_forward_gpytorch_v2/README.md)
+contains 152 completed multi-scale results: 19 methods with eight seeds each.
+It does **not** include fixed-1B results. These are simulator evaluations, not
+new LLM pre-training runs. Historical tables in other archive directories use
+different protocols and must not be merged into this comparison.
+
+The registry includes Best Logged, Random Search, Sobol, Offline MLP, Standard
+GA, CMA-ES, REINFORCE, BO-qEI, GA on GP, MC-Dropout, COMs, BDI, RoMA, ICT,
+Tri-Mentoring, LTR, MATCH-OPT, PGS and SPADE. Published-method implementations
+retain their adaptation labels; they are not automatically exact reproductions.
+The GP methods use GPyTorch, while BDI remains a differentiable RBF kernel-ridge
+adaptation, not the original JAX/Neural Tangents implementation. See
+[Method Notes](docs/METHODS.md) and the [method catalog](docs/METHOD_CATALOG.md).
+
+The package also retains 47 synthetic box-constrained tasks, organized by the
+SFU test-problem categories and backed where available by
+[`bayeso-benchmarks`](https://github.com/jungtaekkim/bayeso-benchmarks).
+They are available through the same oracle-separated method API and the
+development suite runner, not a second formal LLM-DM workflow.
 
 ## Installation
 
-For the agreed LLM data-mixture experiment (scale-stratified visible data,
-fixed-1B subset ablation, frozen configs and per-candidate artifacts), use the
-dedicated [LLM-DM protocol workflow](docs/LLMDM_PROTOCOL.md). Its prepare/freeze
-commands do not train models; execution is a separate explicit command. The
-historical publication table remains unchanged.
+For development:
 
-For a **fresh GPyTorch experiment**, use
+```bash
+git clone https://github.com/Kaiyue2003/llm-design-bench.git
+cd llm-design-bench
+python -m pip install -e ".[dev]"
+```
+
+Python 3.11 and 3.12 are checked by CI. Reproducing a frozen result additionally
+requires that release's recorded code, dependencies, data and runtime policy;
+installing the latest branch is not a replacement for its pinned environment.
+
+After updating an existing editable installation, rerun
+`python -m pip install -e ".[dev]"` to refresh installed command entry points.
+Do not use stale legacy launchers left in an old environment; if necessary,
+install the current package into a clean environment.
+
+The package does not redistribute upstream simulator checkpoints or logged
+runs. Obtain a trusted `data-recipes` checkout and supply its path through the
+formal workflow. Its pickle/checkpoint files and dynamically imported code are
+trusted inputs, not safe formats for untrusted downloads.
+
+## Formal LLM-DM workflow
+
+**Use `llm-design-bench` (an alias of `llm-design-bench-llmdm`) for the formal
+experiment.** Both commands expose the same prepare/freeze/run workflow:
+
+```bash
+llm-design-bench --help
+llm-design-bench-llmdm --help
+```
+
+Follow the [LLM-DM protocol](docs/LLMDM_PROTOCOL.md) for the shared data bundle,
+expanded method budgets, pilot review and formal run commands. Preparation and
+freezing do not train models; `run` explicitly launches training/evaluation.
+New experiments must freeze their own source identity and plan before running.
+
+For the existing GPyTorch v2 release, use
 [LLMDM_GPyTorch_Colab.ipynb](notebooks/LLMDM_GPyTorch_Colab.ipynb) and the
-[automated Colab guide](docs/COLAB_GPYTORCH.md). It prepares a version-pinned
-environment, runs all selected full-budget pilots, asks for one explicit pilot
-review, then queues every formal seed automatically. New results are isolated
-from the original experiment; no v1 result is reused. The dataset and method
-budgets stay unchanged.
+[automated Colab guide](docs/COLAB_GPYTORCH.md). The notebook pins code/data,
+runs the selected full-budget pilots, requires an explicit pilot review, then
+queues the formal seeds. It preserves interrupted attempts and skips verified
+completed runs. The [batch guide](docs/COLAB_BATCH.md) describes recovery and
+Drive backups.
 
-For the historical frozen first batch, open [the Colab notebook](notebooks/LLMDM_Colab.ipynb)
-and follow the [Colab guide](docs/COLAB.md). The
-[release inputs](experiments/llmdm_forward_v1/README.md) contain 184 shared visible
-observations (26 in the fixed-1B subset) and complete budgets for our 19 methods.
-The notebook pins code/data versions, defaults to training disabled, and backs
-up explicitly launched runs to Drive.
+Current-source refactoring changes the package fingerprint. It does not rewrite
+the existing [release](experiments/llmdm_forward_gpytorch_v2/release.json), its
+plan, pinned notebook or results, and does not require rerunning that archive.
+To resume or reproduce that release, keep its pinned environment; never bypass
+the fingerprint checks or substitute the current checkout into its old plan.
 
-The [Colab batch workflow](docs/COLAB_BATCH.md) runs the selected methods and seeds
-sequentially, skips verified completed jobs and preserves an explicit pilot-review
-gate. It can be added to an existing Colab session without changing the frozen
-package or discarding results.
+The old online search entry point and the separate `-offline`, `-publication`
+and `-synthetic` execution commands have been retired. There is no second
+legacy execution workflow in the current package. See
+[reproduction and archive notes](docs/REPRODUCING.md) if you need to inspect
+historical artifacts; preserving them does not imply they belong in the final
+benchmark paper.
 
-Install directly from GitHub:
+## API quickstart and development tasks
 
-```bash
-pip install "llm-design-bench @ git+https://github.com/Kaiyue2003/llm-design-bench.git"
-```
+For a minimal data-mixture API demo, see [Quickstart](docs/QUICKSTART.md) and
+[data_recipes_quickstart.py](examples/data_recipes_quickstart.py). The demo is
+neither a frozen pilot nor a formal experiment.
 
-Or clone the repository for development:
-
-```bash
-git clone https://github.com/Kaiyue2003/llm-design-bench.git
-cd llm-design-bench
-python -m pip install -e ".[dev]"
-python -m pytest -q
-```
-
-Python 3.11 and 3.12 are supported. PyTorch is installed because the MLP, COM,
-and BDI implementations optimize differentiable surrogate models.
-
-## Quickstart
-
-Run all 47 synthetic tasks with the reference configuration:
-
-```bash
-llm-design-bench-synthetic \
-  --logged-samples 256 \
-  --recommendations 64 \
-  --epochs 100 \
-  --particle-steps 100 \
-  --bdi-steps 100 \
-  --seed 38
-```
-
-Run a small reproducibility check first:
-
-```bash
-llm-design-bench-synthetic \
-  --function ackley \
-  --function booth \
-  --logged-samples 64 \
-  --recommendations 8 \
-  --epochs 10 \
-  --particle-steps 10 \
-  --bdi-steps 10 \
-  --results-dir results/smoke
-```
-
-The main synthetic outputs are:
-
-- `results/synthetic_bo_results.csv`
-- `results/synthetic_bo_summary.png`
-- `results/synthetic_categories/`
-- `results/synthetic_categories_top1/`
-
-The normalized best-utility score is
-
-```text
-(generated best utility - logged minimum utility)
--------------------------------------------------
- (logged maximum utility - logged minimum utility)
-```
-
-Higher is better. `1.0` matches the maximum utility in the logged dataset;
-values above `1.0` mean that the optimizer generated a candidate better than
-every logged observation. The score is not clipped and does not claim that the
-global optimum has been reached.
-
-## Seeded Publication Table
-
-Run the compact data-mixture and selected synthetic suite across the eight
-publication seeds:
-
-```bash
-llm-design-bench-publication \
-  --data-recipes-root ../data-recipes \
-  --seed 38 --seed 39 --seed 40 --seed 41 \
-  --seed 42 --seed 43 --seed 44 --seed 45 \
-  --recommendations 128 \
-  --results-dir results/publication
-```
-
-The command checkpoints raw per-seed rows and emits mean +/- sample standard
-deviation summaries, a seed manifest, environment metadata, a GitHub Markdown
-table, and an Overleaf-ready LaTeX table. The committed reference table and
-its raw inputs are in
-[`reference_results/publication/`](reference_results/publication/).
-
-The synthetic publication subset is the union of the prior single-seed COM
-and BDI category winners. This makes the compact table useful for method
-inspection, but performance claims over the full synthetic suite must use all
-47 tasks instead of this selected subset.
-
-## Data-Mixture Benchmark
-
-The package does not redistribute the upstream simulator checkpoints or logged
-runs. Clone `data-recipes` next to this repository, or set
-`DATA_RECIPES_ROOT`:
-
-```bash
-git clone https://github.com/namkoong-lab/data-recipes.git
-git clone https://github.com/Kaiyue2003/llm-design-bench.git
-cd llm-design-bench
-python -m pip install -e ".[dev]"
-```
-
-Run the online-style random/Sobol baselines:
-
-```bash
-llm-design-bench \
-  --data-recipes-root ../data-recipes \
-  --queries 256 \
-  --reference-queries 2048 \
-  --recommendations 128 \
-  --seed 38
-```
-
-Run the logged-data-only MLP, COM, and BDI benchmark:
-
-```bash
-llm-design-bench-offline \
-  --data-recipes-root ../data-recipes \
-  --reference-queries 2048 \
-  --recommendations 128 \
-  --epochs 100 \
-  --particle-steps 100 \
-  --bdi-steps 100 \
-  --train-min-percentile 0 \
-  --train-max-percentile 40 \
-  --seed 38
-```
-
-The default offline split exposes only logged observations between the 0th and
-40th utility percentiles to the optimizers. Metric normalization still uses
-the full logged dataset. Pass `--train-max-percentile 100` to expose all logged
-observations.
-
-For the fixed-1B ablation, keep the target fidelity unchanged and filter the
-visible logged data to 1B runs:
-
-```bash
-llm-design-bench-offline \
-  --data-recipes-root ../data-recipes \
-  --logged-model-scale 1000 \
-  --reference-queries 2048 \
-  --recommendations 128 \
-  --epochs 100 \
-  --particle-steps 100 \
-  --bdi-steps 100 \
-  --train-min-percentile 0 \
-  --train-max-percentile 40 \
-  --seed 38
-```
-
-The Python registry also exposes this setting as `make("data-recipes-1b")`.
-
-Run registered methods through the versioned, oracle-separated suite runner:
+For a small synthetic smoke run without upstream LLM data:
 
 ```bash
 llm-design-bench-suite \
-  --data-mixture \
-  --data-recipes-root ../data-recipes \
-  --method best_logged \
+  --function ackley \
+  --function booth \
   --method random_search \
-  --method sobol \
-  --method offline_mlp \
-  --method standard_ga \
-  --method cma_es \
-  --method reinforce \
-  --method bo_qei \
-  --method ga_on_gp \
-  --method mc_dropout \
-  --method tri_mentoring \
-  --method ict \
-  --method roma \
-  --method ltr \
-  --method match_opt \
-  --method pgs \
-  --method coms \
-  --method bdi \
-  --seed 38 --seed 39 --seed 40 --seed 41 \
-  --seed 42 --seed 43 --seed 44 --seed 45 \
-  --candidate-budget 128 \
-  --results-dir results/unified_data_mixture
+  --seed 0 \
+  --logged-samples 64 \
+  --candidate-budget 8 \
+  --results-dir results/smoke
 ```
 
-Add `--fixed-1b` for the ablation. Both modes use the same unfiltered
-data-recipes normalization reference and the same 1B/19,500-step target.
-When `--method` is omitted, the suite runs these nineteen registered methods.
-The result labels remain **Standard GA adaptation**, **CMA-ES adaptation**,
-**REINFORCE adaptation**, **BO-qEI adaptation**, **GA on GP adaptation**,
-**MC-Dropout adaptation**, **Tri-Mentoring adaptation**, **ICT adaptation**,
-**RoMA adaptation**, **LTR adaptation**, **MATCH-OPT adaptation**, **PGS adaptation**, **COMs adaptation**,
-and **BDI adaptation**; none
-is presented as an exact reproduction of the cited implementation. Source
-audits are in
-[`docs/BASELINE_SOURCE_AUDIT.md`](docs/BASELINE_SOURCE_AUDIT.md) and
-[`docs/GP_UNCERTAINTY_BASELINE_AUDIT.md`](docs/GP_UNCERTAINTY_BASELINE_AUDIT.md),
-with RoMA/ICT/Tri-Mentoring details in
-[`docs/FORWARD_METHOD_SOURCE_AUDIT.md`](docs/FORWARD_METHOD_SOURCE_AUDIT.md).
-LTR, MATCH-OPT, and PGS are independently implemented adaptations.
-Acceptance requirements and
-deliberate deviations are recorded in the
-[ranking and policy source audit](docs/RANKING_POLICY_METHOD_SOURCE_AUDIT.md).
-PGS combines its [certified transition layer](docs/PGS_TRANSITION_DESIGN.md)
-with native CQL/SAC policy training and fixed-target projected-gradient rollout.
-These methods have integration tests and reduced-budget smoke runs, not new
-formal eight-seed publication results.
+`llm-design-bench-suite` is the general-purpose method/task development runner.
+It does not load a frozen LLM-DM manifest or plan, so its outputs do not qualify
+as the formal main experiment or ablation. Omitting `--method` selects all 19
+registered methods; omitting `--seed` selects seeds 38-45. Select explicit
+methods/seeds for development rather than inadvertently launching a full suite.
+Synthetic tasks themselves remain supported after retirement of the old
+synthetic command.
 
-**SPADE adaptation (official-core-derived)** is also registered as `spade`.
-It uses an attributed MIT-licensed PyTorch diffusion core, native Torch kNN,
-and design-only constrained evolution at fixed target fidelity. See the
-[source audit](docs/SPADE_SOURCE_AUDIT.md) and [settings](docs/METHODS.md#spade).
-It has integration smoke validation, not new formal publication results.
-
-## Python API
+The Python API uses the same method boundary:
 
 ```python
 from llm_design_bench import make
-from llm_design_bench.optimizers import BackwardDistillationOptimizer
-
-task = make("synthetic-ackley", logged_samples=256, seed=38)
-optimizer = BackwardDistillationOptimizer(
-    recommendations=64,
-    seed=38,
-    steps=100,
-)
-trace = optimizer.optimize(task)
-
-print("best utility:", trace.recommendation_utility.max())
-print("best objective:", -trace.recommendation_utility.max())
-```
-
-The oracle-separated method API currently registers `best_logged`,
-`random_search`, `sobol`, `offline_mlp`, `standard_ga`, `cma_es`, `reinforce`,
-`bo_qei`, `ga_on_gp`, `mc_dropout`, `tri_mentoring`, `ict`, `roma`, `ltr`,
-`match_opt`, `pgs`, `coms`, and `bdi`:
-
-```python
 from llm_design_bench.optimizers import make_method
 from llm_design_bench.problem import OfflineProblem, RunContext
 
+task = make("synthetic-ackley", logged_samples=64, seed=0)
 problem = OfflineProblem.from_task(task)
-method = make_method("offline_mlp", epochs=100, particle_steps=100)
-result = method.run(
-    problem,
-    RunContext(method_seed=38, candidate_budget=128),
-)
+method = make_method("random_search")
+result = method.run(problem, RunContext(method_seed=0, candidate_budget=8))
 
-# Only the evaluator may send result.candidates to task.predict(...).
+# Only the evaluator may pass the final candidates to task.predict(...).
 ```
 
-The legacy optimizer API remains available for the existing CLI and reference
-result workflows.
+Multi-task development runs compose `BenchmarkTaskSpec` trial factories with
+the seed runner. Methods never receive the oracle. See the
+[benchmark contract](docs/BENCHMARK_PROTOCOL.md),
+[method notes](docs/METHODS.md), and
+[synthetic quickstart](examples/synthetic_quickstart.py).
 
-New multi-task experiments compose `BenchmarkTaskSpec` trial factories with
-the same seed runner, producing a single versioned result schema with raw
-per-seed rows, mean/sample-SD/SE summaries, failures, runtime, candidate
-diagnostics, provenance, Markdown, and LaTeX. The exact columns and legacy-v1
-conversion command are documented in the
-[unified result schema](docs/RESULT_SCHEMA.md).
+## Results and reporting
 
-The frozen three-method result set has a machine-checked
-[publication v1 audit](docs/RESULTS_AUDIT.md). The planned PyTorch integration
-of all 24 methods compared by the SPADE paper is tracked in the
-[method catalog](docs/METHOD_CATALOG.md); catalog membership does not imply
-that a method is already implemented.
+Formal runs retain per-candidate artifacts, per-seed outcomes, resolved
+configuration and provenance. Summaries include mean, sample standard
+deviation, standard error, and success/failure/missing coverage. Pilot results
+and incomplete formal coverage are not eligible for formal ranking.
 
-See [synthetic_quickstart.py](examples/synthetic_quickstart.py) and
-[data_recipes_quickstart.py](examples/data_recipes_quickstart.py) for runnable
-examples.
+The normalized utility score is
 
-## Reproducing Results
+```text
+(candidate utility - logged reference minimum utility)
+/ (logged reference maximum utility - logged reference minimum utility)
+```
 
-The exact commands, expected files, seed policy, and comparison procedure are
-documented in [REPRODUCING.md](docs/REPRODUCING.md). Compact reference outputs
-are committed under [`reference_results/`](reference_results/) so that a fresh
-run can be checked without relying on screenshots alone.
+It is not clipped. A score above 1 exceeds the historical logged reference
+maximum; it is not a percentage improvement or proof of a global optimum.
+Both the main experiment and fixed-1B ablation use the same full multi-scale
+reference. CSV `raw_*_utility` columns retain the original maximization scale;
+`refnorm_*_score` columns use this normalization.
 
-CSV utility columns follow two conventions:
+`llm-design-bench-report` rebuilds reports from saved rows and supports a
+read-only conversion of historical publication-v1 inputs into a new output
+directory. It does not train methods, change old source files, or make results
+from different protocols comparable. See the
+[result schema](docs/RESULT_SCHEMA.md) and
+[reproduction notes](docs/REPRODUCING.md).
 
-- `raw_*_utility`: utility on the original maximization scale.
-- `refnorm_*_score`: utility min-max normalized against the logged reference.
-
-Generated files go to `results/`, which is intentionally ignored by Git.
+Generated output belongs in the Git-ignored `results/` directory. Committed
+snapshots under [`reference_results/`](reference_results/) remain unchanged.
 
 ## Development
 
-The stable offline-method data boundary, candidate rules, seed policy, and
-implementation-provenance requirements are defined in
-[`docs/BENCHMARK_PROTOCOL.md`](docs/BENCHMARK_PROTOCOL.md).
-
-Using `pip`:
+See [code structure](docs/CODE_STRUCTURE.md) for the execution, statistics,
+persistence and Colab module boundaries, and [CONTRIBUTING.md](CONTRIBUTING.md)
+for lint, formatting and incremental strict type checks.
 
 ```bash
-python -m pip install -e ".[dev]"
 python -m pytest -q
 python -m build
 python -m twine check dist/*

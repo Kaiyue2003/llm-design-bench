@@ -69,9 +69,7 @@ def from_legacy(
         results_dir,
         metadata={"legacy_publication_dir": str(publication_dir.resolve())},
     )
-    typer.echo(
-        f"converted {len(result.per_seed)} legacy rows into {results_dir}"
-    )
+    typer.echo(f"converted {len(result.per_seed)} legacy rows into {results_dir}")
 
 
 def main() -> None:

@@ -5,11 +5,9 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, ClassVar, Mapping
 
-import numpy as np
 import torch
 
 from llm_design_bench.problem import MethodResult, OfflineProblem, RunContext
-from llm_design_bench.types import CandidateBatch
 
 
 class MethodFamily(str, Enum):
@@ -174,33 +172,3 @@ class FitThenProposeMethod(OfflineBBOMethod):
 
     def diagnostics(self) -> Mapping[str, Any]:
         return {}
-
-
-@dataclass(frozen=True)
-class EvaluationTrace:
-    name: str
-    recommendations: CandidateBatch
-    recommendation_utility: np.ndarray
-    queried: CandidateBatch
-    query_utility: np.ndarray
-    query_cost: np.ndarray
-
-    @property
-    def cumulative_cost(self) -> float:
-        return float(self.query_cost.sum())
-
-
-def top_candidates(
-    batch: CandidateBatch,
-    utility: np.ndarray,
-    count: int,
-) -> tuple[CandidateBatch, np.ndarray]:
-    indices = np.argsort(utility)[-min(count, len(batch)) :]
-    return (
-        CandidateBatch(
-            mixtures=batch.mixtures[indices],
-            model_scales=batch.model_scales[indices],
-            training_steps=batch.training_steps[indices],
-        ),
-        utility[indices],
-    )

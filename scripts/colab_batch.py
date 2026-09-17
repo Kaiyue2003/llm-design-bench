@@ -13,22 +13,19 @@ compatibility tests. Only one notebook may write a STATE/BACKUPS pair.
 
 from __future__ import annotations
 
-import ast
-import csv
 import hashlib
 import importlib.metadata
 import json
-import math
 import platform
 import sys
-from decimal import Decimal, InvalidOperation
+from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, cast
 
 import colab_support as support
-import numpy as np
 import torch
 from colab_support import run_job
+from colab_verification import verified_result_row
 
 from llm_design_bench.evaluation.data_manifest import (
     load_data_manifest,
@@ -36,9 +33,7 @@ from llm_design_bench.evaluation.data_manifest import (
 )
 from llm_design_bench.evaluation.llmdm_protocol import load_method_plan
 from llm_design_bench.evaluation.run_artifacts import (
-    _component,
     atomic_json,
-    verify_successful_attempt,
 )
 from llm_design_bench.evaluation.seed_runner import (
     MethodSpec,
@@ -48,16 +43,35 @@ from llm_design_bench.evaluation.seed_runner import (
 )
 from llm_design_bench.optimizers.registry import get_method_metadata
 
+if TYPE_CHECKING:
+    from colab_types import (
+        Device,
+        DispatchCompletion,
+        DispatchIntent,
+        EnvironmentContract,
+        JobIdentity,
+        JournalEntry,
+        Phase,
+        PilotReport,
+        QueueOutcome,
+        QueuePreview,
+        Setting,
+    )
+
+    from llm_design_bench.evaluation.plan_types import FrozenMethodPlan
+    from llm_design_bench.evaluation.seed_types import SeedResultRow
+    from llm_design_bench.evaluation.unified_report import BenchmarkTaskSpec
+
 CPU_METHODS = frozenset(
     {"best_logged", "random_search", "sobol", "bdi", "bo_qei", "ga_on_gp"}
 )
-TASK_IDS = {
+TASK_IDS: dict[Setting, str] = {
     "multi_scale": "data_recipes_stack_exchange",
     "fixed_1b": "data_recipes_stack_exchange_1b",
 }
 
 
-def _environment(device: str) -> dict[str, Any]:
+def _environment(device: Device) -> EnvironmentContract:
     if device == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA is unavailable; do not silently switch devices")
     packages = ("torch", "numpy", "pandas", "scipy", "scikit-learn", "plotly")
@@ -65,110 +79,10 @@ def _environment(device: str) -> dict[str, Any]:
         "device": device,
         "python": platform.python_version(),
         "cuda_runtime": torch.version.cuda,
-        "cudnn": torch.backends.cudnn.version(),
+        "cudnn": cast(Callable[[], int | None], torch.backends.cudnn.version)(),
         "gpu": torch.cuda.get_device_name(0) if device == "cuda" else None,
         "packages": {name: importlib.metadata.version(name) for name in packages},
     }
-
-
-def _finite(value: Any) -> bool:
-    if isinstance(value, dict):
-        return all(_finite(item) for item in value.values())
-    if isinstance(value, list):
-        return all(_finite(item) for item in value)
-    return not isinstance(value, float) or math.isfinite(value)
-
-
-def _same_json_value(actual: Any, expected: Any) -> bool:
-    """Compare JSON meaning without treating true as the number 1."""
-    if isinstance(expected, bool):
-        return type(actual) is bool and actual == expected
-    if isinstance(expected, (int, float)):
-        return (
-            type(actual) in (int, float)
-            and _finite(actual)
-            and _finite(expected)
-            and actual == expected
-        )
-    if isinstance(expected, dict):
-        return (
-            isinstance(actual, dict)
-            and actual.keys() == expected.keys()
-            and all(
-                _same_json_value(actual[key], value)
-                for key, value in expected.items()
-            )
-        )
-    if isinstance(expected, list):
-        return (
-            isinstance(actual, list)
-            and len(actual) == len(expected)
-            and all(
-                _same_json_value(left, right)
-                for left, right in zip(actual, expected)
-            )
-        )
-    return type(actual) is type(expected) and actual == expected
-
-
-def _csv_integer(value: str) -> Decimal:
-    """Accept integer-valued CSV notation without rounding through float."""
-    try:
-        number = Decimal(value)
-    except InvalidOperation as exc:
-        raise ValueError("not an integer") from exc
-    if not number.is_finite() or number != number.to_integral_value():
-        raise ValueError("not a finite integer")
-    return number
-
-
-def _csv_value_matches(value: str, expected: Any, *, json_field: bool) -> bool:
-    if expected is None:
-        return value == ""
-    if json_field and isinstance(expected, str):
-        return _same_json_value(json.loads(value), json.loads(expected))
-    if isinstance(expected, (dict, list)):
-        try:
-            parsed = json.loads(value)
-        except json.JSONDecodeError:
-            # pandas exports artifact_sha256 as a Python dict repr in existing
-            # releases. Parse literals only; never execute CSV cell contents.
-            parsed = ast.literal_eval(value)
-        return _same_json_value(parsed, expected)
-    if isinstance(expected, bool):
-        return value in ({"True", "true"} if expected else {"False", "false"})
-    if isinstance(expected, int):
-        return _csv_integer(value) == expected
-    if isinstance(expected, float):
-        actual = float(value)
-        return math.isfinite(actual) and math.isfinite(expected) and math.isclose(
-            actual, expected, rel_tol=1e-12, abs_tol=1e-12
-        )
-    return isinstance(expected, str) and value == expected
-
-
-def _verify_csv_result(csv_row: dict[str, str], result: dict[str, Any]) -> None:
-    """Check every saved result field; allow extra report-only CSV columns."""
-    for field, expected in result.items():
-        if field not in csv_row:
-            raise ValueError(f"result CSV is missing column: {field}")
-        if field == "artifact_dir":
-            # Restoring a snapshot relocates this absolute display path. The
-            # relative path is checked against the latest attempt separately.
-            continue
-        try:
-            matches = _csv_value_matches(
-                csv_row[field], expected, json_field=field.endswith("_json")
-            )
-        except (ValueError, TypeError, SyntaxError) as exc:
-            raise ValueError(
-                f"invalid result CSV value: {field}; inspect before resuming"
-            ) from exc
-        if not matches:
-            raise ValueError(
-                f"result CSV differs from verified result.json: {field}; "
-                "inspect before resuming (no automatic repair or retraining)"
-            )
 
 
 class BatchRunner:
@@ -186,7 +100,7 @@ class BatchRunner:
         data_recipes_root: str | Path,
         state: str | Path,
         backups: str | Path,
-        neural_device: str = "cuda",
+        neural_device: Device = "cuda",
         allow_environment_change: bool = False,
     ) -> None:
         if neural_device not in {"cpu", "cuda"}:
@@ -210,17 +124,21 @@ class BatchRunner:
         self.bundle = load_data_manifest(
             self.assets / "data", data_recipes_root=self.data_recipes_root
         )
-        self.plan = load_method_plan(self.assets / "plan.json", self.bundle)
+        self.plan: FrozenMethodPlan = load_method_plan(
+            self.assets / "plan.json", self.bundle
+        )
         if (
             self.bundle.manifest_id != release["data_manifest_id"]
             or self.plan["plan_id"] != release["plan_id"]
             or self.plan["package_source"]["sha256"] != release["package_source_sha256"]
         ):
             raise ValueError("release, plan, and dataset identities disagree")
-        self._tasks: dict[str, Any] = {}
-        self._journal_index = None
+        self._tasks: dict[Setting, BenchmarkTaskSpec] = {}
+        self._journal_index: dict[str, JournalEntry] | None = None
 
-    def _jobs(self, methods, settings, phase) -> list[dict[str, Any]]:
+    def _jobs(
+        self, methods: Iterable[str] | None, settings: Iterable[Setting], phase: Phase
+    ) -> list[JobIdentity]:
         if phase not in {"pilot", "formal"}:
             raise ValueError("phase must be pilot or formal")
         entries = {entry["run_id"]: entry for entry in self.plan["methods"]}
@@ -249,10 +167,16 @@ class BatchRunner:
             }
             for setting in settings
             for run_id in chosen
-            for seed in self.plan["shared_settings"][f"{phase}_seeds"]
+            for seed in self._phase_seeds(phase)
         ]
 
-    def _check_environment(self, run_id, device, *, write=False) -> None:
+    def _phase_seeds(self, phase: Phase) -> list[int]:
+        shared = self.plan["shared_settings"]
+        return shared["pilot_seeds"] if phase == "pilot" else shared["formal_seeds"]
+
+    def _check_environment(
+        self, run_id: str, device: Device, *, write: bool = False
+    ) -> None:
         current = _environment(device)
         path = self.state / f"environment-{run_id}.json"
         if path.exists():
@@ -267,7 +191,7 @@ class BatchRunner:
         elif write:
             atomic_json(path, current)
 
-    def _journal(self, job) -> dict[str, Any] | None:
+    def _journal(self, job: JobIdentity) -> DispatchCompletion | None:
         digest = hashlib.sha256(support._canonical(job)).hexdigest()
         journal = self.backups / "journal"
         # Index once per public operation. With one owner, journals can only
@@ -275,9 +199,9 @@ class BatchRunner:
         # This avoids O(queue_size * completed_jobs) small reads from Drive for
         # preview/skip/report. run_job retains its own independent retry guard.
         if getattr(self, "_journal_index", None) is None:
-            index = {}
+            index: dict[str, JournalEntry] = {}
             for path in sorted(journal.glob("*.intent.json")):
-                intent = support._verified_json(path)
+                intent = cast("DispatchIntent", support._verified_json(path))
                 intent_hash = hashlib.sha256(
                     support._canonical(intent["identity"])
                 ).hexdigest()
@@ -289,6 +213,7 @@ class BatchRunner:
                     )
                 index[intent_hash] = {"intent": intent, "path": path}
             self._journal_index = index
+        assert self._journal_index is not None
         entry = self._journal_index.get(digest)
         if entry is None:
             return None
@@ -299,7 +224,9 @@ class BatchRunner:
             )
             if not completion.exists():
                 raise RuntimeError("prior job was interrupted; inspect before retrying")
-            entry["completion"] = support._verified_json(completion)
+            entry["completion"] = cast(
+                "DispatchCompletion", support._verified_json(completion)
+            )
         saved = entry["completion"]
         if saved.get("identity_sha256") != digest:
             raise ValueError("completion belongs to a different identity")
@@ -319,13 +246,16 @@ class BatchRunner:
             )
         return saved
 
-    def _remember_dispatch(self, result) -> None:
+    def _remember_dispatch(self, result: DispatchCompletion) -> None:
         """Verify only the newly published pair before advancing the local index."""
         journal = self.backups / "journal"
         path = journal / f"{result['dispatch_id']}.intent.json"
-        intent = support._verified_json(path)
-        saved = support._verified_json(
-            journal / f"{result['dispatch_id']}.completion.json"
+        intent = cast("DispatchIntent", support._verified_json(path))
+        saved = cast(
+            "DispatchCompletion",
+            support._verified_json(
+                journal / f"{result['dispatch_id']}.completion.json"
+            ),
         )
         digest = hashlib.sha256(support._canonical(intent["identity"])).hexdigest()
         if digest != intent["identity_sha256"] or saved != result:
@@ -337,7 +267,7 @@ class BatchRunner:
                 "completion": saved,
             }
 
-    def _expected_logical(self, job) -> dict[str, Any]:
+    def _expected_logical(self, job: JobIdentity) -> dict[str, object]:
         setting = job["setting"]
         if setting not in self._tasks:
             self._tasks[setting] = make_frozen_data_recipes_task_spec(
@@ -357,7 +287,7 @@ class BatchRunner:
             experiment_id=f"{self.plan['experiment_id']}_{job['phase']}",
             phase=job["phase"],
             seeds=(job["seed"],),
-            required_seeds=self.plan["shared_settings"][f"{job['phase']}_seeds"],
+            required_seeds=tuple(self._phase_seeds(job["phase"])),
             task_id=task.task_id,
             dtype=dtype,
             device=job["device"],
@@ -385,135 +315,29 @@ class BatchRunner:
         )
         return _logical_config(row, trial.problem, trial.reference_utility)
 
-    def _verified_row(self, job) -> dict[str, Any] | None:
-        completion = self._journal(job)  # Check even if the CSV claims success.
-        root = self.state / job["phase"]
-        trial_dir = (
-            root
-            / "runs"
-            / _component(f"{self.plan['experiment_id']}_{job['phase']}")
-            / _component(TASK_IDS[job["setting"]])
-            / _component(job["run_id"])
-            / f"seed-{job['seed']}"
+    def _verified_row(self, job: JobIdentity) -> SeedResultRow | None:
+        # The journal must be checked even when the CSV claims success. Keep
+        # this orchestration hook so callers can revalidate immediately before
+        # dispatch; the extracted verifier itself never starts a child.
+        completion = self._journal(job)
+        return verified_result_row(
+            state=self.state,
+            experiment_id=self.plan["experiment_id"],
+            task_id=TASK_IDS[job["setting"]],
+            job=job,
+            completion=completion,
+            expected_logical=lambda: self._expected_logical(job),
         )
-        attempts = sorted(trial_dir.glob("attempt-[0-9][0-9][0-9][0-9]"))
-        path = root / "method_seed_results.csv"
-        records = []
-        if path.exists():
-            with path.open(newline="", encoding="utf-8") as stream:
-                reader = csv.DictReader(stream, strict=True)
-                required = {
-                    "task_id",
-                    "run_id",
-                    "method_seed",
-                    "phase",
-                    "status",
-                    "artifact_relative_dir",
-                }
-                try:
-                    fields = reader.fieldnames or []
-                    missing = required.difference(fields)
-                    if missing:
-                        raise ValueError(
-                            f"result CSV lacks required columns: {sorted(missing)}"
-                        )
-                    duplicates = {
-                        field for field in fields if fields.count(field) > 1
-                    }
-                    if duplicates or "" in fields:
-                        raise ValueError(
-                            "result CSV has duplicate/empty headers: "
-                            f"{sorted(duplicates)}"
-                        )
-                    for record in reader:
-                        if None in record:
-                            raise ValueError(
-                                f"result CSV has extra cells at line {reader.line_num}"
-                            )
-                        absent = [
-                            key for key, value in record.items() if value is None
-                        ]
-                        if absent:
-                            raise ValueError(f"result CSV has missing cells: {absent}")
-                        if (
-                            record["task_id"] != TASK_IDS[job["setting"]]
-                            or record["run_id"] != job["run_id"]
-                        ):
-                            continue
-                        try:
-                            seed = _csv_integer(record["method_seed"])
-                        except ValueError as exc:
-                            raise ValueError("invalid result CSV method_seed") from exc
-                        if seed == job["seed"]:
-                            records.append(record)
-                except csv.Error as exc:
-                    raise ValueError(
-                        f"malformed result CSV at line {reader.line_num}"
-                    ) from exc
-        if not records:
-            if completion is not None or attempts:
-                raise RuntimeError(
-                    "prior attempt exists without a result row in CSV; inspect/restore"
-                )
-            return None
-        if len(records) != 1:
-            raise ValueError("duplicate result CSV rows for task_id/run_id/method_seed")
-        if records[0]["phase"] != job["phase"]:
-            raise ValueError("result CSV phase differs from the requested job")
-        if records[0]["status"] != "success":
-            raise RuntimeError("failed attempt requires inspection; no automatic retry")
-        if completion is None or completion.get("status") != "success":
-            raise RuntimeError(
-                "successful artifact lacks its verified completion journal"
-            )
-        if not (self.state / f"environment-{job['run_id']}.json").is_file():
-            raise RuntimeError(
-                "successful result is missing its original environment contract"
-            )
-        relative = Path(records[0]["artifact_relative_dir"])
-        artifact = (root / relative).resolve()
-        if (
-            relative.is_absolute()
-            or not artifact.is_relative_to(root.resolve())
-            or not attempts
-            or artifact != attempts[-1].resolve()
-        ):
-            raise ValueError(
-                "artifact must be the latest attempt inside its trial directory"
-            )
-        manifest, row = verify_successful_attempt(artifact)
-        if manifest["logical_config"] != self._expected_logical(job):
-            raise ValueError(
-                "saved logical configuration differs from the frozen task/plan"
-            )
-        with np.load(artifact / "candidates.npz", allow_pickle=False) as archive:
-            candidates = archive["candidates"]
-            if (candidates < -1e-6).any() or not np.allclose(
-                candidates.sum(axis=1), 1.0, rtol=0, atol=1e-6
-            ):
-                raise ValueError("saved candidates violate the simplex")
-        for key in ("training_summary_json", "diagnostics_json"):
-            if not _finite(json.loads(row[key])):
-                raise ValueError(f"non-finite diagnostic: {key}")
-        for key in ("method_seconds", "evaluation_seconds", "total_seconds"):
-            if not isinstance(row.get(key), (float, int)) or not math.isfinite(
-                row[key]
-            ):
-                raise ValueError(f"missing or non-finite runtime: {key}")
-            if row[key] < 0:
-                raise ValueError(f"negative runtime: {key}")
-        peak = row.get("peak_gpu_memory_bytes")
-        if (job["device"] == "cuda" or peak is not None) and (
-            not isinstance(peak, (float, int)) or not math.isfinite(peak) or peak < 0
-        ):
-            raise ValueError("missing or invalid peak GPU allocation")
-        _verify_csv_result(records[0], row)
-        return row
 
-    def preview(self, methods=None, settings=("multi_scale",), phase="pilot"):
+    def preview(
+        self,
+        methods: Iterable[str] | None = None,
+        settings: Iterable[Setting] = ("multi_scale",),
+        phase: Phase = "pilot",
+    ) -> list[QueuePreview]:
         """Read-only queue: pending, complete, or blocked; never starts a child."""
         self._validate_release()
-        result = []
+        result: list[QueuePreview] = []
         for job in self._jobs(methods, settings, phase):
             try:
                 self._check_environment(job["run_id"], job["device"])
@@ -523,32 +347,39 @@ class BatchRunner:
                 result.append({**job, "status": "blocked", "error": str(exc)})
         return result
 
-    def pilot_report(self, methods=None, settings=("multi_scale",)):
+    def pilot_report(
+        self,
+        methods: Iterable[str] | None = None,
+        settings: Iterable[Setting] = ("multi_scale",),
+    ) -> list[PilotReport]:
         """Verify pilot artifacts and return cost/diagnostics, never oracle scores."""
         self._validate_release()
-        reports = []
+        reports: list[PilotReport] = []
         for job in self._jobs(methods, settings, "pilot"):
-            report = {"setting": job["setting"], "run_id": job["run_id"]}
+            report: PilotReport = {
+                "setting": job["setting"],
+                "run_id": job["run_id"],
+                "status": "missing",
+            }
             try:
                 row = self._verified_row(job)
                 report["status"] = "verified" if row else "missing"
                 if row:
-                    for key in (
-                        "train_size",
-                        "candidate_budget",
-                        "device",
-                        "dtype",
-                        "method_seconds",
-                        "evaluation_seconds",
-                        "total_seconds",
-                        "peak_gpu_memory_bytes",
-                        "unique_candidate_count",
-                    ):
-                        report[key] = row.get(key)
+                    report["train_size"] = row.get("train_size")
+                    report["candidate_budget"] = row.get("candidate_budget")
+                    report["device"] = row.get("device")
+                    report["dtype"] = row.get("dtype")
+                    report["method_seconds"] = row.get("method_seconds")
+                    report["evaluation_seconds"] = row.get("evaluation_seconds")
+                    report["total_seconds"] = row.get("total_seconds")
+                    report["peak_gpu_memory_bytes"] = row.get("peak_gpu_memory_bytes")
+                    report["unique_candidate_count"] = row.get("unique_candidate_count")
                     report["training_summary"] = json.loads(
-                        row["training_summary_json"]
+                        cast(str, row["training_summary_json"])
                     )
-                    report["diagnostics"] = json.loads(row["diagnostics_json"])
+                    report["diagnostics"] = json.loads(
+                        cast(str, row["diagnostics_json"])
+                    )
                     peak = row.get("peak_gpu_memory_bytes")
                     report["peak_gpu_memory_mib"] = (
                         peak / 2**20 if isinstance(peak, (float, int)) else None
@@ -558,11 +389,12 @@ class BatchRunner:
                     # validation is not a proof of training convergence.
                     report["finite_numeric_diagnostics"] = True
             except (OSError, ValueError, KeyError, TypeError, RuntimeError) as exc:
-                report.update(status="blocked", error=str(exc))
+                report["status"] = "blocked"
+                report["error"] = str(exc)
             reports.append(report)
         return reports
 
-    def _command(self, job) -> list[str]:
+    def _command(self, job: JobIdentity) -> list[str]:
         command = [
             sys.executable,
             "-u",
@@ -598,8 +430,12 @@ class BatchRunner:
         return command
 
     def run(
-        self, methods=None, settings=("multi_scale",), phase="pilot", reviewed_pilots=()
-    ):
+        self,
+        methods: Iterable[str] | None = None,
+        settings: Iterable[Setting] = ("multi_scale",),
+        phase: Phase = "pilot",
+        reviewed_pilots: Iterable[tuple[Setting, str]] = (),
+    ) -> list[QueueOutcome]:
         """Run one finite queue, stopping on the first error, without retrying.
 
         Explicit human review and an independently verified seed-0 pilot are
@@ -613,13 +449,13 @@ class BatchRunner:
             first = blocked[0]
             raise RuntimeError(f"queue blocked before dispatch: {first}")
         if phase == "formal":
-            reviewed = set()
+            reviewed: set[tuple[Setting, str]] = set()
             for pair in reviewed_pilots:
                 if not isinstance(pair, (tuple, list)) or len(pair) != 2:
                     raise ValueError(
                         "reviewed_pilots must contain (setting, run_id) pairs"
                     )
-                reviewed.add(tuple(pair))
+                reviewed.add((pair[0], pair[1]))
             required = {(job["setting"], job["run_id"]) for job in jobs}
             if required - reviewed:
                 raise RuntimeError(
@@ -629,7 +465,7 @@ class BatchRunner:
                 pilot = self._jobs([run_id], [setting], "pilot")[0]
                 if self._verified_row(pilot) is None:
                     raise RuntimeError(f"verified pilot missing: {setting}/{run_id}")
-        results = []
+        results: list[QueueOutcome] = []
         for index, job in enumerate(jobs, 1):
             label = f"{job['setting']}/{job['run_id']}/{phase}/seed-{job['seed']}"
             print(f"[{index}/{len(jobs)}] {label}", flush=True)

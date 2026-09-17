@@ -94,11 +94,11 @@ def test_box_projection_and_out_of_range_actions_are_not_silently_clipped():
 
 
 def test_box_projection_rounds_outward_float32_endpoints_inward():
-    space = BoxSpace(torch.tensor([[-32.768, 32.768], [0., 1.]], dtype=torch.float64))
-    projected = project_designs(torch.tensor([[-100., -1.], [100., 2.]]), space)
+    space = BoxSpace(torch.tensor([[-32.768, 32.768], [0.0, 1.0]], dtype=torch.float64))
+    projected = project_designs(torch.tensor([[-100.0, -1.0], [100.0, 2.0]]), space)
     assert (projected.double() >= space.bounds[:, 0]).all()
     assert (projected.double() <= space.bounds[:, 1]).all()
-    assert torch.equal(projected[:, 1], torch.tensor([0., 1.]))
+    assert torch.equal(projected[:, 1], torch.tensor([0.0, 1.0]))
     assert projected.dtype == torch.float32
 
 

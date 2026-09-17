@@ -48,19 +48,19 @@ Issues = "https://github.com/Kaiyue2003/llm-design-bench/issues"
 [project.optional-dependencies]
 dev = [
     "build>=1.2",
+    "mypy==1.19.1",
+    "pandas-stubs==3.0.5.260914",
     "pytest>=9.0.3",
+    "ruff==0.16.6",
     "twine>=5.0",
     "wheel>=0.43",
 ]
 
 [project.scripts]
 llm-design-bench = "llm_design_bench:main"
-llm-design-bench-offline = "llm_design_bench.offline_cli:main"
-llm-design-bench-publication = "llm_design_bench.publication_cli:main"
 llm-design-bench-report = "llm_design_bench.report_cli:main"
 llm-design-bench-suite = "llm_design_bench.suite_cli:main"
 llm-design-bench-llmdm = "llm_design_bench.llmdm_cli:main"
-llm-design-bench-synthetic = "llm_design_bench.synthetic_cli:main"
 
 [build-system]
 requires = ["setuptools>=69", "wheel"]
@@ -72,10 +72,57 @@ where = ["src"]
 [tool.setuptools.package-data]
 llm_design_bench = ["py.typed", "third_party/*.txt"]
 
+[tool.ruff]
+required-version = "==0.16.6"
+target-version = "py311"
+line-length = 88
+# Released artifacts are immutable, even when checking from the repository root.
+extend-exclude = ["experiments", "notebooks", "reference_results", "configs", "results"]
+force-exclude = true
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.mypy]
+# Use the active interpreter's Python version to match installed dependency stubs.
+# Incremental gate: public interfaces, plans, seed execution and Colab orchestration.
+# Other modules retain their type information but are not yet checked for errors.
+files = [
+    "src/llm_design_bench/types.py",
+    "src/llm_design_bench/tasks/base.py",
+    "src/llm_design_bench/spaces.py",
+    "src/llm_design_bench/problem.py",
+    "src/llm_design_bench/optimizers/base.py",
+    "src/llm_design_bench/evaluation/plan_types.py",
+    "src/llm_design_bench/evaluation/artifact_types.py",
+    "src/llm_design_bench/evaluation/llmdm_protocol.py",
+    "src/llm_design_bench/evaluation/run_artifacts.py",
+    "src/llm_design_bench/evaluation/seed_types.py",
+    "src/llm_design_bench/evaluation/seed_statistics.py",
+    "src/llm_design_bench/evaluation/seed_persistence.py",
+    "src/llm_design_bench/evaluation/seed_runner.py",
+    "scripts/colab_types.py",
+    "scripts/colab_verification.py",
+    "scripts/colab_batch.py",
+    "scripts/colab_support.py",
+]
+follow_imports = "silent"
+strict = true
+warn_unreachable = true
+show_error_codes = true
+
 [dependency-groups]
 dev = [
     "build>=1.2",
+    "mypy==1.19.1",
+    "pandas-stubs==3.0.5.260914",
     "pytest>=9.0.3",
+    "ruff==0.16.6",
     "twine>=5.0",
     "wheel>=0.43",
 ]

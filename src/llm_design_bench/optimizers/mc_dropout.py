@@ -51,12 +51,15 @@ class DropoutMLP(nn.Module):
         for layer in self.hidden_layers:
             hidden = torch.relu(layer(hidden))
             if stochastic:
-                keep = torch.rand(
-                    hidden.shape,
-                    generator=generator,
-                    device=hidden.device,
-                    dtype=hidden.dtype,
-                ) >= self.dropout_probability
+                keep = (
+                    torch.rand(
+                        hidden.shape,
+                        generator=generator,
+                        device=hidden.device,
+                        dtype=hidden.dtype,
+                    )
+                    >= self.dropout_probability
+                )
                 hidden = hidden * keep / (1.0 - self.dropout_probability)
         return self.output_layer(hidden).squeeze(-1)
 
@@ -219,12 +222,8 @@ class MCDropoutMethod(OfflineBBOMethod):
                 "predicted_standardized_utility_mean": float(
                     predicted_mean.mean().cpu()
                 ),
-                "predicted_standardized_utility_max": float(
-                    predicted_mean.max().cpu()
-                ),
-                "predicted_standardized_std_mean": float(
-                    predicted_std.mean().cpu()
-                ),
+                "predicted_standardized_utility_max": float(predicted_mean.max().cpu()),
+                "predicted_standardized_std_mean": float(predicted_std.mean().cpu()),
                 "acquisition_mean": float(acquisition.mean().cpu()),
             },
         )
@@ -237,9 +236,7 @@ class MCDropoutMethod(OfflineBBOMethod):
     ) -> tuple[DropoutMLP, torch.Tensor, torch.Tensor, dict[str, float | int | str]]:
         features = problem.train_features
         feature_mean = features.mean(dim=0)
-        feature_std = features.std(dim=0, unbiased=False).clamp_min(
-            self.minimum_std
-        )
+        feature_std = features.std(dim=0, unbiased=False).clamp_min(self.minimum_std)
         normalized_features = (features - feature_mean) / feature_std
         utility, utility_mean, utility_std = problem.standardized_utility(
             self.minimum_std
@@ -285,16 +282,21 @@ class MCDropoutMethod(OfflineBBOMethod):
                 predictions.mean(dim=0),
                 utility,
             )
-        return model, feature_mean.detach(), feature_std.detach(), {
-            "surrogate": "mc_dropout_mlp",
-            "train_samples": problem.sample_count,
-            "feature_dim": int(normalized_features.shape[1]),
-            "epochs": self.epochs,
-            "dropout_probability": self.dropout_probability,
-            "final_standardized_mse": float(final_mse.cpu()),
-            "utility_mean": float(utility_mean.cpu()),
-            "utility_std": float(utility_std.cpu()),
-        }
+        return (
+            model,
+            feature_mean.detach(),
+            feature_std.detach(),
+            {
+                "surrogate": "mc_dropout_mlp",
+                "train_samples": problem.sample_count,
+                "feature_dim": int(normalized_features.shape[1]),
+                "epochs": self.epochs,
+                "dropout_probability": self.dropout_probability,
+                "final_standardized_mse": float(final_mse.cpu()),
+                "utility_mean": float(utility_mean.cpu()),
+                "utility_std": float(utility_std.cpu()),
+            },
+        )
 
 
 def _normalized_target_features(
@@ -313,10 +315,7 @@ def _mc_predictions(
     samples: int,
 ) -> torch.Tensor:
     return torch.stack(
-        [
-            model(features, generator=generator, stochastic=True)
-            for _ in range(samples)
-        ]
+        [model(features, generator=generator, stochastic=True) for _ in range(samples)]
     )
 
 

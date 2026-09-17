@@ -162,7 +162,9 @@ def test_method_metadata_mutation_cannot_change_evaluation_or_later_runs(
                 if fail_first and context.method_seed == 38:
                     raise RuntimeError("intentional failure after metadata mutation")
             return MethodResult(
-                candidates=prepared.train_designs[:1].repeat(context.candidate_budget, 1)
+                candidates=prepared.train_designs[:1].repeat(
+                    context.candidate_budget, 1
+                )
             )
 
     class MetadataCheckingEvaluator(Evaluator):
@@ -188,9 +190,7 @@ def test_method_metadata_mutation_cannot_change_evaluation_or_later_runs(
     assert problem.metadata == original
     assert observations == [original] * 4
     expected_status = (
-        ["failed", "success", "success", "success"]
-        if fail_first
-        else ["success"] * 4
+        ["failed", "success", "success", "success"] if fail_first else ["success"] * 4
     )
     assert result.per_seed["status"].tolist() == expected_status
     assert evaluator.calls == (3 if fail_first else 4)

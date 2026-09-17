@@ -13,7 +13,7 @@ import re
 import subprocess
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 import torch
@@ -23,6 +23,15 @@ from llm_design_bench.evaluation.data_manifest import (
     make_frozen_data_recipes_task_spec,
 )
 from llm_design_bench.evaluation.run_artifacts import verify_successful_attempt
+from llm_design_bench.evaluation.plan_types import (
+    FrozenMethodPlan,
+    MethodPlanEntry,
+    MethodPlanPayload,
+    MethodRequest,
+    PackageSourceIdentity,
+    SharedSettings,
+    read_plan_shape,
+)
 from llm_design_bench.evaluation.seed_runner import (
     DEFAULT_METHOD_SEEDS,
     MethodSpec,
@@ -30,6 +39,7 @@ from llm_design_bench.evaluation.seed_runner import (
     resolved_method_config,
 )
 from llm_design_bench.evaluation.unified_report import (
+    BenchmarkTaskSpec,
     UnifiedBenchmarkResult,
     run_benchmark_suite,
 )
@@ -39,7 +49,7 @@ PROTOCOL_ID = "llmdm_scale_stratified_v1"
 DOUBLE_METHODS = frozenset({"bo_qei", "ga_on_gp", "bdi"})
 
 
-def shared_settings() -> dict[str, Any]:
+def shared_settings() -> SharedSettings:
     """Return a fresh JSON-compatible copy of the group-wide settings."""
     return {
         "protocol_id": PROTOCOL_ID,
@@ -77,7 +87,7 @@ def _digest(value: Any) -> str:
     return hashlib.sha256(_canonical(value)).hexdigest()
 
 
-def package_source_identity() -> dict[str, Any]:
+def package_source_identity() -> PackageSourceIdentity:
     """Hash installed Python sources; commit alone cannot identify dirty code."""
     package = Path(__file__).resolve().parents[1]
     sources = {
@@ -124,10 +134,10 @@ def _validate_name(value: str, name: str) -> None:
 
 def freeze_method_plan(
     bundle: FrozenDataManifest,
-    methods: Sequence[Mapping[str, Any]],
+    methods: Sequence[MethodRequest],
     *,
     experiment_id: str,
-) -> dict[str, Any]:
+) -> FrozenMethodPlan:
     """Expand explicitly selected methods; do not train, search, or query oracle.
 
     An empty kwargs mapping explicitly selects that method's current defaults.
@@ -136,7 +146,7 @@ def freeze_method_plan(
     _validate_name(experiment_id, "experiment_id")
     if not methods:
         raise ValueError("select at least one method with explicit kwargs")
-    entries = []
+    entries: list[MethodPlanEntry] = []
     for entry in methods:
         if not isinstance(entry, Mapping):
             raise TypeError("each method must be an object")
@@ -168,7 +178,7 @@ def freeze_method_plan(
         )
     if len({entry["run_id"] for entry in entries}) != len(entries):
         raise ValueError("method run_id values must be unique")
-    payload = {
+    payload: MethodPlanPayload = {
         "schema_version": 1,
         "experiment_id": experiment_id,
         "data_manifest_id": bundle.manifest_id,
@@ -179,7 +189,7 @@ def freeze_method_plan(
     return {**payload, "plan_id": _digest(payload)}
 
 
-def save_method_plan(plan: Mapping[str, Any], path: str | Path) -> Path:
+def save_method_plan(plan: Mapping[str, object], path: str | Path) -> Path:
     """Write a new plan; never overwrite an existing frozen configuration."""
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -188,7 +198,9 @@ def save_method_plan(plan: Mapping[str, Any], path: str | Path) -> Path:
     return output
 
 
-def validate_method_plan(plan: Mapping[str, Any], bundle: FrozenDataManifest) -> None:
+def validate_method_plan(
+    plan: Mapping[str, object], bundle: FrozenDataManifest
+) -> None:
     payload = dict(plan)
     plan_id = payload.pop("plan_id", None)
     if plan_id != _digest(payload):
@@ -200,15 +212,17 @@ def validate_method_plan(plan: Mapping[str, Any], bundle: FrozenDataManifest) ->
         raise ValueError("frozen plan does not match the agreed LLM-DM protocol")
     if payload.get("data_manifest_id") != bundle.manifest_id:
         raise ValueError("frozen plan references a different data manifest")
-    if payload["package_source"]["sha256"] != package_source_identity()["sha256"]:
+    # Keep the public Mapping input contract; the shape reader describes JSON dicts.
+    checked = read_plan_shape(dict(plan))
+    if checked["package_source"]["sha256"] != package_source_identity()["sha256"]:
         raise ValueError(
             "package source changed; create a new plan and rerun the pilot"
         )
-    _validate_name(payload["experiment_id"], "experiment_id")
-    if not payload.get("methods"):
+    _validate_name(checked["experiment_id"], "experiment_id")
+    if not checked["methods"]:
         raise ValueError("frozen plan contains no methods")
     run_ids = []
-    for entry in payload["methods"]:
+    for entry in checked["methods"]:
         _validate_name(entry["run_id"], "run_id")
         run_ids.append(entry["run_id"])
         expected = "float64" if entry["method_id"] in DOUBLE_METHODS else "float32"
@@ -225,19 +239,20 @@ def validate_method_plan(plan: Mapping[str, Any], bundle: FrozenDataManifest) ->
         raise ValueError("frozen plan contains duplicate run_id values")
 
 
-def load_method_plan(path: str | Path, bundle: FrozenDataManifest) -> dict[str, Any]:
+def load_method_plan(path: str | Path, bundle: FrozenDataManifest) -> FrozenMethodPlan:
     plan = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(plan, dict):
         raise TypeError("frozen plan must be a JSON object")
     validate_method_plan(plan, bundle)
-    return plan
+    # Structural and semantic validation above precede this JSON-boundary cast.
+    return cast(FrozenMethodPlan, plan)
 
 
 def _require_pilots(
     results_dir: str | Path | None,
-    plan: Mapping[str, Any],
-    tasks,
-    specs,
+    plan: FrozenMethodPlan,
+    tasks: Sequence[BenchmarkTaskSpec],
+    specs: Sequence[MethodSpec],
 ) -> None:
     if results_dir is None:
         raise ValueError("formal runs require pilot_results from the same frozen plan")
@@ -307,7 +322,7 @@ def _require_pilots(
 
 def run_frozen_experiment(
     bundle: FrozenDataManifest,
-    plan: Mapping[str, Any],
+    plan: FrozenMethodPlan,
     *,
     data_recipes_root: str | Path,
     results_dir: str | Path,

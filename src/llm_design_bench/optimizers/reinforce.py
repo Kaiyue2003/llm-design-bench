@@ -201,12 +201,8 @@ class ReinforceMethod(OfflineBBOMethod):
                 "random_initializations": random_count,
                 "final_training_reward_mean": final_reward_mean,
                 "final_training_reward_std": final_reward_std,
-                "predicted_standardized_utility_mean": float(
-                    prediction.mean().cpu()
-                ),
-                "predicted_standardized_utility_max": float(
-                    prediction.max().cpu()
-                ),
+                "predicted_standardized_utility_mean": float(prediction.mean().cpu()),
+                "predicted_standardized_utility_max": float(prediction.max().cpu()),
             },
         )
 

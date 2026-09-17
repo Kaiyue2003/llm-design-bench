@@ -23,8 +23,13 @@ import time
 import uuid
 import warnings
 from datetime import UTC, datetime
+from io import BufferedReader
 from pathlib import Path, PurePosixPath
-from typing import Any
+from collections.abc import Callable, Mapping
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from colab_types import DispatchCompletion, DispatchIntent
 
 MAX_RESTORE_BYTES = 4 * 1024**3
 
@@ -109,26 +114,64 @@ def _ignored(path: Path) -> bool:
     ) or path.name.endswith(".lock")
 
 
+def _check_archive_size(total: int) -> None:
+    if total > MAX_RESTORE_BYTES:
+        raise ValueError(
+            f"archive contents ({total} bytes) exceed the restoration safety limit "
+            f"({MAX_RESTORE_BYTES} uncompressed bytes)"
+        )
+
+
 def snapshot_tree(local_root: Path | str, backup_root: Path | str) -> Path:
-    """Publish one verified immutable archive and checksum; retain older copies."""
+    """Publish one size-bounded immutable archive and checksum; retain older copies."""
     local, backup = _roots(local_root, backup_root)
     if not local.is_dir():
         raise NotADirectoryError(local)
+    files = []
+    total = 0
+    # Reject oversized state before spending time/disk space on compression.
+    for path in sorted(local.rglob("*")):
+        relative = path.relative_to(local)
+        if _ignored(relative):
+            continue
+        if path.is_symlink():
+            raise ValueError(f"snapshot refuses symlinks: {path}")
+        if path.is_dir():
+            continue
+        if not path.is_file():
+            raise ValueError(f"snapshot accepts regular files only: {path}")
+        total += path.stat().st_size
+        _check_archive_size(total)
+        files.append((path, relative))
+
+    archived_bytes = 0
+
+    def check_member(member: tarfile.TarInfo) -> tarfile.TarInfo:
+        nonlocal archived_bytes
+        if not member.isfile():
+            raise ValueError(f"snapshot accepts regular files only: {member.name}")
+        # Logs can grow after preflight. Count the actual headers before tarfile
+        # streams each member, so a growing source cannot publish an oversized tar.
+        archived_bytes += member.size
+        _check_archive_size(archived_bytes)
+        return member
+
     destination = backup / "snapshots" / f"snapshot-{_id()}.tar.gz"
     with tempfile.TemporaryDirectory(prefix="llmdm-snapshot-") as temporary:
         archive = Path(temporary) / "snapshot.tar.gz"
         with tarfile.open(archive, "w:gz", dereference=True) as handle:
-            for path in sorted(local.rglob("*")):
-                relative = path.relative_to(local)
-                if _ignored(relative):
-                    continue
+            for path, relative in files:
+                # Keep source-type checks next to add(), not just at preflight.
                 if path.is_symlink():
                     raise ValueError(f"snapshot refuses symlinks: {path}")
-                if path.is_dir():
-                    continue
                 if not path.is_file():
                     raise ValueError(f"snapshot accepts regular files only: {path}")
-                handle.add(path, arcname=relative.as_posix(), recursive=False)
+                handle.add(
+                    path,
+                    arcname=relative.as_posix(),
+                    recursive=False,
+                    filter=check_member,
+                )
         checksum = Path(temporary) / "checksum"
         checksum.write_text(_sha256(archive) + "\n", encoding="ascii")
         _publish(archive, destination)
@@ -156,8 +199,7 @@ def _members(archive: tarfile.TarFile) -> list[tuple[tarfile.TarInfo, Path]]:
             raise ValueError(f"unsafe or duplicate archive member: {name!r}")
         names.add(name)
         total += member.size
-        if total > MAX_RESTORE_BYTES:
-            raise ValueError("archive exceeds the 4 GiB restoration safety limit")
+        _check_archive_size(total)
         result.append((member, Path(*pure.parts)))
     return result
 
@@ -254,12 +296,17 @@ def _check_previous(
         )
 
 
-def _stop(process: subprocess.Popen) -> None:
+def _kill_group(pid: int, sig: int) -> None:
+    # This POSIX-only API has no Windows stub; it is called only in POSIX branches.
+    cast(Callable[[int, int], None], getattr(os, "killpg"))(pid, sig)
+
+
+def _stop(process: subprocess.Popen[bytes]) -> None:
     if process.poll() is not None:
         return
     try:
         if os.name == "posix":
-            os.killpg(process.pid, signal.SIGTERM)
+            _kill_group(process.pid, signal.SIGTERM)
         else:
             process.terminate()
     except ProcessLookupError:
@@ -270,7 +317,7 @@ def _stop(process: subprocess.Popen) -> None:
     except subprocess.TimeoutExpired:
         try:
             if os.name == "posix":
-                os.killpg(process.pid, signal.SIGKILL)
+                _kill_group(process.pid, cast(int, getattr(signal, "SIGKILL")))
             else:
                 process.kill()
         except ProcessLookupError:
@@ -282,11 +329,11 @@ def run_job(
     command: list[str],
     local_root: Path | str,
     backup_root: Path | str,
-    identity: dict[str, Any],
+    identity: Mapping[str, object],
     *,
     snapshot_interval: float = 60,
     infrastructure_retry_reason: str | None = None,
-) -> dict[str, Any]:
+) -> DispatchCompletion:
     """Run one explicit job, preserving dispatch, logs and periodic snapshots.
 
     Only one worker may use a backup root; cross-runtime locks are not promised.
@@ -309,7 +356,7 @@ def run_job(
     identity_hash = hashlib.sha256(_canonical(identity)).hexdigest()
     _check_previous(journal, identity_hash, reason, local)
     dispatch_id = _id()
-    intent = {
+    intent: DispatchIntent = {
         "schema_version": 1,
         "dispatch_id": dispatch_id,
         "identity": identity,
@@ -354,7 +401,8 @@ def run_job(
                 try:
                     assert process is not None and process.stdout is not None
                     with process.stdout:
-                        while chunk := process.stdout.read1(8192):
+                        # Popen's binary PIPE uses a buffered reader at default bufsize.
+                        while chunk := cast(BufferedReader, process.stdout).read1(8192):
                             log.write(chunk)
                             log.flush()
                             sys.stdout.write(chunk.decode("utf-8", errors="replace"))
@@ -390,7 +438,7 @@ def run_job(
         if process is not None:
             _stop(process)
             returncode = process.returncode
-    result = {
+    result: DispatchCompletion = {
         "dispatch_id": dispatch_id,
         "identity_sha256": identity_hash,
         "status": "success" if error is None and returncode == 0 else "failed",
@@ -410,5 +458,6 @@ def run_job(
     if error is not None:
         raise error
     if returncode != 0:
-        raise subprocess.CalledProcessError(returncode, command)
+        # Without an error, the completed wait() above supplied an integer status.
+        raise subprocess.CalledProcessError(cast(int, returncode), command)
     return result

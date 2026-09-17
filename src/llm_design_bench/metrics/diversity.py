@@ -13,7 +13,9 @@ def pairwise_diversity(mixtures: np.ndarray) -> float:
 def mixture_entropy(mixtures: np.ndarray) -> np.ndarray:
     mixtures = np.asarray(mixtures, dtype=float)
     safe_mixtures = np.where(mixtures > 0, mixtures, 1.0)
-    return -np.sum(np.where(mixtures > 0, mixtures * np.log(safe_mixtures), 0.0), axis=1)
+    return -np.sum(
+        np.where(mixtures > 0, mixtures * np.log(safe_mixtures), 0.0), axis=1
+    )
 
 
 def active_domain_count(mixtures: np.ndarray, threshold: float = 0.01) -> np.ndarray:

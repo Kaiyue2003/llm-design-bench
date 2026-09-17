@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from llm_design_bench.optimizers.bdi import BackwardDistillationOptimizer
-from llm_design_bench.optimizers.coms import ConservativeObjectiveModelOptimizer
+from llm_design_bench.optimizers import make_method
+from llm_design_bench.problem import OfflineProblem, RunContext
 from llm_design_bench.tasks.synthetic_functions import (
     DEFAULT_SYNTHETIC_FUNCTIONS,
     SYNTHETIC_CATEGORIES,
@@ -30,32 +30,33 @@ def test_synthetic_function_known_minimum(function_name: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "optimizer",
+    "method_id,kwargs",
     [
-        ConservativeObjectiveModelOptimizer(
-            recommendations=4,
-            seed=7,
-            hidden_size=16,
-            epochs=2,
-            batch_size=8,
-            adversarial_steps=2,
-            particle_steps=2,
+        (
+            "coms",
+            {
+                "hidden_size": 16,
+                "epochs": 2,
+                "batch_size": 8,
+                "adversarial_steps": 2,
+                "particle_steps": 2,
+            },
         ),
-        BackwardDistillationOptimizer(
-            recommendations=4,
-            seed=7,
-            steps=2,
-        ),
+        ("bdi", {"steps": 2}),
     ],
 )
-def test_box_offline_optimizers_keep_candidates_in_bounds(optimizer) -> None:
+def test_box_offline_methods_keep_candidates_in_bounds(method_id, kwargs) -> None:
     task = SyntheticFunctionTask("booth", logged_samples=32, seed=3)
-    trace = optimizer.optimize(task)
+    result = make_method(method_id, **kwargs).run(
+        OfflineProblem.from_task(task),
+        RunContext(method_seed=7, candidate_budget=4),
+    )
+    batch = task.at_target_fidelity(result.candidates.detach().cpu().numpy())
+    utility = task.predict(batch)
 
     lower = task.design_bounds[:, 0]
     upper = task.design_bounds[:, 1]
-    assert trace.name in {"coms", "bdi"}
-    assert len(trace.recommendations) == 4
-    assert np.all(trace.recommendations.mixtures >= lower - 1e-6)
-    assert np.all(trace.recommendations.mixtures <= upper + 1e-6)
-    assert np.all(np.isfinite(trace.recommendation_utility))
+    assert len(batch) == 4
+    assert np.all(batch.mixtures >= lower - 1e-6)
+    assert np.all(batch.mixtures <= upper + 1e-6)
+    assert np.all(np.isfinite(utility))

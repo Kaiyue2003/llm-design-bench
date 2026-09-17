@@ -66,9 +66,11 @@ with hardware information and report adaptations under their registered labels.
 
 ## Workflow
 
-The new entry point is `llm-design-bench-llmdm`, or equivalently
-`python -m llm_design_bench.llmdm_cli` after installation. Older publication and
-generic suite commands are not a substitute for this frozen protocol.
+The formal entry point is `llm-design-bench-llmdm`, also available as
+`llm-design-bench`, or `python -m llm_design_bench.llmdm_cli` after installation.
+The generic `llm-design-bench-suite` command is for current-method development
+and synthetic tasks; it is not a substitute for this frozen protocol. Historical
+execution commands are archived in Git, not installed by the current package.
 
 ### 1. Prepare the shared bundle once
 

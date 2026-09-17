@@ -216,6 +216,8 @@ def _check_loaded_sources(repo: Path) -> None:
         "llm_design_bench": repo / "src/llm_design_bench/__init__.py",
         "colab_support": repo / "scripts/colab_support.py",
         "colab_batch": repo / "scripts/colab_batch.py",
+        "colab_types": repo / "scripts/colab_types.py",
+        "colab_verification": repo / "scripts/colab_verification.py",
         "colab_v2": repo / "scripts/colab_v2.py",
     }
     for name, path in expected.items():

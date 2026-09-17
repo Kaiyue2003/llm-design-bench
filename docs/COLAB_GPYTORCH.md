@@ -82,6 +82,11 @@ that the full queue fits within a single runtime. Formal coverage is complete
 only when each selected method/setting has eight verified successful seeds,
 zero pending and zero blocked jobs.
 
+See [snapshot size safety](COLAB.md#snapshot-size-safety) for the 4 GiB
+uncompressed-content limit and the development helper's write-time check.
+This frozen notebook retains its original helper pins; that development fix
+is not automatically included in its checkout.
+
 ## Implementation and tests
 
 `scripts/colab_v2.py` handles setup checks, the v2-wide environment contract and

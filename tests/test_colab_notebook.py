@@ -87,7 +87,7 @@ def launcher(tmp_path):
             backends=SimpleNamespace(cudnn=SimpleNamespace(version=lambda: 123)),
             cuda=SimpleNamespace(
                 is_available=lambda: True, get_device_name=lambda index: "test GPU"
-            )
+            ),
         ),
         "importlib": SimpleNamespace(
             metadata=SimpleNamespace(version=lambda name: "test")

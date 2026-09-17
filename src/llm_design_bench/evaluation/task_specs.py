@@ -6,7 +6,7 @@ import numpy as np
 import torch
 
 from llm_design_bench.evaluation.data_manifest import stratified_percentile_mask
-from llm_design_bench.evaluation.offline_runner import LoggedDatasetView
+from llm_design_bench.evaluation.logged_data import LoggedDatasetView
 from llm_design_bench.evaluation.unified_report import (
     BenchmarkTaskSpec,
     BenchmarkTrial,

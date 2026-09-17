@@ -60,9 +60,7 @@ def test_publication_v1_raw_contract_is_frozen() -> None:
         names=["task", "seed", "optimizer"],
     )
     actual_pairs = pd.MultiIndex.from_frame(
-        raw[["task", "seed", "optimizer"]].sort_values(
-            ["task", "seed", "optimizer"]
-        )
+        raw[["task", "seed", "optimizer"]].sort_values(["task", "seed", "optimizer"])
     )
     assert actual_pairs.equals(expected_pairs)
 

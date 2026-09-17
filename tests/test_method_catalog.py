@@ -81,7 +81,9 @@ def test_ranking_policy_sources_are_pinned_and_backlog_matches_status() -> None:
             "54837299b33f986563b15176695e2c83472ffdda",
         ),
     }
-    assert not set(expected_sources).intersection(catalog["next_forward_integration_order"])
+    assert not set(expected_sources).intersection(
+        catalog["next_forward_integration_order"]
+    )
     audit = ROOT / catalog["ranking_policy_source_audit"]
     audit_text = audit.read_text(encoding="utf-8")
     for method_id, (source_url, commit) in expected_sources.items():
@@ -109,7 +111,9 @@ def test_spade_integration_retains_source_pin_and_mit_provenance() -> None:
     from llm_design_bench.optimizers.registry import method_names
 
     catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
-    spade = next(method for method in catalog["methods"] if method["method_id"] == "spade")
+    spade = next(
+        method for method in catalog["methods"] if method["method_id"] == "spade"
+    )
     assert spade["status"] == "integrated_adaptation"
     assert spade["integration_stage"] == "integrated_diffusion_lcb_ea"
     assert spade["source_license"] == "MIT"

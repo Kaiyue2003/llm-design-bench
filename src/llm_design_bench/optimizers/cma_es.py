@@ -180,11 +180,15 @@ class CMAEvolutionStrategyMethod(OfflineBBOMethod):
             1.0 - 1.0 / (4.0 * dimension) + 1.0 / (21.0 * dimension**2)
         )
 
-        covariance = torch.eye(
-            dimension,
-            device=context.device,
-            dtype=context.dtype,
-        ).expand(strategy_count, -1, -1).clone()
+        covariance = (
+            torch.eye(
+                dimension,
+                device=context.device,
+                dtype=context.dtype,
+            )
+            .expand(strategy_count, -1, -1)
+            .clone()
+        )
         covariance_path = torch.zeros_like(means)
         sigma_path = torch.zeros_like(means)
         sigmas = torch.full(
@@ -249,15 +253,9 @@ class CMAEvolutionStrategyMethod(OfflineBBOMethod):
                     inverse_sqrt,
                     weighted_step,
                 )
-                sigma_path = (
-                    (1.0 - sigma_path_rate) * sigma_path
-                    + math.sqrt(
-                        sigma_path_rate
-                        * (2.0 - sigma_path_rate)
-                        * effective_parents
-                    )
-                    * whitened_step
-                )
+                sigma_path = (1.0 - sigma_path_rate) * sigma_path + math.sqrt(
+                    sigma_path_rate * (2.0 - sigma_path_rate) * effective_parents
+                ) * whitened_step
                 sigma_path_norm = torch.linalg.vector_norm(sigma_path, dim=1)
                 path_scale = math.sqrt(
                     1.0 - (1.0 - sigma_path_rate) ** (2 * (generation + 1))
@@ -267,15 +265,12 @@ class CMAEvolutionStrategyMethod(OfflineBBOMethod):
                     < 1.4 + 2.0 / (dimension + 1.0)
                 ).to(context.dtype)
                 covariance_path = (
-                    (1.0 - covariance_path_rate) * covariance_path
-                    + path_active[:, None]
-                    * math.sqrt(
-                        covariance_path_rate
-                        * (2.0 - covariance_path_rate)
-                        * effective_parents
-                    )
-                    * weighted_step
-                )
+                    1.0 - covariance_path_rate
+                ) * covariance_path + path_active[:, None] * math.sqrt(
+                    covariance_path_rate
+                    * (2.0 - covariance_path_rate)
+                    * effective_parents
+                ) * weighted_step
 
                 rank_one = covariance_path.unsqueeze(2) * covariance_path.unsqueeze(1)
                 rank_mu = torch.einsum(
@@ -294,9 +289,7 @@ class CMAEvolutionStrategyMethod(OfflineBBOMethod):
                     + rank_one_rate * (rank_one + inactive_correction)
                     + rank_mu_rate * rank_mu
                 )
-                covariance = 0.5 * (
-                    covariance + covariance.transpose(-1, -2)
-                )
+                covariance = 0.5 * (covariance + covariance.transpose(-1, -2))
                 sigmas = (
                     sigmas
                     * torch.exp(
@@ -323,12 +316,8 @@ class CMAEvolutionStrategyMethod(OfflineBBOMethod):
                 "initial_sigma": self.sigma,
                 "logged_initializations": logged_count,
                 "random_initializations": random_count,
-                "predicted_standardized_utility_mean": float(
-                    best_scores.mean().cpu()
-                ),
-                "predicted_standardized_utility_max": float(
-                    best_scores.max().cpu()
-                ),
+                "predicted_standardized_utility_mean": float(best_scores.mean().cpu()),
+                "predicted_standardized_utility_max": float(best_scores.max().cpu()),
             },
         )
 

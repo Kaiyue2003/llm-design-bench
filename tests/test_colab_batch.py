@@ -41,6 +41,9 @@ def _load_script(name):
 
 
 support = _load_script("colab_support")
+# The real Colab entry point has the full checkout's scripts directory on
+# sys.path. Load its read-only companion explicitly for this file-based fixture.
+_load_script("colab_verification")
 batch = _load_script("colab_batch")
 REAL_EXPECTED_LOGICAL = batch.BatchRunner._expected_logical
 REAL_VALIDATE_RELEASE = batch.BatchRunner._validate_release

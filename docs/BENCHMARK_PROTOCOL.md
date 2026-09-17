@@ -200,6 +200,22 @@ same seed-level evaluator boundary into this runner, then write one unified
 report. The complete versioned column contract, report artifacts, and legacy-v1
 conversion rules are documented in [RESULT_SCHEMA.md](RESULT_SCHEMA.md).
 
-The historical `publication_runner` is a compatibility path for reproducing
-the frozen three-method publication-v1 files. New method comparisons must use
-the unified runner and report path.
+The current formal CLI is `llm-design-bench`, with
+`llm-design-bench-llmdm` as an equivalent explicit name. It enforces the frozen
+LLM-DM data/plan workflow. `llm-design-bench-suite` remains a general-purpose
+method/task development runner, not a replacement for that formal workflow.
+
+The historical online/offline/publication/synthetic execution runners and
+task-taking optimizer classes have been retired from the current package.
+Synthetic tasks themselves remain available through the current method API
+and suite runner. `llm-design-bench-report` retains read-only loading/conversion
+of old results into new output directories; conversion does not make them
+comparable with current formal results. Git history and unchanged result
+archives retain historical provenance; see [REPRODUCING.md](REPRODUCING.md).
+
+Refactoring the current source changes its fingerprint, not the source pinned
+by an existing frozen plan. Existing releases must still use their own pinned
+code/environment for resume or reproduction. Do not alter their plan hashes,
+notebook pins or archived results to accommodate a new checkout. A new
+experiment requires its own freeze and pilot; no retraining of an existing
+archive is implied by this source cleanup.
