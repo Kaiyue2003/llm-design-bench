@@ -56,12 +56,16 @@ jobs:
       - name: Exercise all 27 methods on invented data and verify resume
         env:
           IMAGE_REF: ${{ fromJSON(steps.metadata.outputs.json).tags[0] }}
-        run: >-
-          docker run --rm
-          --volume "$RUNNER_TEMP/container-smoke:/results"
-          --entrypoint python
-          "$IMAGE_REF"
-          /app/scripts/container_smoke.py --results-root /results
+        run: |
+          # Keep private result directories/files owned by the artifact uploader.
+          mkdir -p "$RUNNER_TEMP/container-smoke"
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --env HOME=/tmp \
+            --volume "$RUNNER_TEMP/container-smoke:/results" \
+            --entrypoint python \
+            "$IMAGE_REF" \
+            /app/scripts/container_smoke.py --results-root /results
       - name: Save reproducibility artifacts
         if: always()
         uses: actions/upload-artifact@v6

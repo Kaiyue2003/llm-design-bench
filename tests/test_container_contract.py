@@ -73,3 +73,20 @@ def test_ci_checks_installed_entrypoints_and_actual_container_runtime() -> None:
         "llm-design-bench-synthetic",
     ):
         assert removed not in ci + workflow
+
+
+def test_ci_smoke_results_are_owned_by_the_artifact_uploader() -> None:
+    workflow = (ROOT / ".github/workflows/container.yml").read_text(encoding="utf-8")
+    smoke_step = workflow.split(
+        "      - name: Exercise all 27 methods on invented data and verify resume\n", 1
+    )[1].split("      - name:", 1)[0]
+    script = smoke_step.split("        run: |\n", 1)[1]
+
+    # Docker otherwise creates a missing bind source as root before switching UID.
+    create_output = 'mkdir -p "$RUNNER_TEMP/container-smoke"'
+    assert script.index(create_output) < script.index("docker run --rm")
+    assert '--user "$(id -u):$(id -g)"' in script
+    assert "--env HOME=/tmp" in script
+    assert '--volume "$RUNNER_TEMP/container-smoke:/results"' in script
+    assert "--entrypoint python" in script
+    assert "/app/scripts/container_smoke.py --results-root /results" in script
