@@ -127,6 +127,7 @@ def test_suite_runner_writes_one_schema_for_multiple_tasks(tmp_path) -> None:
     assert all(evaluator.predict_calls == 3 for evaluator in evaluators)
 
     expected_files = {
+        ".suite.lock",
         "README.md",
         "benchmark_table.tex",
         "d_best_summary.csv",

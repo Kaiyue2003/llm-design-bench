@@ -408,6 +408,13 @@ def _trusted_checkpoint_loading(
                 raise ValueError(f"undeclared oracle checkpoint: {relative}")
             _verify_file_hashes(root, {relative: expected[relative]})
             accessed.add(relative)
+            # Load from the verified absolute path, not a relative path interpreted
+            # against the process cwd. Keep a path (rather than a stream) so
+            # torch.load's mmap support and all other arguments remain intact.
+            if args:
+                args = (path, *args[1:])
+            else:
+                kwargs["f"] = path
         kwargs.setdefault("weights_only", False)
         return original_load(*args, **kwargs)
 

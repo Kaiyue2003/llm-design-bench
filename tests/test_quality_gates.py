@@ -23,10 +23,20 @@ def _check_tool(module, *arguments, source=None):
     )
 
 
-def _check_types(tmp_path, source):
+def _check_types(tmp_path, source, *companion_sources):
     probe = tmp_path / "quality_probe.py"
     probe.write_text(source, encoding="utf-8")
-    return _check_tool("mypy", "--config-file", str(CONFIG), str(probe))
+    return _check_tool(
+        "mypy",
+        "--config-file",
+        str(CONFIG),
+        # Share within this pytest run, but isolate probes from other runs and
+        # CLI checks targeting a different platform (Windows versus Linux).
+        "--cache-dir",
+        str(tmp_path.parent / "quality-mypy-cache"),
+        str(probe),
+        *(str(ROOT / path) for path in companion_sources),
+    )
 
 
 def test_quality_tools_are_pinned_in_both_install_paths_and_lock():
@@ -189,3 +199,36 @@ def test_record_contracts_reject_wrong_fixed_fields(
     result = _check_types(tmp_path, code)
     assert result.returncode == 1, result.stdout + result.stderr
     assert "[typeddict-item]" in result.stdout
+
+
+@pytest.mark.parametrize(
+    "identity_type,expected_code",
+    [
+        ("dict[str, str]", 0),
+        ("dict[str, object]", 0),
+        ("JobIdentity", 0),
+        ("Mapping[str, object]", 1),
+        ("MappingProxyType[str, object]", 1),
+    ],
+)
+def test_dispatch_identity_type_matches_dict_only_runtime_contract(
+    tmp_path, identity_type, expected_code
+):
+    source = f"""
+from collections.abc import Mapping
+from types import MappingProxyType
+from colab_support import run_job
+from colab_types import JobIdentity
+
+def launch(identity: {identity_type}) -> None:
+    run_job(["python", "-c", "pass"], "local", "backups", identity)
+"""
+    # These are standalone scripts, not installed package modules. Give mypy
+    # their real top-level import roots, matching the current Colab checkout.
+    result = _check_types(
+        tmp_path, source, "scripts/colab_support.py", "scripts/colab_types.py"
+    )
+    assert result.returncode == expected_code, result.stdout + result.stderr
+    if expected_code:
+        assert "[arg-type]" in result.stdout
+        assert 'Argument 4 to "run_job"' in result.stdout

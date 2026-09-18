@@ -7,6 +7,10 @@ from typing import TYPE_CHECKING, Any, Mapping, cast
 import numpy as np
 import torch
 
+from llm_design_bench._integer_parameters import (
+    optional_nonnegative_integer,
+    require_integer,
+)
 from llm_design_bench.spaces import BoxSpace, DesignSpace, SimplexSpace
 
 if TYPE_CHECKING:
@@ -202,18 +206,30 @@ class RunContext:
     split_seed: int | None = None
 
     def __post_init__(self) -> None:
-        if self.method_seed < 0:
+        method_seed = require_integer(self.method_seed, name="method_seed")
+        if method_seed < 0:
             raise ValueError("method_seed must be non-negative")
-        if self.candidate_budget < 1:
+        candidate_budget = require_integer(
+            self.candidate_budget, name="candidate_budget"
+        )
+        if candidate_budget < 1:
             raise ValueError("candidate_budget must be positive")
+        dataset_seed = optional_nonnegative_integer(
+            self.dataset_seed, name="dataset_seed"
+        )
+        split_seed = optional_nonnegative_integer(self.split_seed, name="split_seed")
         if not isinstance(self.dtype, torch.dtype):
             raise TypeError("dtype must be a torch.dtype")
         if not torch.empty((), dtype=self.dtype).is_floating_point():
             raise TypeError("dtype must be floating point")
+        object.__setattr__(self, "method_seed", method_seed)
+        object.__setattr__(self, "candidate_budget", candidate_budget)
+        object.__setattr__(self, "dataset_seed", dataset_seed)
+        object.__setattr__(self, "split_seed", split_seed)
         object.__setattr__(self, "device", torch.device(self.device))
 
     def make_generator(self) -> torch.Generator:
-        # __post_init__ normalizes string inputs without narrowing the init type.
+        # __post_init__ normalizes the device string without narrowing its init type.
         device = cast(torch.device, self.device)
         generator_device = device if device.type in {"cpu", "cuda"} else "cpu"
         generator = torch.Generator(device=generator_device)

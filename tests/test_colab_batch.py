@@ -467,8 +467,10 @@ def test_stale_or_mismatched_result_never_counts_as_complete(
 
 
 @pytest.mark.parametrize("phase", ["pilot", "formal"])
+@pytest.mark.parametrize("method_generator", [False, True])
+@pytest.mark.parametrize("setting_generator", [False, True])
 def test_launch_uses_exact_identity_frozen_cli_and_absolute_paths(
-    runner, monkeypatch, phase
+    runner, monkeypatch, phase, method_generator, setting_generator
 ):
     calls = []
     if phase == "formal":
@@ -480,8 +482,11 @@ def test_launch_uses_exact_identity_frozen_cli_and_absolute_paths(
         return _journal_result(runner, identity)
 
     monkeypatch.setattr(batch, "run_job", fake_run)
+    methods = ["offline_mlp"]
+    settings = ["multi_scale"]
     result = runner.run(
-        methods=["offline_mlp"],
+        methods=(name for name in methods) if method_generator else methods,
+        settings=(name for name in settings) if setting_generator else settings,
         phase=phase,
         reviewed_pilots=[("multi_scale", "offline_mlp")] if phase == "formal" else [],
     )
@@ -523,6 +528,60 @@ def test_launch_uses_exact_identity_frozen_cli_and_absolute_paths(
         assert state == runner.state and backups == runner.backups
         assert options["snapshot_interval"] == 60
         assert options.get("infrastructure_retry_reason") is None
+
+
+def test_generator_queue_preserves_order_and_skips_verified_results(
+    runner, monkeypatch
+):
+    methods = ["sobol", "best_logged"]
+    settings = ["fixed_1b", "multi_scale"]
+    first = _job(runner, methods[0], settings[0])
+    directory, _ = _save_job(runner, first)
+    original = {path: path.read_bytes() for path in directory.iterdir()}
+    calls = []
+
+    def fake_run(command, state, backups, identity, **options):
+        calls.append((identity["setting"], identity["run_id"]))
+        _save_job(runner, identity)
+        return _journal_result(runner, identity)
+
+    monkeypatch.setattr(batch, "run_job", fake_run)
+    results = runner.run(
+        methods=(name for name in methods),
+        settings=(name for name in settings),
+    )
+    expected = [(setting, method) for setting in settings for method in methods]
+    assert [(row["setting"], row["run_id"]) for row in results] == expected
+    assert [row["status"] for row in results] == ["skipped"] + ["completed"] * 3
+    assert calls == expected[1:]
+    assert all(path.read_bytes() == content for path, content in original.items())
+
+
+@pytest.mark.parametrize(
+    "methods,settings",
+    [
+        ([], ["multi_scale"]),
+        (["sobol", "sobol"], ["multi_scale"]),
+        (["unknown"], ["multi_scale"]),
+        (["sobol"], []),
+        (["sobol"], ["multi_scale", "multi_scale"]),
+        (["sobol"], ["unknown"]),
+    ],
+)
+def test_invalid_generator_selection_fails_before_dispatch_or_writes(
+    runner, monkeypatch, methods, settings
+):
+    def forbidden(*args, **kwargs):
+        pytest.fail("invalid selections must not dispatch a job")
+
+    monkeypatch.setattr(batch, "run_job", forbidden)
+    before = set(runner.state.parent.rglob("*"))
+    with pytest.raises(ValueError, match="select unique frozen run IDs"):
+        runner.run(
+            methods=(name for name in methods),
+            settings=(name for name in settings),
+        )
+    assert set(runner.state.parent.rglob("*")) == before
 
 
 def test_completed_formal_seeds_are_preserved_and_only_missing_dispatch(

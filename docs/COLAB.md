@@ -11,6 +11,29 @@ Its repository checkout is pinned to a full commit, and its data-recipes checkou
 to `37269969a0957448d51622e0c083977bc5d260e8`. The saved plan also checks installed
 Python source fingerprints and the data/oracle file hashes.
 
+### Current helper platform boundaries
+
+The benchmark's standard CLI/Python runner works independently of this optional
+Colab launcher and does not require a notebook or Google Drive. The following
+describes the current helper source; commit-pinned notebooks retain their
+recorded implementation until a separate release updates those pins.
+
+Live periodic snapshots are supported on POSIX (including Colab/Linux). Each
+file's metadata and bytes are read through the same open descriptor, so an
+atomic CSV replacement cannot combine one version's length with another
+version's contents. Known append-only job logs may be archived as prefixes.
+Detected in-place changes to non-log files or truncation reject the new archive without
+replacing older snapshots. This is not a transaction across the entire tree;
+restored result/attempt consistency checks are still required.
+
+Windows file replacement has different open-handle semantics. On Windows the
+optional `run_job` helper warns and backs up only before launching a child and
+after it stops, never while it may replace results. A runtime loss mid-job
+therefore cannot restore that job's in-progress files from backup. Direct
+`snapshot_tree` calls on Windows require idle writers. This restriction does
+not alter local CLI result persistence, resume rules or optimization budgets.
+The archive remains `tar.gz` plus a SHA-256 sidecar; old snapshots are readable.
+
 ## Before running
 
 1. Open the notebook in Colab and choose a GPU runtime for neural methods.

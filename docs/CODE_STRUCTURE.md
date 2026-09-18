@@ -8,14 +8,18 @@ reference data. Module organization does not change that boundary.
 
 ```text
 src/llm_design_bench/
+  _integer_parameters.py                    strict execution-only integer checks
   problem.py, spaces.py, optimizers/base.py   method-facing contracts
   evaluation/
     plan_types.py          frozen plan field types and structural JSON checks
     llmdm_protocol.py      plan identity, protocol, pilot gate and formal entry
     seed_types.py          run configuration, evaluator protocol, per-seed records
+    seed_contracts.py      shared phase, required-seed and ranking eligibility checks
     seed_runner.py         method construction, execution and final evaluation
     seed_statistics.py     candidate scores, diagnostics and cross-seed summary
+    report_scores.py       read-only raw/refnorm consistency checks for report rows
     seed_persistence.py    row construction, identities, shard merge and progress
+    unified_report.py      report preparation and directory-locked publication
     artifact_types.py      manifest and environment record types
     run_artifacts.py       locks, atomic artifacts and successful-attempt validation
 scripts/
@@ -33,9 +37,46 @@ responsibility. In particular, statistics never launches methods and Colab
 verification never dispatches jobs or grants approval.
 
 Artifact locking and attempt publication remain together in `run_artifacts`:
-their ordering is part of the recovery contract. The small stdlib-only
+their ordering is part of the recovery contract. The stdlib-only
 `colab_support` remains independently usable; its type-only imports do not add
 runtime dependencies to snapshot or single-job recovery.
+
+## Function-level lifecycles
+
+The seed runner's `_run_method_seed_benchmark_unlocked` separates method/seed
+iteration and final summary construction from `_run_seed_attempt`, which owns
+a single seed's attempt lifecycle. Private stage helpers handle method
+construction, attempt preparation, timed method execution, candidate persistence,
+oracle evaluation and diagnostics. The single-attempt owner retains the
+`try/except/finally` boundary: failures and keyboard interruptions still record
+their stage, finalize available artifacts and save progress before any required
+exception propagation.
+Preparing or restoring an attempt is not a second training entry point.
+
+The ordering remains part of the contract:
+
+- Seed and construct the method before checking its saved attempt. A verified
+  resume may reconstruct configuration but does not run the method or oracle.
+- Persist the exact candidate batch before even converting it to target fidelity.
+- Keep per-method dtype overrides separate from the suite's shared configuration.
+- Finish the attempt before publishing the updated seed-result CSV. Keep the
+  original timing boundaries; total time is recorded before finalization and
+  CSV writes, while method and evaluation timers cover only their own stages.
+
+`run_job` delegates to `_prepare_dispatch`, `_supervise_process` and
+`_publish_completion`. Process supervision uses `_capture_output` for its reader
+and `_wait_for_process` for polling and periodic backups. Process cleanup and
+reader shutdown remain one supervised lifecycle. The dispatch order is remote intent, local
+intent, initial snapshot, child execution and log cleanup, local completion,
+final snapshot, then remote completion. A failed final backup therefore cannot
+advertise a completed job in the remote journal. Exceptions and nonzero child
+exit codes are propagated after the existing failure-publication steps; none of
+these helpers grants approval, retries a job or changes its identity.
+
+These are private function boundaries within the existing modules, not a new
+execution framework. The public runner APIs, JSON records and frozen-release
+rules remain unchanged. Statistics and frozen-protocol gate functions do not
+need further splitting merely to reduce their line counts.
 
 ## Type checking is not trust validation
 

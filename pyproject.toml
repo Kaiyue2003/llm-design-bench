@@ -93,6 +93,7 @@ line-ending = "auto"
 # Incremental gate: public interfaces, plans, seed execution and Colab orchestration.
 # Other modules retain their type information but are not yet checked for errors.
 files = [
+    "src/llm_design_bench/_integer_parameters.py",
     "src/llm_design_bench/types.py",
     "src/llm_design_bench/tasks/base.py",
     "src/llm_design_bench/spaces.py",
@@ -103,7 +104,9 @@ files = [
     "src/llm_design_bench/evaluation/llmdm_protocol.py",
     "src/llm_design_bench/evaluation/run_artifacts.py",
     "src/llm_design_bench/evaluation/seed_types.py",
+    "src/llm_design_bench/evaluation/seed_contracts.py",
     "src/llm_design_bench/evaluation/seed_statistics.py",
+    "src/llm_design_bench/evaluation/report_scores.py",
     "src/llm_design_bench/evaluation/seed_persistence.py",
     "src/llm_design_bench/evaluation/seed_runner.py",
     "scripts/colab_types.py",

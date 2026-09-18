@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-import json
 import math
 from typing import cast
 
 import numpy as np
 import pandas as pd
 
+from llm_design_bench.evaluation.seed_contracts import (
+    seed_group_contract,
+    validate_seed_contracts,
+)
 from llm_design_bench.evaluation.seed_types import (
     FloatArray,
     SeedDiagnostics,
@@ -56,6 +59,7 @@ def summarize_seed_results(per_seed: pd.DataFrame) -> pd.DataFrame:
     missing = sorted(required.difference(per_seed.columns))
     if missing:
         raise KeyError(f"missing seed-result columns: {missing}")
+    validate_seed_contracts(per_seed)
 
     rows: list[dict[str, object]] = []
     group_columns = ["experiment_id"]
@@ -75,26 +79,9 @@ def summarize_seed_results(per_seed: pd.DataFrame) -> pd.DataFrame:
     for _, group in groups:
         first = group.iloc[0]
         successful = group[group["status"] == "success"]
-        required_json = first.get("required_seeds_json")
-        if isinstance(required_json, str):
-            if group["required_seeds_json"].nunique(dropna=False) != 1:
-                raise ValueError(
-                    "required seeds must be consistent within a task/method"
-                )
-            required_seeds = set(json.loads(required_json))
-        else:
-            required_seeds = {int(seed) for seed in group["method_seed"]}
-        observed_seeds = {int(seed) for seed in group["method_seed"]}
-        if len(observed_seeds) != len(group):
-            raise ValueError("duplicate method/task/seed rows are not allowed")
-        if not observed_seeds.issubset(required_seeds):
-            raise ValueError("observed seed is not in required_seeds")
-        if "phase" in group and group["phase"].nunique(dropna=False) != 1:
-            raise ValueError("phase must be consistent within a task/method")
-        complete = len(successful) == len(required_seeds)
-        rank_eligible = first.get("phase") != "pilot" and (
-            complete if isinstance(required_json, str) else len(successful) > 0
-        )
+        contract = seed_group_contract(group)
+        required_seeds = contract.required_seeds
+        observed_seeds = contract.observed_seeds
         environment_variants = (
             group["environment_json"].dropna().nunique()
             if "environment_json" in group
@@ -123,15 +110,15 @@ def summarize_seed_results(per_seed: pd.DataFrame) -> pd.DataFrame:
                 "method_config_json": first.get("method_config_json"),
                 "package_commit": first.get("package_commit"),
                 "normalization_reference_id": first.get("normalization_reference_id"),
-                "phase": first.get("phase", "legacy"),
+                "phase": contract.phase,
                 "required_seeds_json": _json_dumps(sorted(required_seeds)),
                 "requested_runs": len(required_seeds),
                 "attempted_runs": len(group),
                 "successful_runs": len(successful),
                 "failed_runs": int(len(group) - len(successful)),
                 "missing_runs": len(required_seeds - observed_seeds),
-                "complete_seed_set": complete,
-                "rank_eligible": rank_eligible,
+                "complete_seed_set": contract.complete,
+                "rank_eligible": contract.rank_eligible,
                 "environment_variants": int(environment_variants),
                 "mixed_environment": environment_variants > 1,
                 "candidate_budget": int(first.get("candidate_budget", 0)),

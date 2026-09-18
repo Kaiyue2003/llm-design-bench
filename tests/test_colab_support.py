@@ -9,9 +9,17 @@ import json
 import subprocess
 import sys
 import tarfile
+from collections import UserDict
 from pathlib import Path
+from types import MappingProxyType
 
 import pytest
+
+# The platform warning is asserted explicitly in the boundary-backup regression;
+# these tests focus on journal, failure and restoration behavior.
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:Live snapshots are disabled on this platform:UserWarning"
+)
 
 HELPER = Path(__file__).resolve().parents[1] / "scripts" / "colab_support.py"
 SPEC = importlib.util.spec_from_file_location("colab_support", HELPER)
@@ -176,11 +184,14 @@ def test_refuses_nested_roots(trees):
 
 def test_success_records_output_intent_and_completion(trees, capsys):
     local, backup = trees
+    identity = {"plan": "fake", "seed": 0}
+    identity_bytes = support._canonical(identity)
+    identity_hash = hashlib.sha256(identity_bytes).hexdigest()
     result = support.run_job(
         [sys.executable, "-c", "print('fake child output')"],
         local,
         backup,
-        {"plan": "fake", "seed": 0},
+        identity,
     )
     assert result["returncode"] == 0
     assert result["status"] == "success"
@@ -189,6 +200,11 @@ def test_success_records_output_intent_and_completion(trees, capsys):
     assert len(list((backup / "journal").glob("*.intent.json"))) == 1
     assert len(list((backup / "journal").glob("*.completion.json"))) == 1
     assert Path(result["snapshot"]).is_file()
+    intent_path = next((backup / "journal").glob("*.intent.json"))
+    intent = support._verified_json(intent_path)
+    assert intent["identity"] == identity
+    assert support._canonical(identity) == identity_bytes
+    assert intent["identity_sha256"] == result["identity_sha256"] == identity_hash
 
 
 def test_child_failure_preserved_and_not_automatically_retried(trees):
@@ -283,6 +299,9 @@ def test_unfinished_intent_survives_missing_local_artifacts(trees, tmp_path):
     assert len(list((backup / "journal").glob("*.intent.json"))) == 2
 
 
+@pytest.mark.skipif(
+    not support._LIVE_SNAPSHOTS_SUPPORTED, reason="live snapshots require POSIX"
+)
 def test_periodic_snapshot_and_restore_artifacts(trees, tmp_path):
     local, backup = trees
     result = support.run_job(
@@ -332,3 +351,34 @@ def test_validates_snapshot_interval(trees, interval):
             {"job": "bad"},
             snapshot_interval=interval,
         )
+
+
+@pytest.mark.parametrize(
+    "identity",
+    [
+        {},
+        None,
+        "job",
+        [("job", "example")],
+        MappingProxyType({"job": "example"}),
+        UserDict({"job": "example"}),
+    ],
+)
+def test_invalid_identity_is_rejected_before_any_side_effect(
+    tmp_path, monkeypatch, identity
+):
+    local, backup = tmp_path / "local", tmp_path / "backup"
+
+    def forbidden(*args, **kwargs):
+        pytest.fail(
+            "invalid identity must be rejected before filesystem or process work"
+        )
+
+    monkeypatch.setattr(support, "_roots", forbidden)
+    monkeypatch.setattr(support, "_publish_json", forbidden)
+    monkeypatch.setattr(support, "snapshot_tree", forbidden)
+    monkeypatch.setattr(support.subprocess, "Popen", forbidden)
+    with pytest.raises(ValueError, match="identity must be a nonempty JSON object"):
+        support.run_job([sys.executable, "-c", "pass"], local, backup, identity)
+    assert not local.exists()
+    assert not backup.exists()

@@ -1,5 +1,7 @@
 """Retain aggregation regression coverage on the current result schema."""
 
+import json
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -13,6 +15,9 @@ def test_seed_summary_reports_sample_standard_deviation_and_standard_error(value
         [
             {
                 "experiment_id": "aggregation-contract",
+                "result_source": "unified_runner",
+                "phase": "exploratory",
+                "required_seeds_json": json.dumps(list(range(38, 38 + len(values)))),
                 "run_id": "coms",
                 "method_id": "coms",
                 "method_seed": seed,

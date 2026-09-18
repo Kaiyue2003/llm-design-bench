@@ -13,6 +13,11 @@ import pandas as pd
 import torch
 from numpy.typing import NDArray
 
+from llm_design_bench._integer_parameters import (
+    optional_nonnegative_integer,
+    require_integer,
+)
+
 DEFAULT_METHOD_SEEDS = tuple(range(38, 46))
 RESULT_SCHEMA_VERSION = 1
 FloatArray = NDArray[np.floating[Any]]
@@ -178,21 +183,33 @@ class SeedBenchmarkConfig:
             raise ValueError("experiment_id must not be empty")
         if not self.normalization_reference_id:
             raise ValueError("normalization_reference_id must not be empty")
-        seeds = tuple(int(seed) for seed in self.seeds)
+        seeds = tuple(
+            require_integer(seed, name=f"seeds[{index}]")
+            for index, seed in enumerate(self.seeds)
+        )
         if not seeds:
             raise ValueError("seeds must not be empty")
         if any(seed < 0 for seed in seeds):
             raise ValueError("seeds must be non-negative")
         if len(set(seeds)) != len(seeds):
             raise ValueError("seeds must be unique")
-        if self.candidate_budget < 1:
+        candidate_budget = require_integer(
+            self.candidate_budget, name="candidate_budget"
+        )
+        if candidate_budget < 1:
             raise ValueError("candidate_budget must be positive")
+        dataset_seed = optional_nonnegative_integer(
+            self.dataset_seed, name="dataset_seed"
+        )
+        split_seed = optional_nonnegative_integer(self.split_seed, name="split_seed")
         _validate_dtype(self.dtype)
         if self.phase not in {"exploratory", "pilot", "formal"}:
             raise ValueError("phase must be exploratory, pilot, or formal")
         required = tuple(
-            int(seed)
-            for seed in (seeds if self.required_seeds is None else self.required_seeds)
+            require_integer(seed, name=f"required_seeds[{index}]")
+            for index, seed in enumerate(
+                seeds if self.required_seeds is None else self.required_seeds
+            )
         )
         if not required or len(set(required)) != len(required) or min(required) < 0:
             raise ValueError(
@@ -215,6 +232,9 @@ class SeedBenchmarkConfig:
             raise ValueError("resume and infrastructure retries require save_artifacts")
         object.__setattr__(self, "seeds", seeds)
         object.__setattr__(self, "required_seeds", required)
+        object.__setattr__(self, "candidate_budget", candidate_budget)
+        object.__setattr__(self, "dataset_seed", dataset_seed)
+        object.__setattr__(self, "split_seed", split_seed)
         object.__setattr__(self, "provenance", dict(self.provenance))
         object.__setattr__(self, "device", torch.device(self.device))
         object.__setattr__(self, "results_dir", Path(self.results_dir))

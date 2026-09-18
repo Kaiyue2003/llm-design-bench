@@ -4,12 +4,40 @@ import pandas as pd
 import typer
 
 from llm_design_bench.evaluation.unified_report import (
+    UNIFIED_REPORT_FILENAMES,
     load_legacy_publication_results,
     write_unified_report,
 )
 
 
 app = typer.Typer(add_completion=False)
+
+
+def _protect_report_inputs(inputs: tuple[Path, ...], results_dir: Path) -> None:
+    """Reject output/input aliases before the report writer changes any files.
+
+    Resolve symbolic links and parent-directory aliases; compare existing files
+    by identity as well so hard links are covered. This is a CLI input boundary,
+    not a restriction on the writer's intentional incremental report updates.
+    """
+    destinations = tuple(
+        (results_dir / name).resolve() for name in UNIFIED_REPORT_FILENAMES
+    )
+    for input_path in inputs:
+        source = input_path.resolve()
+        for destination in destinations:
+            aliases_input = destination == source
+            if not aliases_input:
+                try:
+                    aliases_input = destination.samefile(source)
+                except FileNotFoundError:
+                    # A not-yet-created output cannot alias an existing input.
+                    aliases_input = False
+            if aliases_input:
+                raise typer.BadParameter(
+                    f"results-dir must not overwrite input file {input_path}: "
+                    f"report output {destination} refers to the same file"
+                )
 
 
 @app.command("from-unified")
@@ -23,12 +51,10 @@ def from_unified(
     ),
     results_dir: Path = typer.Option(
         Path("results/report"),
-        help="New directory for summaries, Markdown, LaTeX, and copied raw rows.",
+        help="Directory for summaries, Markdown, LaTeX, and copied raw rows.",
     ),
 ) -> None:
-    destination = results_dir.resolve() / "method_seed_results.csv"
-    if destination == input_csv.resolve():
-        raise typer.BadParameter("results-dir must not overwrite the input CSV")
+    _protect_report_inputs((input_csv,), results_dir)
     result = write_unified_report(pd.read_csv(input_csv), results_dir)
     typer.echo(
         f"wrote {len(result.per_seed)} per-seed rows and "
@@ -47,7 +73,7 @@ def from_legacy(
     ),
     results_dir: Path = typer.Option(
         Path("results/publication_v1_unified"),
-        help="New directory for converted unified artifacts.",
+        help="Directory outside publication-dir for converted unified artifacts.",
     ),
     experiment_id: str = typer.Option(
         "publication_v1",
@@ -60,6 +86,10 @@ def from_legacy(
         raise typer.BadParameter(
             "results-dir must be outside publication-dir; publication v1 is immutable"
         )
+    _protect_report_inputs(
+        (publication_dir / "raw_runs.csv", publication_dir / "run_metadata.json"),
+        results_dir,
+    )
     converted = load_legacy_publication_results(
         publication_dir,
         experiment_id=experiment_id,

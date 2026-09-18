@@ -136,17 +136,16 @@ def test_rejected_snapshot_keeps_previous_snapshot_restorable(trees, tmp_path):
 def test_growth_after_preflight_is_rejected_before_publication(trees, monkeypatch):
     local, backup = trees
     _write_files(local, [4, 4])
-    original_add = support.tarfile.TarFile.add
+    original_open = support._open_snapshot_file
     added_names = []
 
-    def add_after_growth(self, name, *args, **kwargs):
-        source = Path(name)
+    def open_after_growth(source):
         added_names.append(source.name)
         if source.name == "file-1.bin":
             source.write_bytes(source.read_bytes() + b"g")
-        return original_add(self, name, *args, **kwargs)
+        return original_open(source)
 
-    monkeypatch.setattr(support.tarfile.TarFile, "add", add_after_growth)
+    monkeypatch.setattr(support, "_open_snapshot_file", open_after_growth)
     publications = []
     monkeypatch.setattr(support, "_publish", lambda *args: publications.append(args))
 

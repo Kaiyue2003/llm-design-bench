@@ -442,6 +442,10 @@ class BatchRunner:
         both required before any formal job. Approval is not inferred from a
         successful process or from pilot oracle scores.
         """
+        # Preview and dispatch must see the same selection, including when a
+        # caller supplies a one-shot iterable. None still selects all methods.
+        methods = None if methods is None else tuple(methods)
+        settings = tuple(settings)
         preview = self.preview(methods, settings, phase)
         jobs = self._jobs(methods, settings, phase)
         blocked = [row for row in preview if row["status"] == "blocked"]

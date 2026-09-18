@@ -7,9 +7,8 @@ using their commit-pinned helpers and serialized records unchanged.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from pathlib import Path
-from typing import Literal, NotRequired, TypeAlias, TypedDict
+from typing import Any, Literal, NotRequired, TypeAlias, TypedDict
 
 Phase: TypeAlias = Literal["pilot", "formal"]
 Setting: TypeAlias = Literal["multi_scale", "fixed_1b"]
@@ -29,6 +28,10 @@ class JobIdentity(TypedDict):
 
 
 QueuedJob: TypeAlias = JobIdentity
+# The generic runner accepts ordinary JSON dictionaries as well as the typed
+# benchmark identity. TypedDict is not statically a dict, despite being one at
+# runtime; name both shapes rather than claiming to accept arbitrary Mapping.
+DispatchIdentity: TypeAlias = dict[str, Any] | JobIdentity
 
 
 class ReadyQueuePreview(JobIdentity):
@@ -52,7 +55,7 @@ class DispatchIntent(TypedDict):
 
     schema_version: int
     dispatch_id: str
-    identity: Mapping[str, object]
+    identity: DispatchIdentity
     identity_sha256: str
     command: list[str]
     infrastructure_retry_reason: str | None

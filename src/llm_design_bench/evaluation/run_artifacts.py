@@ -427,11 +427,31 @@ class RunAttempt:
             lock.close()
             raise
 
-    def finish(self, row: Mapping[str, object]) -> None:
+    def finish(
+        self,
+        row: Mapping[str, object],
+        *,
+        pending_error: BaseException | None = None,
+    ) -> None:
         try:
             atomic_json(self.path / "result.json", row)
+        except BaseException as exc:
+            pending_error = exc
+            raise
         finally:
-            self.close()
+            self.close_preserving_error(pending_error)
 
     def close(self) -> None:
         self._lock.close()
+
+    def close_preserving_error(self, pending_error: BaseException | None) -> None:
+        """Close the attempt, retaining an error already escaping the operation."""
+        try:
+            self.close()
+        except BaseException as cleanup_error:
+            if pending_error is None:
+                raise
+            pending_error.add_note(
+                "Attempt lock cleanup also failed: "
+                f"{type(cleanup_error).__name__}: {cleanup_error}"
+            )

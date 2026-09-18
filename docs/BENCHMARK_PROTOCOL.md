@@ -96,6 +96,14 @@ Randomness is separated into three namespaces:
 - `method_seed` controls model initialization, data-loader order, sampling,
   mutation, dropout, diffusion noise, and other method randomness.
 
+The execution APIs (`SeedBenchmarkConfig` and `RunContext`) accept Python and
+NumPy integers for seeds and candidate budgets. They reject booleans, floats
+(including `38.0`) and strings before conversion, so an accidental value cannot
+silently select a different seed or budget. Seeds must be non-negative and
+candidate budgets positive; optional dataset/split seeds may remain `None`.
+This does not change seed derivation or the report reader's compatibility with
+lossless integer representations in CSV files.
+
 The data-recipes dataset and percentile split are deterministic. Final method
 comparisons use the paired method seeds
 

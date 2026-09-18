@@ -11,10 +11,15 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from llm_design_bench.evaluation.report_scores import validate_report_scores
 from llm_design_bench.evaluation.run_artifacts import (
     atomic_bytes,
     atomic_json,
     result_directory_lock,
+)
+from llm_design_bench.evaluation.seed_contracts import (
+    LEGACY_PUBLICATION_SOURCE as LEGACY_PUBLICATION_SOURCE,
+    validate_seed_contracts,
 )
 from llm_design_bench.evaluation.seed_runner import (
     DEFAULT_SEED_BENCHMARK_CONFIG,
@@ -29,7 +34,22 @@ from llm_design_bench.evaluation.seed_runner import (
 )
 from llm_design_bench.problem import OfflineProblem
 
-LEGACY_PUBLICATION_SOURCE = "legacy_publication_v1"
+UNIFIED_RESULTS_FILENAME = "method_seed_results.csv"
+UNIFIED_SUMMARY_FILENAME = "method_seed_summary.csv"
+RANK_SUMMARY_FILENAME = "rank_summary.csv"
+D_BEST_SUMMARY_FILENAME = "d_best_summary.csv"
+REPORT_METADATA_FILENAME = "run_metadata.json"
+REPORT_MARKDOWN_FILENAME = "README.md"
+REPORT_LATEX_FILENAME = "benchmark_table.tex"
+UNIFIED_REPORT_FILENAMES = (
+    UNIFIED_RESULTS_FILENAME,
+    UNIFIED_SUMMARY_FILENAME,
+    RANK_SUMMARY_FILENAME,
+    D_BEST_SUMMARY_FILENAME,
+    REPORT_METADATA_FILENAME,
+    REPORT_MARKDOWN_FILENAME,
+    REPORT_LATEX_FILENAME,
+)
 
 
 @dataclass(frozen=True)
@@ -105,14 +125,12 @@ def run_benchmark_suite(
     config: SeedBenchmarkConfig = DEFAULT_SEED_BENCHMARK_CONFIG,
     metadata: Mapping[str, Any] | None = None,
 ) -> UnifiedBenchmarkResult:
-    """Run a suite; artifact-backed suites exclusively reserve their result directory."""
-    if config.save_artifacts:
-        with result_directory_lock(config.results_dir):
-            validate_existing_result_config(config)
-            return _run_benchmark_suite_locked(
-                tasks, methods, config=config, metadata=metadata
-            )
-    return _run_benchmark_suite_locked(tasks, methods, config=config, metadata=metadata)
+    """Reserve the result directory before running any report-producing suite."""
+    with result_directory_lock(config.results_dir):
+        validate_existing_result_config(config)
+        return _run_benchmark_suite_locked(
+            tasks, methods, config=config, metadata=metadata
+        )
 
 
 def _run_benchmark_suite_locked(
@@ -177,7 +195,7 @@ def _run_benchmark_suite_locked(
             )
             frames.append(frame)
             if config.save_artifacts:
-                write_unified_report(
+                _write_unified_report_locked(
                     pd.concat(frames, ignore_index=True),
                     config.results_dir,
                     metadata=metadata,
@@ -185,7 +203,7 @@ def _run_benchmark_suite_locked(
                 )
 
     per_seed = pd.concat(frames, ignore_index=True)
-    return write_unified_report(
+    return _write_unified_report_locked(
         per_seed,
         config.results_dir,
         metadata=metadata,
@@ -200,11 +218,40 @@ def write_unified_report(
     metadata: Mapping[str, Any] | None = None,
     config: SeedBenchmarkConfig | None = None,
 ) -> UnifiedBenchmarkResult:
-    """Validate unified per-seed rows and write CSV, JSON, Markdown, and LaTeX."""
+    """Validate and publish a report under the shared result-directory lock.
+
+    Standalone reports can be prepared before touching the output directory.
+    For shard updates, read and merge the existing rows only while holding the
+    lock. Suite-owned writes use the private already-locked entry below.
+    """
+
+    output = Path(results_dir)
+    if config is None:
+        report, resolved_metadata = _prepare_unified_report(per_seed, metadata)
+        with result_directory_lock(output):
+            return _publish_unified_report(report, resolved_metadata, output)
+
+    # Reject malformed new rows before creating a directory or lock file. The
+    # metadata of a merged report can only be validated after reading old rows.
+    _validate_unified_rows(per_seed)
+    with result_directory_lock(output):
+        return _write_unified_report_locked(
+            per_seed, output, metadata=metadata, config=config
+        )
+
+
+def _write_unified_report_locked(
+    per_seed: pd.DataFrame,
+    results_dir: str | Path,
+    *,
+    metadata: Mapping[str, Any] | None = None,
+    config: SeedBenchmarkConfig | None = None,
+) -> UnifiedBenchmarkResult:
+    """Merge and write a report; the caller must already own the directory lock."""
 
     _validate_unified_rows(per_seed)
     output = Path(results_dir)
-    existing = output / "method_seed_results.csv"
+    existing = output / UNIFIED_RESULTS_FILENAME
     if config is not None and existing.exists():
         per_seed = merge_result_rows(
             pd.read_csv(existing),
@@ -214,43 +261,61 @@ def write_unified_report(
             resume=True,
             infrastructure_retry_reason=config.infrastructure_retry_reason,
         )
-        _validate_unified_rows(per_seed)
+    report, resolved_metadata = _prepare_unified_report(per_seed, metadata)
+    return _publish_unified_report(report, resolved_metadata, output)
+
+
+def _prepare_unified_report(
+    per_seed: pd.DataFrame, metadata: Mapping[str, Any] | None
+) -> tuple[UnifiedBenchmarkResult, dict[str, Any]]:
+    """Compute and validate a report without changing any filesystem state."""
+    _validate_unified_rows(per_seed)
     ordered = _order_per_seed(per_seed)
     summary = summarize_seed_results(ordered)
     summary = _add_task_ranks(summary)
     ranks = summarize_method_ranks(summary)
     d_best = aggregate_d_best(ordered)
     resolved_metadata = _report_metadata(ordered, metadata)
+    return (
+        UnifiedBenchmarkResult(
+            per_seed=ordered, summary=summary, ranks=ranks, d_best=d_best
+        ),
+        resolved_metadata,
+    )
 
+
+def _publish_unified_report(
+    report: UnifiedBenchmarkResult,
+    metadata: Mapping[str, Any],
+    output: Path,
+) -> UnifiedBenchmarkResult:
+    """Publish a validated report while the caller holds the directory lock."""
     output.mkdir(parents=True, exist_ok=True)
     for name, frame in (
-        ("method_seed_results.csv", ordered),
-        ("method_seed_summary.csv", summary),
-        ("rank_summary.csv", ranks),
-        ("d_best_summary.csv", d_best),
+        (UNIFIED_RESULTS_FILENAME, report.per_seed),
+        (UNIFIED_SUMMARY_FILENAME, report.summary),
+        (RANK_SUMMARY_FILENAME, report.ranks),
+        (D_BEST_SUMMARY_FILENAME, report.d_best),
     ):
         atomic_bytes(
             output / name, frame.to_csv(index=False).encode("utf-8"), replace=True
         )
-    atomic_json(output / "run_metadata.json", resolved_metadata, replace=True)
+    atomic_json(output / REPORT_METADATA_FILENAME, metadata, replace=True)
     atomic_bytes(
-        output / "README.md",
-        render_unified_markdown(summary, ranks, d_best, resolved_metadata).encode(
-            "utf-8"
-        ),
+        output / REPORT_MARKDOWN_FILENAME,
+        render_unified_markdown(
+            report.summary, report.ranks, report.d_best, metadata
+        ).encode("utf-8"),
         replace=True,
     )
     atomic_bytes(
-        output / "benchmark_table.tex",
-        render_unified_latex(summary, ranks, d_best, resolved_metadata).encode("utf-8"),
+        output / REPORT_LATEX_FILENAME,
+        render_unified_latex(
+            report.summary, report.ranks, report.d_best, metadata
+        ).encode("utf-8"),
         replace=True,
     )
-    return UnifiedBenchmarkResult(
-        per_seed=ordered,
-        summary=summary,
-        ranks=ranks,
-        d_best=d_best,
-    )
+    return report
 
 
 def load_legacy_publication_results(
@@ -574,12 +639,12 @@ def render_unified_markdown(
             "",
             "## Artifacts",
             "",
-            "- [Per-seed results](method_seed_results.csv)",
-            "- [Mean, sample SD, and SE summary](method_seed_summary.csv)",
-            "- [D(best) reference summary](d_best_summary.csv)",
-            "- [Method ranks and failure counts](rank_summary.csv)",
-            "- [Resolved run metadata](run_metadata.json)",
-            "- [LaTeX table](benchmark_table.tex)",
+            f"- [Per-seed results]({UNIFIED_RESULTS_FILENAME})",
+            f"- [Mean, sample SD, and SE summary]({UNIFIED_SUMMARY_FILENAME})",
+            f"- [D(best) reference summary]({D_BEST_SUMMARY_FILENAME})",
+            f"- [Method ranks and failure counts]({RANK_SUMMARY_FILENAME})",
+            f"- [Resolved run metadata]({REPORT_METADATA_FILENAME})",
+            f"- [LaTeX table]({REPORT_LATEX_FILENAME})",
             "",
         ]
     )
@@ -765,30 +830,8 @@ def _validate_unified_rows(per_seed: pd.DataFrame) -> None:
     keys = ["experiment_id", "suite", "task_id", "run_id", "method_seed"]
     if per_seed.duplicated(keys).any():
         raise ValueError("duplicate method/task/seed rows are not allowed")
-    numeric_reference = per_seed[
-        [
-            "d_best_utility",
-            "refnorm_d_best_score",
-            "reference_min_utility",
-            "reference_max_utility",
-        ]
-    ].apply(pd.to_numeric, errors="coerce")
-    if not np.isfinite(numeric_reference.to_numpy(dtype=float)).all():
-        raise ValueError("D(best) and normalization reference values must be finite")
-    if (
-        numeric_reference["reference_min_utility"]
-        > numeric_reference["reference_max_utility"]
-    ).any():
-        raise ValueError("reference_min_utility must not exceed reference_max_utility")
-    score_columns = list(_score_columns())
-    numeric_scores = per_seed[score_columns].apply(pd.to_numeric, errors="coerce")
-    successful = per_seed["status"] == "success"
-    if not np.isfinite(numeric_scores.loc[successful].to_numpy(dtype=float)).all():
-        raise ValueError("successful rows must contain finite utility scores")
-    failed = ~successful
-    available_failed_scores = per_seed.loc[failed, score_columns].notna()
-    if available_failed_scores.any().any():
-        raise ValueError("failed rows must not contain utility scores")
+    validate_seed_contracts(per_seed)
+    validate_report_scores(per_seed)
 
 
 def _order_per_seed(per_seed: pd.DataFrame) -> pd.DataFrame:

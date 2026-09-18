@@ -76,6 +76,45 @@ pilots are not ranked, and a formal method must have successful seeds 38-45
 before receiving a rank. The summary also retains `missing_runs` and marks
 incomplete coverage in both Markdown and LaTeX.
 
+### Imported report validation
+
+The summary and report entry points share the same seed contract. Rows marked
+`result_source="unified_runner"` must include a valid `phase` and a non-empty
+`required_seeds_json` integer array. Formal rows must declare exactly seeds
+38-45, not a smaller self-declared set; pilot rows must declare only seed 0.
+Observed seeds must be unique non-negative integers within the declared set.
+Partial formal reports remain valid progress reports, but are not ranked.
+Exploratory runs retain their explicitly requested seed set. Only explicitly
+marked `legacy_publication_v1` rows may use the historical missing-phase/seed
+defaults; losing modern metadata never silently enables legacy ranking rules.
+
+Before writing any report output, validation checks each row's raw and refnorm
+maximum, median, mean and D(best) against that row's reference interval. Values
+outside [0, 1] are valid; the existing near-zero reference-width rule is retained.
+A small, propagated CSV rounding allowance avoids rejecting legitimate results
+near that cutoff. This tolerance is validation-only: scores are neither clipped
+nor recomputed in the saved rows. Different trial seeds may legitimately have
+different reference intervals. Failed candidate scores must remain null.
+
+These checks need neither an oracle nor per-attempt NPZs, and do not modify the
+input CSV or archived results. They detect inconsistent supplied fields, not
+coordinated edits to all scores and references. Use the artifact verifier below
+when candidate/evaluation-array evidence is required. No retraining or frozen
+plan changes are needed to report valid archived results.
+
+Report-producing suite runs, standalone seed CSV writers and the public report
+writer share the same `.suite.lock`. A competing writer fails immediately;
+reads for shard merging and all output updates happen while the lock is held.
+The suite's internal report calls reuse its existing lock, rather than taking
+a second lock. Standalone report inputs are validated before creating output
+state, and the CLI's input/output alias protection remains in force.
+
+The empty or small lock file may remain after a successful run; its existence
+does not mean a process still owns the lock. Do not delete it to bypass an
+active writer. OS locks release when their owner exits. Each output file is
+still published atomically, but this is not a transaction over all report files;
+saved attempts remain the evidence for recovering interrupted formal reports.
+
 ## Durable frozen-protocol attempts
 
 The dedicated [LLM-DM workflow](LLMDM_PROTOCOL.md) enables evaluator-owned
