@@ -46,37 +46,26 @@ jobs:
             VCS_REF=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: Smoke test container
+      - name: Check the unified default CLI without training
         env:
           IMAGE_REF: ${{ fromJSON(steps.metadata.outputs.json).tags[0] }}
         run: >-
           docker run --rm
-          --env RUN_RESULTS_DIR=/tmp/smoke
           "$IMAGE_REF"
-          llm-design-bench-publication
-          --no-data-mixture
-          --function ackley
-          --function booth
-          --seed 38
-          --logged-samples 32
-          --recommendations 8
-          --epochs 2
-          --particle-steps 2
-          --bdi-steps 2
-          --results-dir /tmp/smoke
-      - name: Replay all fourteen PyTorch methods
+          methods
+      - name: Exercise all 27 methods on invented data and verify resume
         env:
           IMAGE_REF: ${{ fromJSON(steps.metadata.outputs.json).tags[0] }}
         run: >-
           docker run --rm
-          --volume "$RUNNER_TEMP/all-methods:/results"
-          --env RUN_RESULTS_DIR=/results
+          --volume "$RUNNER_TEMP/container-smoke:/results"
+          --entrypoint python
           "$IMAGE_REF"
-          /app/docker/reproduce_all_methods_smoke.sh
+          /app/scripts/container_smoke.py --results-root /results
       - name: Save reproducibility artifacts
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: all-methods-replay
-          path: ${{ runner.temp }}/all-methods
+          name: container-smoke
+          path: ${{ runner.temp }}/container-smoke
           if-no-files-found: ignore

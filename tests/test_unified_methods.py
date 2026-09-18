@@ -58,7 +58,7 @@ def _box_problem() -> OfflineProblem:
                 "hidden_size": 8,
             },
         ),
-        ("bdi", {"steps": 1, "max_support_points": 8}),
+        ("bdi", {"steps": 1}),
     ],
 )
 def test_registered_pytorch_methods_run_on_box_space(method_id, kwargs) -> None:
@@ -89,7 +89,10 @@ def test_additional_catalog_tracks_implemented_adaptations() -> None:
     assert {"best_logged", "offline_mlp", "coms", "bdi"}.issubset(method_names())
     assert planned_method_names() == ()
     assert "spade" in method_names()
-    assert all(blueprint.status.value == "implemented_adaptation" for blueprint in list_method_blueprints())
+    assert all(
+        blueprint.status.value == "implemented_adaptation"
+        for blueprint in list_method_blueprints()
+    )
 
 
 def test_tensorflow_origin_is_disclosed_for_com_port() -> None:

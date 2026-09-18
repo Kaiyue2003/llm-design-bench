@@ -29,8 +29,9 @@ jobs:
       - name: Check command-line entry points
         run: |
           llm-design-bench --help
-          llm-design-bench-offline --help
-          llm-design-bench-synthetic --help
+          llm-design-bench methods
+          llm-design-bench-llmdm --help
+          llm-design-bench-report --help
 
   package:
     runs-on: ubuntu-latest
@@ -46,3 +47,14 @@ jobs:
         run: python -m build
       - name: Validate distributions
         run: python -m twine check dist/*
+      - name: Install wheel in a clean environment outside the checkout
+        run: |
+          python -m venv "$RUNNER_TEMP/wheel-env"
+          "$RUNNER_TEMP/wheel-env/bin/python" -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+          "$RUNNER_TEMP/wheel-env/bin/python" -m pip install dist/*.whl
+          "$RUNNER_TEMP/wheel-env/bin/python" -m pip check
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/wheel-env/bin/python" -I -m llm_design_bench methods
+          "$RUNNER_TEMP/wheel-env/bin/llm-design-bench" --help
+          "$RUNNER_TEMP/wheel-env/bin/llm-design-bench-llmdm" --help
+          "$RUNNER_TEMP/wheel-env/bin/llm-design-bench-report" --help

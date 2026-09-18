@@ -2,8 +2,13 @@
 
 ## Minimal implementation
 
-Use `PreparedFitThenProposeMethod` when the algorithm has a training
-phase and a candidate-generation phase:
+Every method implements `OfflineBBOMethod` and returns `MethodResult` without
+querying an oracle. Choose `FitThenProposeMethod` for direct fitting/proposal, or
+`PreparedFitThenProposeMethod` when the algorithm explicitly uses a visible-data
+train/validation partition and the shared train-only transformations. Do not add
+that partition to an existing method simply to force all internals to match.
+
+The following skeleton illustrates the Prepared variant:
 
 ```python
 import torch
@@ -56,6 +61,17 @@ class MyMethod(PreparedFitThenProposeMethod):
 The evaluator constructs the method with
 `make_method("my_method", **config)`. Do not import or call a task
 oracle from a method module.
+
+Export a reconstructible `configuration()` containing constructor settings,
+including inherited defaults, but no learned state. The default implementation
+supports cooperative `**kwargs` constructors; override it for a nonstandard
+constructor. Add a constructor round-trip test before allowing plan freezing.
+
+New formal runs use the existing `llm-design-bench` application and its frozen
+plan, not a method-specific command line or a restored retired runner. For the
+current integration, budget approval and the new pilot/formal campaign follow
+the code merge. Raw SPADE remains a research implementation until separately
+selected for formal use.
 
 ## Porting TensorFlow or JAX code
 

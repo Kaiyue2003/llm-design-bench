@@ -6,4 +6,9 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-exec docker compose run --rm publication
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+project_dir=$(dirname -- "$script_dir")
+if [ "$#" -eq 0 ]; then
+  set -- --help
+fi
+exec docker compose --project-directory "$project_dir" -f "$project_dir/compose.yaml" run --rm benchmark "$@"

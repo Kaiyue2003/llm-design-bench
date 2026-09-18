@@ -26,6 +26,8 @@ classifiers = [
 ]
 dependencies = [
     "bayeso-benchmarks>=0.2.0",
+    "gpytorch==1.15.2",
+    "linear_operator==0.6.1",
     "matplotlib>=3.8",
     "numpy>=1.26",
     "pandas>=2.2",
@@ -52,10 +54,9 @@ dev = [
 ]
 
 [project.scripts]
-llm-design-bench = "llm_design_bench:main"
-llm-design-bench-offline = "llm_design_bench.offline_cli:main"
-llm-design-bench-publication = "llm_design_bench.publication_cli:main"
-llm-design-bench-synthetic = "llm_design_bench.synthetic_cli:main"
+llm-design-bench = "llm_design_bench.llmdm_cli:main"
+llm-design-bench-llmdm = "llm_design_bench.llmdm_cli:main"
+llm-design-bench-report = "llm_design_bench.report_cli:main"
 
 [build-system]
 requires = ["setuptools>=69", "wheel"]

@@ -1,33 +1,28 @@
-from llm_design_bench import make
-from llm_design_bench.optimizers import (
-    BackwardDistillationOptimizer,
-    ConservativeObjectiveModelOptimizer,
-)
+"""Tiny Python API demonstration, not a formal LLM-DM experiment."""
+
+from llm_design_bench import OfflineProblem, RunContext, make
+from llm_design_bench.optimizers import make_method
 
 
 def main() -> None:
-    task = make("synthetic-ackley", logged_samples=128, seed=38)
-    optimizers = (
-        ConservativeObjectiveModelOptimizer(
-            recommendations=16,
-            seed=38,
-            epochs=20,
-            particle_steps=20,
-        ),
-        BackwardDistillationOptimizer(
-            recommendations=16,
-            seed=38,
-            steps=20,
+    task = make("synthetic-ackley", logged_samples=32, seed=0)
+    problem = OfflineProblem.from_task(task)
+    methods = (
+        ("random_search", {}),
+        (
+            "offline_mlp",
+            {"hidden_size": 16, "epochs": 2, "particle_steps": 2},
         ),
     )
-
-    for optimizer in optimizers:
-        trace = optimizer.optimize(task)
-        best_utility = float(trace.recommendation_utility.max())
-        print(
-            f"{trace.name}: best utility={best_utility:.6f}, "
-            f"best objective={-best_utility:.6f}"
+    for method_id, kwargs in methods:
+        result = make_method(method_id, **kwargs).run(
+            problem, RunContext(method_seed=0, candidate_budget=4, dataset_seed=0)
         )
+        # Methods never receive the evaluator. Query only after they return.
+        batch = task.at_target_fidelity(result.candidates.detach().cpu().numpy())
+        best_utility = float(task.predict(batch).max())
+        print(f"{method_id}: best utility={best_utility:.6f}")
+    print("Small API demonstration only; use the frozen CLI for formal LLM-DM.")
 
 
 if __name__ == "__main__":

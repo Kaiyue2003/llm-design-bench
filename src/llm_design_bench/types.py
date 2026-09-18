@@ -1,18 +1,24 @@
 from dataclasses import dataclass
 
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
 
 
 @dataclass(frozen=True)
 class CandidateBatch:
-    mixtures: np.ndarray
-    model_scales: np.ndarray
-    training_steps: np.ndarray
+    # Keep constructor inputs dtype-generic; __post_init__ coerces to float64.
+    mixtures: NDArray[np.generic]
+    model_scales: NDArray[np.generic]
+    training_steps: NDArray[np.generic]
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "mixtures", np.asarray(self.mixtures, dtype=float))
-        object.__setattr__(self, "model_scales", np.asarray(self.model_scales, dtype=float))
-        object.__setattr__(self, "training_steps", np.asarray(self.training_steps, dtype=float))
+        object.__setattr__(
+            self, "model_scales", np.asarray(self.model_scales, dtype=float)
+        )
+        object.__setattr__(
+            self, "training_steps", np.asarray(self.training_steps, dtype=float)
+        )
 
     def __len__(self) -> int:
         return len(self.mixtures)
@@ -20,7 +26,7 @@ class CandidateBatch:
     @classmethod
     def at_fidelity(
         cls,
-        mixtures: np.ndarray,
+        mixtures: ArrayLike,
         model_scale: float,
         training_steps: float,
     ) -> "CandidateBatch":

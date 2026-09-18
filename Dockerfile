@@ -20,8 +20,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     UV_PROJECT_ENVIRONMENT=/opt/venv \
     PATH="/opt/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin" \
     LLM_DESIGN_BENCH_VCS_REF="${VCS_REF}" \
-    RESULTS_ROOT=/results \
-    RUN_RESULTS_DIR=/results/publication
+    RESULTS_ROOT=/results
 
 RUN apt-get update \
     && apt-get install --no-install-recommends -y ca-certificates git \
@@ -33,6 +32,6 @@ COPY . /app
 RUN uv sync --frozen --no-dev \
     && chmod +x /app/docker/*.sh
 
-VOLUME ["/results", "/opt/external"]
+VOLUME ["/results"]
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
-CMD ["llm-design-bench-publication", "--help"]
+CMD ["--help"]

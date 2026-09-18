@@ -1,139 +1,144 @@
-# Docker Reproduction
+# Docker: the same frozen LLM-DM workflow
 
-The container pins Python 3.11.15, uv 0.11.8, and every Python package through
-`uv.lock`. It is CPU-first and fixes common BLAS thread counts to one.
+The container uses `llm-design-bench`, the same formal CLI as a native installation.
+It does not select experimental budgets, freeze a real campaign automatically, or
+download data. There are two Compose services: `benchmark` and `smoke`.
 
-## One command
+The image pins Python 3.11.15 and uv 0.11.8, installs the frozen `uv.lock`, and sets
+common BLAS thread counts to one. The provided container workflow is CPU-only;
+it does not establish CUDA or cross-platform numerical parity.
 
-The all-methods services include CbAS, MINs, DDOM, GABO, GTG, RGD, BONET,
-DEMO, ROOT, SPADE, and the four existing baselines. Build the current checkout
-and run an independent replay check:
-
-```bash
-docker compose run --build --rm all-methods-smoke
-```
-
-This trains all fourteen methods on Ackley and Booth twice, with seed 38 and
-small settings from `configs/all_methods_smoke.json`. Both executions start
-fresh. The verifier checks input hashes and compares every candidate and oracle
-score exactly. Results persist in
-`results/docker/all-methods-smoke/{first,replay}/`; the first directory contains
-`replay_verification.json`.
-
-For the complete configured eight-seed suite (the nine publication synthetic
-tasks plus real Data Recipes logged data and simulator):
+## Build and inspect without training
 
 ```bash
-docker compose run --build --rm all-methods
+docker compose run --build --rm benchmark
+docker compose run --rm benchmark methods
 ```
 
-This uses normal training budgets and can take a long time on CPU. Interrupted
-runs retain completed rows and resume only when code, dependency versions,
-data-asset hashes, method settings, and saved artifact hashes match. The smoke
-configuration is for integration checks, not a claim of optimization quality.
+The first command builds the current checkout and prints help. The second lists
+the 27 non-SPADE formal methods. No data or oracle is loaded by these commands.
+`llm-design-bench-llmdm` is a native alias for the same application, not another
+Docker service or experiment protocol.
 
-The original three-method reproduction remains available:
-
-From a clone of the repository:
+The shell/PowerShell wrappers only forward arguments to `benchmark`; with no
+arguments they print help:
 
 ```bash
-docker compose run --rm publication
+./scripts/reproduce_docker.sh methods
 ```
-
-Windows users can run:
 
 ```powershell
-.\scripts\reproduce_docker.ps1
+.\scripts\reproduce_docker.ps1 methods
 ```
 
-Linux and macOS users can run:
+## Small engineering smoke check
 
 ```bash
-./scripts/reproduce_docker.sh
+docker compose run --build --rm smoke
 ```
 
-The first publication run clones Data Recipes at commit
-`37269969a0957448d51622e0c083977bc5d260e8` into the named
-`data-recipes` volume. The upstream dataset and simulator are not
-copied into this repository or image. Later runs reuse the verified checkout.
+`scripts/container_smoke.py` creates invented logs and a fake oracle in a fresh
+directory. It exercises the real prepare/freeze/run CLI and:
 
-Results are written to `results/docker/publication/` on the host, not
-left inside the disposable container. This directory includes raw per-seed
-rows, summary CSVs, Markdown tables, Overleaf tables, run metadata, and
-`container_environment.json`.
+- gives all 27 methods tiny engineering-test budgets for pilot seed 0;
+- checks K=128 candidate outputs and saved attempt artifacts;
+- runs only Best Logged's formal seed 38 and resumes it without another oracle
+  call or a new attempt;
+- verifies that the formal shard remains incomplete: seven missing seeds,
+  `rank_eligible=false`.
 
-## Quick container test
+Output is under
+`results/docker/container-smoke/invented-smoke-*/run/`, including
+`smoke_verification.json`. No real checkpoint, dataset, old result or approved
+budget is read or changed. A successful smoke check is not a full-budget pilot,
+a 27-method formal result, or evidence of real-data optimization quality.
+
+## Supply external inputs explicitly
+
+Compose maps these host directories:
+
+| Host setting | Default | Container mount |
+| --- | --- | --- |
+| `ASSETS_DIR` | `./assets` | `/assets`, read-only |
+| `RESULTS_DIR` | `./results/docker` | `/results`, writable and durable |
+
+Create those directories and place a trusted `data-recipes` checkout under
+`assets/data-recipes`, or set `ASSETS_DIR` to your own parent directory. An existing
+verified bundle/plan can also be placed under assets. Neither the image nor
+Compose automatically clones or updates the upstream checkout. Record the exact
+revision and trust its pickle/checkpoint files before use.
+
+After the code merge and budget approval, the following examples use container
+paths. Replace the checkpoint placeholder with every real checkpoint required
+by the oracle; repeat the option as necessary.
 
 ```bash
-docker compose run --rm smoke
+docker compose run --rm benchmark prepare \
+  --data-recipes-root /assets/data-recipes \
+  --oracle-checkpoint /assets/data-recipes/path/to/trusted/checkpoint.pt \
+  --output /results/shared-data
+
+docker compose run --rm benchmark freeze \
+  --data-recipes-root /assets/data-recipes \
+  --data-bundle /results/shared-data \
+  --methods-file /assets/approved-methods.json \
+  --experiment-id merged-llmdm-v1 --output /results/plan.json
 ```
 
-The smoke service runs Ackley and Booth with one seed and small training
-budgets. Its outputs appear in `results/docker/smoke/`.
+The methods-file schema and approval policy are in
+[Reproducing Results](REPRODUCING.md). There is no implicit full-experiment budget
+preset. Preparation/freezing do not query the oracle. Output paths must be new;
+do not overwrite an existing campaign.
 
-## Pulling a published image
-
-The container workflow publishes branch, commit-SHA, and release tags to:
-
-```text
-ghcr.io/kaiyue2003/llm-design-bench
-```
-
-Set an immutable image tag before running Compose:
+## Run the approved pilot and formal campaign
 
 ```bash
-LLM_DESIGN_BENCH_IMAGE=ghcr.io/kaiyue2003/llm-design-bench:sha-<commit> \
-docker compose run --rm publication
+docker compose run --rm benchmark run \
+  --data-recipes-root /assets/data-recipes \
+  --data-bundle /results/shared-data --plan /results/plan.json \
+  --phase pilot --setting multi_scale --device cpu \
+  --results-dir /results/pilot
+
+docker compose run --rm benchmark run \
+  --data-recipes-root /assets/data-recipes \
+  --data-bundle /results/shared-data --plan /results/plan.json \
+  --phase formal --setting multi_scale --device cpu \
+  --pilot-results /results/pilot --results-dir /results/formal
 ```
 
-On PowerShell:
+The runtime requires matching verified pilots. Use `fixed_1b` or `both` only
+with the corresponding pilot coverage. Selection, explicit resume and
+infrastructure-retry rules are identical to the native CLI. A changed image
+source/configuration cannot silently inherit old pilots or successful rows.
 
-```powershell
-$env:LLM_DESIGN_BENCH_IMAGE = "ghcr.io/kaiyue2003/llm-design-bench:sha-<commit>"
-docker compose run --rm publication
-```
-
-Commit-SHA tags are preferred for publication. The `main` tag is
-convenient but mutable.
-
-## What reproducibility means
-
-New runs save:
-
-- `datasets/*.npz`: exact optimizer-visible designs, context, utility, target
-  fidelity and original bounds where applicable;
-- `candidates/*.npz`: each method/seed candidate batch and evaluator scores;
-- `raw_runs.csv`: per-run settings, source revisions, diagnostics and artifact
-  hashes;
-- `run_metadata.json` and `METHOD_PROVENANCE.md`: source and data provenance,
-  source-content fingerprint, package versions, and algorithmic adaptations;
-- `container_environment.json`: image revision, Python/Torch versions,
-  dependency lock hash and the full method registry.
-
-Verify integrity or compare two independent runs from the same configuration:
+To derive reports into a separate directory:
 
 ```bash
-python scripts/verify_reproduction.py results/first
-python scripts/verify_reproduction.py results/first --compare results/replay
+docker compose run --rm --entrypoint llm-design-bench-report benchmark \
+  from-unified --input-csv /results/formal/method_seed_results.csv \
+  --results-dir /results/report
 ```
 
-Default comparison is exact. Use explicit `--atol` and `--rtol` only when
-cross-platform numerical tolerance is intended. The verifier also checks
-complete task/seed/method coverage and refuses mismatched configurations.
-It never executes code from NPZ files.
+Native and container runs use the same per-attempt manifests, result JSON,
+candidate/evaluation NPZs, environment records and integrity/resume checks.
+Preserve the full results directory, including failed attempts, not just CSV
+summaries. The former raw-run verification/environment scripts and publication
+services are not part of this workflow.
 
-The Data Recipes volume is fetched at its pinned revision on first use. Once
-that commit is cached, reproduction does not require another Git fetch.
-Original dataset and simulator assets are hashed separately from the Git
-revision, so modified assets cannot silently enter a resumed experiment.
+## Images, reproducibility and historical results
 
-The current Docker services use CPU. Native PyTorch methods also accept
-`--device cuda`; GPU replay requires a compatible CUDA runtime and explicitly
-matched device environment. CPU validation does not establish GPU parity.
+For a reviewed image that has actually been published, set
+`LLM_DESIGN_BENCH_IMAGE` to its immutable commit tag or digest. Do not assume an
+unpublished integration image exists; build this checkout for local validation.
+The mutable `main` tag is not an experiment identity.
 
-The image fixes code, Python dependencies, CPU execution, random seeds,
-threading, and the external dataset commit. Raw results and manifests make a
-run auditable. Bitwise equality can still be affected by host CPU instruction
-sets and low-level numerical libraries; publication checks should compare
-within declared numerical tolerances as well as inspect seeds, row counts,
-failures, and configuration fingerprints.
+A fixed image, seeds, threads and data manifest make runs auditable, but do not
+guarantee bitwise equality across hardware or numerical libraries. Record the
+image/release and inspect configuration, coverage, failures and numerical
+tolerances when independently reproducing results.
+
+Historical instructions under `reference_results/` refer to their original code,
+environment and old services. Those archives are unchanged and must be replayed
+from their recorded version, not relabeled as current 27-method results. Full
+real-data reproduction, budget approval, new plans/pilots and SPADE selection
+happen after code integration; they are not prerequisites for merging this work.

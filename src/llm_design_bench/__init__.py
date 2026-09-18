@@ -45,11 +45,6 @@ __all__ = [
 
 
 def main() -> None:
-    from llm_design_bench.cli import app
+    from llm_design_bench.llmdm_cli import main as formal_main
 
-    app()
-from llm_design_bench.data import (
-    OfflineDataSplit,
-    OfflineTensorDataset,
-    split_offline_dataset,
-)
+    formal_main()
