@@ -1,178 +1,146 @@
-# Reproducing the Reference Results
+# Reproducing Results
 
-The committed files under `reference_results/` are comparison artifacts, not
-inputs to the benchmark. Fresh runs are always written to the ignored
-`results/` directory.
+## Current entry points and release order
 
-For the ten additional methods and their uploaded 1,120-run simulation snapshot,
-see [Additional-method simulation results](../reference_results/additional_methods_integration/README.md).
-That page includes the frozen two-epoch settings and commands to extract and
-verify both independent native runs and both Docker runs.
+`llm-design-bench` and `llm-design-bench-llmdm` invoke the same frozen LLM-DM
+application. `llm-design-bench-report` derives reports from saved rows without
+training. The retired experiment CLIs are not alternate ways to run this release.
 
-For the pinned one-command container workflow, use:
+The code merge comes first. After merge, method owners approve their separate
+training/search budgets; then freeze a new release plan, run full-budget seed-0
+pilots, and run the eight formal seeds. The commands below describe that future
+campaign, not an already approved budget or a reason to rerun historical results.
 
-```bash
-docker compose run --rm publication
-```
-
-This writes durable outputs to `results/docker/publication/`. See
-[Docker Reproduction](DOCKER.md) for immutable image tags, the external Data
-Recipes volume, and the environment manifest.
-
-## 1. Create an environment
+## 1. Install the reviewed revision
 
 ```bash
-python -m venv .venv
-```
-
-Activate the environment, then install the checkout:
-
-```bash
-python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
+llm-design-bench --help
+llm-design-bench methods
 ```
 
-The reference environment uses Python 3.11. The CI suite also checks Python
-3.12.
+Use the merged release commit and a clean source tree before freezing. Keep its
+dependency environment and source revision with the experiment. The formal
+roster has 27 non-SPADE methods; listing methods neither trains nor loads data.
+The generic synthetic task/Python API remains available for development checks.
 
-## 2. Synthetic benchmark
+## 2. Prepare one shared data bundle
 
-Run:
+Obtain a trusted `data-recipes` checkout and record its exact revision. Its logged
+dataset and oracle checkpoints are external; do not substitute arbitrary pickle
+or checkpoint files. Use real paths in place of the placeholders below:
 
 ```bash
-llm-design-bench-synthetic \
-  --logged-samples 256 \
-  --recommendations 64 \
-  --epochs 100 \
-  --particle-steps 100 \
-  --bdi-steps 100 \
-  --seed 38 \
-  --results-dir results/synthetic
+llm-design-bench prepare \
+  --data-recipes-root /path/to/data-recipes \
+  --oracle-checkpoint /path/to/data-recipes/path/to/trusted/checkpoint.pt \
+  --output /path/to/new/shared-data
 ```
 
-The task at index `i` receives logged-data seed `38 + i`. COM and BDI both use
-optimizer seed 38. Compare `results/synthetic/synthetic_bo_results.csv` with
-`reference_results/synthetic/synthetic_bo_results.csv`.
+Repeat `--oracle-checkpoint` for every checkpoint used by the oracle. Preparation
+freezes the five-source order, source/asset hashes, visible row IDs, arrays and
+reference identity without querying the oracle. The visible set combines the
+0–40 utility percentiles within each model scale, including threshold ties.
+All methods consume the same bundle; fixed-1B filters its visible 1B subset and
+does not resplit. The reference range stays evaluator-only and is shared across
+settings. Hashes establish identity, not the safety of third-party code.
 
-Exact floating-point values can vary slightly across PyTorch, BLAS, and
-operating-system versions. Task names, row counts, columns, ranking behavior,
-and scores within normal numerical tolerance should agree.
+## 3. Freeze approved method budgets
 
-## 3. Data-mixture benchmark
+The owners supply a `methods.json` list of objects containing `method_id`, optional
+`run_id`, and an explicit `kwargs` mapping. This small shape example is **not a
+27-method experimental configuration**:
 
-Clone the exact upstream dependency and make its path available:
+```json
+[
+  {"method_id": "best_logged", "kwargs": {}}
+]
+```
+
+For a trained method, approve its settings before freezing. An explicit `{}`
+means “use and freeze all current constructor defaults”; it is not a claim that
+different methods share a budget. The final list must contain the selected
+campaign's methods, not just the example reference above.
 
 ```bash
-git clone https://github.com/namkoong-lab/data-recipes.git
+llm-design-bench freeze \
+  --data-recipes-root /path/to/data-recipes \
+  --data-bundle /path/to/shared-data \
+  --methods-file /path/to/approved-methods.json \
+  --experiment-id merged-llmdm-v1 \
+  --output /path/to/new/plan.json
 ```
 
-The committed data-mixture snapshots use upstream commit
-`37269969a0957448d51622e0c083977bc5d260e8`. For strict historical replication,
-check out that commit and record `git -C ../data-recipes status --short` alongside
-your experiment.
+Freeze expands inherited defaults, checks reconstruction, and records package
+and data identities. SPADE is rejected until its formal implementation is
+selected. Preparation and freezing do not run model training.
 
-Run the search baselines:
+## 4. Pilot, then formal runs
 
 ```bash
-llm-design-bench \
-  --data-recipes-root ../data-recipes \
-  --queries 256 \
-  --reference-queries 2048 \
-  --recommendations 128 \
-  --seed 38 \
-  --results-dir results/data_recipes_baselines
+llm-design-bench run \
+  --data-recipes-root /path/to/data-recipes \
+  --data-bundle /path/to/shared-data --plan /path/to/plan.json \
+  --phase pilot --setting multi_scale --device cpu \
+  --results-dir /path/to/pilot
+
+llm-design-bench run \
+  --data-recipes-root /path/to/data-recipes \
+  --data-bundle /path/to/shared-data --plan /path/to/plan.json \
+  --phase formal --setting multi_scale --device cpu \
+  --pilot-results /path/to/pilot --results-dir /path/to/formal
 ```
 
-Run the offline methods:
+Pilot seed 0 uses the complete frozen method budget. Inspect cost, memory,
+numerical stability and saved artifacts, not oracle scores for choosing settings.
+Formal runs require verified pilots and use seeds 38–45. Each run returns K=128
+candidates; the logged data does not change with the method seed. Target fidelity
+is always 1B/19500 steps and utility is negative StackExchange cross-entropy.
+
+Use `--setting fixed_1b` for the ablation or `both` for both settings; first obtain
+the corresponding pilot coverage. `--run-id` and `--seed` can select shards.
+`--device cuda` controls the method where a compatible PyTorch/CUDA runtime is
+available; `--oracle-device` is independent. The existing precision policy uses
+float64 for BDI, GA on GP and BO-qEI, and float32 for other methods; no mixed
+precision is enabled.
+
+`--resume` reuses identical verified successful attempts, not arbitrary CSV rows.
+Inspect an interrupted attempt before supplying `--infrastructure-retry-reason`;
+do not relabel algorithm failures or silently retry until a favorable result.
+Changed code/data/settings require a new plan and output directory.
+
+## 5. Inspect and report
+
+Preserve the full run directory, not only downloaded CSV files. It contains
+immutable per-attempt manifests/results, `candidates.npz`, `evaluation.npz`,
+provenance and checksums, along with `method_seed_results.csv` and
+`method_seed_summary.csv`. Failures remain recorded. Ranking requires complete
+formal coverage; partial averages are not a completed benchmark.
 
 ```bash
-llm-design-bench-offline \
-  --data-recipes-root ../data-recipes \
-  --reference-queries 2048 \
-  --recommendations 128 \
-  --epochs 100 \
-  --particle-steps 100 \
-  --bdi-steps 100 \
-  --train-min-percentile 0 \
-  --train-max-percentile 40 \
-  --seed 38 \
-  --results-dir results/data_recipes_offline
+llm-design-bench-report from-unified \
+  --input-csv /path/to/formal/method_seed_results.csv \
+  --results-dir /path/to/new/report
 ```
 
-To reproduce the fixed-1B ablation, add `--logged-model-scale 1000` and write
-to a separate output directory:
+Reporting produces summaries and Markdown/LaTeX tables without retraining or
+modifying its input CSV. Reports include mean, sample SD and SE with successful,
+failed and missing coverage; additional confidence/range fields are preserved.
+Report generation alone is not an independent audit of every original artifact.
 
-```bash
-llm-design-bench-offline \
-  --data-recipes-root ../data-recipes \
-  --logged-model-scale 1000 \
-  --reference-queries 2048 \
-  --recommendations 128 \
-  --epochs 100 \
-  --particle-steps 100 \
-  --bdi-steps 100 \
-  --train-min-percentile 0 \
-  --train-max-percentile 40 \
-  --seed 38 \
-  --results-dir results/data_recipes_1b_offline
-```
+Raw utility is maximized; `refnorm_*_score` uses the frozen full-logged utility
+range. Scores are not clipped: above 1 means above logged best, not proof of a
+global optimum. Do not concatenate different plans or historical splits into a
+single ranking.
 
-The `data-recipes` task loads logged runs from
-`results/data_mixing_runs.pkl` in the upstream checkout and evaluates
-candidates through its simulator checkpoint. Because that checkpoint is
-loaded as a trusted local artifact, use only an upstream checkout you trust.
+## Containers and historical archives
 
-## 4. Seeded publication benchmark
+[Docker](DOCKER.md) runs this same workflow through `benchmark`, with a separate
+small `smoke` check. It does not choose budgets or remove the pilot requirement.
 
-The compact publication table uses the following predeclared trial seeds:
-
-```text
-38, 39, 40, 41, 42, 43, 44, 45
-```
-
-For synthetic tasks, the logged-dataset seed and optimizer seed both equal the
-trial seed. The Data Recipes logged dataset is fixed, while COM and BDI use the
-trial seed. All methods return `K=128` recommendations. The
-compatibility table uses mean +/- sample standard deviation
-(`ddof=1`). A second Table 1-style report uses mean +/- standard
-error. `task_summary.csv` preserves both together with a 95%
-Student-t interval and observed minimum/maximum seed estimates.
-
-Run:
-
-```bash
-llm-design-bench-publication \
-  --data-recipes-root ../data-recipes \
-  --seed 38 --seed 39 --seed 40 --seed 41 \
-  --seed 42 --seed 43 --seed 44 --seed 45 \
-  --logged-samples 256 \
-  --recommendations 128 \
-  --epochs 100 \
-  --particle-steps 100 \
-  --bdi-steps 100 \
-  --train-min-percentile 0 \
-  --train-max-percentile 40 \
-  --results-dir results/publication
-```
-
-The runner is resumable. It rejects an existing `raw_runs.csv` when its
-configuration fingerprint differs, preventing accidental aggregation across
-incompatible runs. Compare all files against
-`reference_results/publication/`, especially `raw_runs.csv`,
-`seed_manifest.csv`, and `run_metadata.json`.
-
-The default synthetic list is fixed in
-`PUBLICATION_SYNTHETIC_FUNCTIONS`. It is the union of the prior exploratory
-COM and BDI winner in each category, so this compact result is descriptive and
-performance-selected. Use Section 2 for an unbiased all-task sweep.
-
-## 5. Verify the package
-
-```bash
-python -m pytest -q
-python -m build
-python -m twine check dist/*
-```
-
-To test the wheel itself, create another environment and install the generated
-`.whl` from `dist/`, then run `llm-design-bench-synthetic --help`.
+Files under `reference_results/` are unchanged historical evidence. Reproducing
+their old commands requires each archive's recorded original code and environment.
+The old 14-method integration, publication, and 19-method forward tables do not
+become new 27-method results by changing their labels. Historical configurations,
+source pins, CSVs and documentation stay in their archive/history rather than
+being installed as parallel active experiment workflows.

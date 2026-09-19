@@ -5,16 +5,15 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, ClassVar, Mapping
 
-import numpy as np
 import torch
 
+from llm_design_bench.optimizers.configuration import resolve_constructor_configuration
 from llm_design_bench.problem import MethodResult, OfflineProblem, RunContext
 from llm_design_bench.transforms import (
     PreparedOfflineProblem,
     ProblemPreparationConfig,
     prepare_offline_problem,
 )
-from llm_design_bench.types import CandidateBatch
 
 
 class MethodFamily(str, Enum):
@@ -75,7 +74,9 @@ class MethodMetadata:
                 "method_id may contain only lowercase letters, digits, and underscores"
             )
         if self.implementation_framework.lower() != "pytorch":
-            raise ValueError("registered implementations must expose a PyTorch boundary")
+            raise ValueError(
+                "registered implementations must expose a PyTorch boundary"
+            )
         if self.config_schema_version < 1:
             raise ValueError("config_schema_version must be positive")
 
@@ -96,11 +97,12 @@ class OfflineBBOMethod(ABC):
         # dataclasses do not otherwise prevent mutation of tensor contents.
         prepared = problem.to(context.device, context.dtype, copy=True)
         generator = context.make_generator()
+        configuration = dict(self.configuration())
         optimized = self.optimize(prepared, context=context, generator=generator)
         if not isinstance(optimized, MethodResult):
             raise TypeError("optimize must return MethodResult")
         summary = dict(optimized.training_summary)
-        summary.setdefault("resolved_method_config", dict(self.configuration()))
+        summary["resolved_method_config"] = configuration
         result = MethodResult(
             candidates=optimized.candidates,
             training_summary=summary,
@@ -110,13 +112,12 @@ class OfflineBBOMethod(ABC):
         return result
 
     def configuration(self) -> Mapping[str, Any]:
-        """Return JSON-safe public constructor state for run manifests."""
+        """Export replayable constructor arguments, including inherited defaults.
 
-        return {
-            name: value
-            for name, value in vars(self).items()
-            if not name.startswith("_") and _is_configuration_value(value)
-        }
+        Override this for a non-cooperative or dynamically configured constructor.
+        Learned state must never be included in a frozen method configuration.
+        """
+        return resolve_constructor_configuration(self)
 
     @abstractmethod
     def optimize(
@@ -277,46 +278,3 @@ class PreparedFitThenProposeMethod(OfflineBBOMethod):
 
     def diagnostics(self) -> Mapping[str, Any]:
         return {}
-
-
-@dataclass(frozen=True)
-class EvaluationTrace:
-    name: str
-    recommendations: CandidateBatch
-    recommendation_utility: np.ndarray
-    queried: CandidateBatch
-    query_utility: np.ndarray
-    query_cost: np.ndarray
-
-    @property
-    def cumulative_cost(self) -> float:
-        return float(self.query_cost.sum())
-
-
-def top_candidates(
-    batch: CandidateBatch,
-    utility: np.ndarray,
-    count: int,
-) -> tuple[CandidateBatch, np.ndarray]:
-    indices = np.argsort(utility)[-min(count, len(batch)) :]
-    return (
-        CandidateBatch(
-            mixtures=batch.mixtures[indices],
-            model_scales=batch.model_scales[indices],
-            training_steps=batch.training_steps[indices],
-        ),
-        utility[indices],
-    )
-
-
-def _is_configuration_value(value: Any) -> bool:
-    if value is None or isinstance(value, (bool, int, float, str)):
-        return True
-    if isinstance(value, (tuple, list)):
-        return all(_is_configuration_value(item) for item in value)
-    if isinstance(value, Mapping):
-        return all(
-            isinstance(key, str) and _is_configuration_value(item)
-            for key, item in value.items()
-        )
-    return False

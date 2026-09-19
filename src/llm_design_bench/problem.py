@@ -1,12 +1,20 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping, cast
 
 import numpy as np
 import torch
 
+from llm_design_bench._integer_parameters import (
+    optional_nonnegative_integer,
+    require_integer,
+)
 from llm_design_bench.spaces import BoxSpace, DesignSpace, SimplexSpace
+
+if TYPE_CHECKING:
+    from llm_design_bench.tasks.base import Task
 
 
 @dataclass(frozen=True)
@@ -112,6 +120,12 @@ class OfflineProblem:
         *,
         copy: bool = False,
     ) -> "OfflineProblem":
+        """Convert tensors, optionally isolating all method-visible input data.
+
+        ``copy=True`` also clones the design space and deeply copies metadata,
+        including nested mutable values in ``extra``. With ``copy=False``,
+        metadata and the design space remain shared as before.
+        """
         dtype = dtype or self.train_designs.dtype
 
         def convert(value: torch.Tensor) -> torch.Tensor:
@@ -124,13 +138,13 @@ class OfflineProblem:
             train_utility=convert(self.train_utility),
             target_context=convert(self.target_context),
             design_space=self.design_space.clone() if copy else self.design_space,
-            metadata=self.metadata,
+            metadata=deepcopy(self.metadata) if copy else self.metadata,
         )
 
     @classmethod
     def from_task(
         cls,
-        task,
+        task: Task,
         *,
         design_space: DesignSpace | None = None,
         device: torch.device | str = "cpu",
@@ -161,8 +175,8 @@ class OfflineProblem:
             if bounds is None:
                 design_space = SimplexSpace(int(task.mixture_dim))
             else:
-                # Preserve the original limits so float32 decoding cannot round
-                # outward and fail the evaluator's float64 domain check.
+                # Domain metadata must retain precision independently of model
+                # tensors; rounded float32 endpoints can lie outside the oracle.
                 design_space = BoxSpace(torch.as_tensor(bounds, dtype=torch.float64))
         if metadata is None:
             metric = getattr(task, "metric", None)
@@ -192,18 +206,32 @@ class RunContext:
     split_seed: int | None = None
 
     def __post_init__(self) -> None:
-        if self.method_seed < 0:
+        method_seed = require_integer(self.method_seed, name="method_seed")
+        if method_seed < 0:
             raise ValueError("method_seed must be non-negative")
-        if self.candidate_budget < 1:
+        candidate_budget = require_integer(
+            self.candidate_budget, name="candidate_budget"
+        )
+        if candidate_budget < 1:
             raise ValueError("candidate_budget must be positive")
+        dataset_seed = optional_nonnegative_integer(
+            self.dataset_seed, name="dataset_seed"
+        )
+        split_seed = optional_nonnegative_integer(self.split_seed, name="split_seed")
         if not isinstance(self.dtype, torch.dtype):
             raise TypeError("dtype must be a torch.dtype")
         if not torch.empty((), dtype=self.dtype).is_floating_point():
             raise TypeError("dtype must be floating point")
+        object.__setattr__(self, "method_seed", method_seed)
+        object.__setattr__(self, "candidate_budget", candidate_budget)
+        object.__setattr__(self, "dataset_seed", dataset_seed)
+        object.__setattr__(self, "split_seed", split_seed)
         object.__setattr__(self, "device", torch.device(self.device))
 
     def make_generator(self) -> torch.Generator:
-        generator_device = self.device if self.device.type in {"cpu", "cuda"} else "cpu"
+        # __post_init__ normalizes the device string without narrowing its init type.
+        device = cast(torch.device, self.device)
+        generator_device = device if device.type in {"cpu", "cuda"} else "cpu"
         generator = torch.Generator(device=generator_device)
         generator.manual_seed(self.method_seed)
         return generator

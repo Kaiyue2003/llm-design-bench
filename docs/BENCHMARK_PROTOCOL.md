@@ -39,18 +39,19 @@ candidate batch.
 
 ## Data-mixture settings
 
-The primary data-mixture experiment uses all available logged model scales and
-exposes observations in the global 0th through 40th utility percentiles. It
-evaluates mixture recommendations at the target fidelity:
+The primary data-mixture experiment uses all available logged model scales.
+Within each scale it exposes the 0th through 40th utility percentiles, including
+threshold ties, then merges the visible rows into one shared frozen manifest.
+It evaluates mixture recommendations at the target fidelity:
 
 ```text
 model scale:    1B (1000 million parameters)
 training steps: 19,500
 ```
 
-The fixed-1B experiment uses the same utility convention, percentile rule, and
-target fidelity, but filters the logged dataset to the 1B scale before making
-the percentile split. It is an ablation rather than the primary setting.
+The fixed-1B experiment takes the 1B subset of that exact visible manifest,
+without rerunning the split. It keeps the same utility convention, target fidelity
+and full-logged normalization reference. It is an ablation, not the main setting.
 
 For methods originally defined without context variables, adding model scale
 and training steps is a multi-fidelity adaptation and must be identified as
@@ -67,15 +68,18 @@ dimension. The framework does not copy candidates to fill a short batch and
 does not silently remove duplicates. Duplicate and unique candidate counts are
 reported as method behavior.
 
-`D(best)` or Best Logged is an evaluation reference. It is not treated as a
-128-candidate generative method when reporting candidate medians or diversity.
+`D(best)` is a scalar evaluator-side logged reference. The separately registered
+`best_logged` method returns K candidates and obeys the same output contract;
+it may repeat visible designs to fill the requested budget. Do not confuse its
+candidate statistics with the scalar `D(best)` reference.
 
 ## Random seeds
 
 Randomness is separated into three namespaces:
 
 - `dataset_seed` controls construction of a generated logged dataset;
-- `split_seed` controls a stochastic offline split, when applicable; and
+- `split_seed` controls a visible-data training/validation partition where a
+  method's preparation pipeline uses one; and
 - `method_seed` controls model initialization, data-loader order, sampling,
   mutation, dropout, diffusion noise, and other method randomness.
 
@@ -94,9 +98,10 @@ the mean, sample standard deviation, and standard error
 standard error = sample standard deviation / sqrt(8)
 ```
 
-Deterministic references may be evaluated once and explicitly marked
-deterministic; they must not be presented as eight independent stochastic
-runs.
+The formal runner records all eight seeds for each selected method, including
+deterministic references, to maintain uniform coverage. Identical deterministic
+results must not be described as eight independent stochastic discoveries.
+Pilot seed 0 uses the full configured budget and is checked before formal runs.
 
 ## Normalization and comparison
 
@@ -109,8 +114,9 @@ primary cross-setting metrics. A reference-normalized score is
 
 and is not clipped. Scores above one are allowed.
 
-Comparisons between multi-scale and fixed-1B settings must use the same
-target-fidelity normalization reference. Setting-local normalized scores may be
+Comparisons between multi-scale and fixed-1B settings use the same frozen
+full-logged utility reference while evaluating all candidates at the target
+fidelity. Setting-local normalized scores may be
 reported for diagnostics but must not be compared across settings as if their
 denominators were identical. The hidden reference is evaluation-only and is
 never exposed to a method.
@@ -123,8 +129,11 @@ Method hyperparameters must come from one of the following sources:
 2. a configuration fixed before final evaluation; or
 3. tuning performed only on visible logged data.
 
-Hyperparameters must not be selected using hidden-region or final oracle
-utilities. Each final result records the complete resolved configuration.
+Hyperparameters must not be selected using hidden-region, pilot-oracle, or final
+oracle utilities. Each final result records the complete resolved configuration.
+For the integrated campaign, owners agree method-specific budgets after the code
+merge, then freeze a new plan and run full-budget pilots. Those experimental
+decisions are not code-merge prerequisites.
 
 ## PyTorch boundary
 
@@ -166,8 +175,12 @@ successful-run statistics and the number of failed seeds.
 
 ## Seed-run artifacts
 
-The unified method runner writes two machine-readable files and two rendered
-tables:
+The frozen workflow saves per-attempt manifests/results, candidate and evaluation
+NPZ files, provenance/checksums and environment metadata. Candidates are committed
+before oracle evaluation. Verified matching attempts support explicit resume;
+failed or interrupted attempts are never silently discarded or retried.
+
+The method/report APIs also write machine-readable and rendered summaries:
 
 - `method_seed_results.csv` contains one row per method configuration and seed,
   including failures, timing, configuration, provenance, candidate diagnostics,
@@ -181,3 +194,17 @@ tables:
 
 The runner creates a fresh method instance for every seed. It evaluates no
 candidate when method training or proposal fails.
+Incomplete formal seed coverage is retained in reports but is not rank-eligible.
+
+## Supported entry points and archives
+
+`llm-design-bench` is the default `prepare`/`freeze`/`run` application;
+`llm-design-bench-llmdm` is its explicit alias. The report command
+`llm-design-bench-report from-unified` only creates reports. Docker invokes the
+same formal application.
+Generic task/method Python APIs remain available for research, not as an alternate
+formal protocol. SPADE remains outside the formal roster until resolved.
+
+Retired experiment CLIs/runners are not installed. Historical commands and results
+under `reference_results/` require their original recorded commit/environment and
+must not be combined into a new 27-method formal ranking.

@@ -1,24 +1,51 @@
-from llm_design_bench.evaluation.runner import BenchmarkConfig, run_baselines
 from llm_design_bench.evaluation.seed_runner import (
     DEFAULT_METHOD_SEEDS,
+    RESULT_SCHEMA_VERSION,
     MethodSpec,
     SeedBenchmarkConfig,
     SeedBenchmarkResult,
-    run_method_seed_benchmark,
+    reference_normalize,
     render_seed_summary_latex,
     render_seed_summary_markdown,
+    run_method_seed_benchmark,
     summarize_seed_results,
+)
+from llm_design_bench.evaluation.task_specs import (
+    make_data_recipes_task_spec,
+    make_synthetic_task_spec,
+)
+from llm_design_bench.evaluation.unified_report import (
+    BenchmarkTaskSpec,
+    BenchmarkTrial,
+    UnifiedBenchmarkResult,
+    aggregate_d_best,
+    render_unified_latex,
+    render_unified_markdown,
+    run_benchmark_suite,
+    summarize_method_ranks,
+    write_unified_report,
 )
 
 __all__ = [
-    "BenchmarkConfig",
     "DEFAULT_METHOD_SEEDS",
+    "RESULT_SCHEMA_VERSION",
+    "BenchmarkTaskSpec",
+    "BenchmarkTrial",
     "MethodSpec",
     "SeedBenchmarkConfig",
     "SeedBenchmarkResult",
-    "run_baselines",
-    "run_method_seed_benchmark",
+    "UnifiedBenchmarkResult",
+    "aggregate_d_best",
+    "make_data_recipes_task_spec",
+    "make_synthetic_task_spec",
+    "reference_normalize",
     "render_seed_summary_latex",
     "render_seed_summary_markdown",
+    "render_unified_latex",
+    "render_unified_markdown",
+    "run_benchmark_suite",
+    "run_method_seed_benchmark",
+    "summarize_method_ranks",
     "summarize_seed_results",
+    "write_unified_report",
 ]

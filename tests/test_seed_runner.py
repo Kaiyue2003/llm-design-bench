@@ -176,6 +176,21 @@ def test_seed_runner_writes_per_seed_and_summary_results(tmp_path) -> None:
     assert (tmp_path / "method_seed_table.tex").is_file()
     summary = json.loads(result.per_seed.loc[0, "training_summary_json"])
     assert summary["tag"] == "created"
+    assert json.loads(result.per_seed.loc[0, "method_config_json"]) == {
+        "tag": "created"
+    }
+    assert (
+        result.per_seed.loc[0, "resolved_method_config_json"]
+        == result.per_seed.loc[0, "method_config_json"]
+    )
+    for field in (
+        "paper_url",
+        "original_framework",
+        "implementation_framework",
+        "optional_dependencies_json",
+        "config_schema_version",
+    ):
+        assert field in result.per_seed.columns
 
     row = result.per_seed.iloc[0]
     expected = (row["raw_max_utility"] + 2.0) / 2.0

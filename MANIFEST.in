@@ -5,7 +5,6 @@ include Dockerfile
 include compose.yaml
 include uv.lock
 include .python-version
-recursive-include configs *.json
 recursive-include docker *.sh
 recursive-include src/llm_design_bench py.typed
 recursive-include examples *.py

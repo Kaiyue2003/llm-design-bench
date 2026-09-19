@@ -1,7 +1,9 @@
 # Additional PyTorch methods
 
-All ten methods are callable through `make_method(id, **settings)` and the
-publication CLI. They operate on `OfflineProblem`: logged designs, utility,
+All ten methods are callable through the generic Python API
+`make_method(id, **settings)`. Nine are selected for the integrated formal CLI;
+SPADE remains deferred and is rejected by formal freeze/load/run. They operate
+on `OfflineProblem`: logged designs, utility,
 fidelity context, and domain constraints. The evaluator is never passed into
 training or generation. All final candidates have the requested count, device,
 dtype, and valid physical coordinates.
@@ -61,32 +63,22 @@ paper-specific benchmark preprocessing and configurations.
 
 ## Running selected methods
 
-```bash
-llm-design-bench-publication --method cbas --method mins --method spade \
-  --no-data-mixture --function ackley --seed 38 --results-dir results/selected
-```
+Use the single formal workflow documented in [Reproducing Results](REPRODUCING.md):
+`llm-design-bench methods`, then `prepare`, `freeze`, and `run`. The explicit
+`llm-design-bench-llmdm` alias calls the same application. There is no parallel
+publication CLI or `--all-methods` experiment preset.
 
-For all methods with the normal training budgets:
+After merge, each owner approves method-specific budgets and provides entries
+in the methods file: `method_id`, optional `run_id`, and explicit `kwargs`.
+Freeze exports complete constructor settings, including inherited defaults;
+it is not a global `--epochs` override applied indiscriminately to all methods.
+BONET's rollout length, diffusion sampling, MINs' target grid and surrogate
+training have separate method-specific controls. An empty `kwargs` mapping
+explicitly chooses current defaults, not an approved experiment-wide budget.
 
-```bash
-llm-design-bench-publication --all-methods \
-  --data-recipes-root /path/to/data-recipes --results-dir results/all-methods
-```
-
-Use `--method-config settings.json` for method-specific constructor parameters:
-
-```json
-{
-  "cbas": {"latent_dim": 16, "quantile": 0.9, "adaptation_epochs": 5},
-  "ddom": {"diffusion_steps": 100, "guidance": 2.0},
-  "spade": {"support_k": 5, "lcb_beta": 1.0}
-}
-```
-
-The JSON must contain only selected method IDs. Unknown constructor arguments
-raise an error. The common `--epochs` controls neural training; `--method-steps`
-controls the additional methods' search/sampling loops where applicable.
-BONET's rollout length and MINs' target grid have their own settings.
+For development, methods can still be run directly on a Python `OfflineProblem`.
+Such calls, including raw SPADE research calls, do not create a valid frozen
+formal experiment or waive its pilot/coverage requirements.
 
 ## Validation and reproduction
 
@@ -98,11 +90,11 @@ density ratios, diffusion forward/reverse identities, causal masking,
 within-fidelity trajectories, bridge moments, Gaussian probability-flow
 likelihood, reverse-KL gradients, GP acquisition and support conservatism.
 
-`configs/all_methods_smoke.json` is a deliberately small **integration-test
-configuration**, not a recommended paper-comparison configuration. Its short
-training budgets prove execution and reproducibility, not optimizer quality.
-Existing publication reference results for COM/BDI remain separate.
+The container `smoke` service uses invented data and small budgets to exercise
+the 27-method workflow. Its short training does not establish optimization
+quality, real-data pilot readiness, or paper-table parity. See
+[Docker](DOCKER.md) for its precise scope.
 
-The Docker smoke service executes all fourteen methods twice in fresh output
-directories and compares every input array, candidate and oracle evaluation.
-See [Docker Reproduction](DOCKER.md) for commands and saved artifacts.
+The historical 14-method integration and publication snapshots remain unchanged
+under `reference_results/`; their old commands require their original recorded
+commit/environment. Do not combine those numbers with a new 27-method ranking.

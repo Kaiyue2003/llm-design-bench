@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Validate Compose configuration
-        run: docker compose config --quiet
+        run: LLMDM_CONTAINER_USER="$(id -u):$(id -g)" docker compose config --quiet
       - uses: docker/setup-buildx-action@v3
       - name: Log in to GitHub Container Registry
         if: github.event_name != 'pull_request'
@@ -46,37 +46,51 @@ jobs:
             VCS_REF=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: Smoke test container
+      - name: Check the unified default CLI without training
         env:
           IMAGE_REF: ${{ fromJSON(steps.metadata.outputs.json).tags[0] }}
         run: >-
           docker run --rm
-          --env RUN_RESULTS_DIR=/tmp/smoke
           "$IMAGE_REF"
-          llm-design-bench-publication
-          --no-data-mixture
-          --function ackley
-          --function booth
-          --seed 38
-          --logged-samples 32
-          --recommendations 8
-          --epochs 2
-          --particle-steps 2
-          --bdi-steps 2
-          --results-dir /tmp/smoke
-      - name: Replay all fourteen PyTorch methods
+          methods
+      - name: Exercise all 27 methods on invented data and verify resume
         env:
-          IMAGE_REF: ${{ fromJSON(steps.metadata.outputs.json).tags[0] }}
-        run: >-
-          docker run --rm
-          --volume "$RUNNER_TEMP/all-methods:/results"
-          --env RUN_RESULTS_DIR=/results
-          "$IMAGE_REF"
-          /app/docker/reproduce_all_methods_smoke.sh
+          LLM_DESIGN_BENCH_IMAGE: ${{ fromJSON(steps.metadata.outputs.json).tags[0] }}
+          RESULTS_DIR: ${{ runner.temp }}/container-smoke
+          ASSETS_DIR: ${{ runner.temp }}/container-assets
+        run: |
+          # Exercise the same identity, directory preparation and Compose path as users.
+          sh scripts/reproduce_docker.sh --smoke
+      - name: Verify host access to container artifacts
+        env:
+          RESULTS_DIR: ${{ runner.temp }}/container-smoke
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["RESULTS_DIR"])
+          reports = list(root.rglob("smoke_verification.json"))
+          assert len(reports) == 1, "Expected exactly one readable smoke result"
+          report = json.loads(reports[0].read_text(encoding="utf-8"))
+          assert report["status"] == "passed" and report["pilot_methods"] == 27
+          assert report["scientific_result"] is False
+          assert report["formal_rank_eligible"] is False
+          assert report["formal_missing_seeds"] == 7
+          artifacts = [path for path in root.rglob("*") if path.suffix in {".json", ".npz"}]
+          assert any(path.suffix == ".npz" for path in artifacts), "Missing candidate/evaluation artifacts"
+          for path in artifacts:
+              assert path.stat().st_uid == os.getuid(), f"Wrong artifact owner: {path}"
+              with path.open("rb") as stream:
+                  while stream.read(1024 * 1024):
+                      pass
+          print(f"Host user can read all {len(artifacts)} JSON/NPZ artifacts")
+          PY
       - name: Save reproducibility artifacts
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: all-methods-replay
-          path: ${{ runner.temp }}/all-methods
+          name: container-smoke
+          path: ${{ runner.temp }}/container-smoke
           if-no-files-found: ignore
