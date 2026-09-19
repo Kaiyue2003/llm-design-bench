@@ -1,9 +1,9 @@
 """Exercise host wrappers with stub Docker; no package, daemon, or image imports.
 
 Run this file alone with ``pytest --noconftest tests/test_docker_wrappers.py``.
-POSIX shell tests run on POSIX hosts; PowerShell tests run when pwsh or Windows
-PowerShell is installed. These verify argument/environment handling, not Docker
-mount permissions or the container image itself.
+POSIX shell tests run on POSIX hosts; PowerShell 7 and native Windows PowerShell
+are tested separately when installed. These verify argument/environment handling,
+not Docker mount permissions or the container image itself.
 """
 
 from __future__ import annotations
@@ -50,7 +50,13 @@ if ($env:WRAPPER_TEST_NO_DOCKER -ne "1") {
         $global:LASTEXITCODE = [int]$env:WRAPPER_TEST_DOCKER_EXIT
     }
 }
-$wrapperArguments = @(ConvertFrom-Json -InputObject $env:WRAPPER_TEST_ARGUMENTS)
+$decodedArguments = ConvertFrom-Json -InputObject $env:WRAPPER_TEST_ARGUMENTS
+# Windows PowerShell 5.1 emits JSON arrays as one pipeline object, unlike PS7.
+# Enumerate that value explicitly instead of wrapping cmdlet output in @(...).
+[string[]]$wrapperArguments = @()
+foreach ($argument in $decodedArguments) {
+    $wrapperArguments += [string]$argument
+}
 & $env:WRAPPER_TEST_SCRIPT @wrapperArguments
 $wrapperExitCode = $LASTEXITCODE
 $afterEnvironment = [ordered]@{
@@ -148,7 +154,7 @@ class WrapperHarness:
             WRAPPER_TEST_UID=self.default_user.split(":")[0],
             WRAPPER_TEST_GID=self.default_user.split(":")[1],
         )
-        if self.kind == "powershell":
+        if self.kind != "posix":
             env["WRAPPER_TEST_SCRIPT"] = str(
                 self.project / "scripts/reproduce_docker.ps1"
             )
@@ -200,14 +206,18 @@ class WrapperHarness:
         return records[0]
 
 
-@pytest.fixture(params=("posix", "powershell"))
+@pytest.fixture(params=("posix", "pwsh", "powershell"))
 def wrapper(request, tmp_path) -> WrapperHarness:
     if request.param == "posix":
         if os.name == "nt":
             pytest.skip("POSIX wrapper requires a POSIX host")
         shell = shutil.which("sh")
+    elif request.param == "pwsh":
+        shell = shutil.which("pwsh")
     else:
-        shell = shutil.which("pwsh") or shutil.which("powershell")
+        if os.name != "nt":
+            pytest.skip("Native Windows PowerShell requires Windows")
+        shell = shutil.which("powershell")
     if shell is None:
         pytest.skip(f"{request.param} shell is unavailable")
     project = tmp_path / "checkout with spaces"
@@ -382,7 +392,7 @@ def test_posix_identity_lookup_failure_stops_before_writes_or_docker(wrapper):
 def test_powershell_restores_original_environment_even_when_docker_fails(
     wrapper, docker_exit, set_environment
 ):
-    if wrapper.kind != "powershell":
+    if wrapper.kind == "posix":
         pytest.skip("Only PowerShell wrappers can affect their caller's environment")
     configured = (
         {
