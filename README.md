@@ -68,16 +68,26 @@ trusted data-recipes checkout + checkpoints
 
 `methods`, `prepare`, and `freeze` do not train or query the oracle. `run` does.
 Use the complete path-based examples in [Reproducing Results](docs/REPRODUCING.md)
-after the post-merge budget decision. Docker runs this same application:
+after the post-merge budget decision. For a local Docker daemon, use the wrappers
+to prepare host directories and the container user before running Compose:
 
 ```bash
-docker compose run --build --rm benchmark methods
-docker compose run --build --rm smoke
+./scripts/reproduce_docker.sh --build methods
+./scripts/reproduce_docker.sh --build --smoke
+```
+
+On Windows with Docker Desktop using Linux containers:
+
+```powershell
+.\scripts\reproduce_docker.ps1 --build methods
+.\scripts\reproduce_docker.ps1 --build --smoke
 ```
 
 The first command only lists methods. The second checks a tiny invented-data
-workflow, not a real LLM experiment. See [Docker](docs/DOCKER.md) for asset mounts,
-explicit experiment arguments and smoke-test limits.
+workflow, not a real LLM experiment. No arguments prints help. Raw Compose now
+requires an explicit `LLMDM_CONTAINER_USER=uid:gid` and existing mount directories;
+it never silently falls back to root. See [Docker](docs/DOCKER.md) for platform
+defaults, rootless overrides, asset mounts and the limits of these smoke checks.
 
 The upstream logged data and simulator checkpoints are external inputs. Use only
 a trusted checkout: their pickle/checkpoint formats can execute code when loaded.

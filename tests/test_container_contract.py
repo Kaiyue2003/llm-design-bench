@@ -1,6 +1,7 @@
 """Packaging and identity checks; actual Linux containers run in separate CI."""
 
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -18,6 +19,23 @@ def _ci_smoke_script() -> str:
         "      - name: Exercise all 27 methods on invented data and verify resume\n", 1
     )[1].split("      - name:", 1)[0]
     return smoke_step.split("        run: |\n", 1)[1]
+
+
+def _compose_environment() -> dict[str, str]:
+    """Read the actual flat shared environment, without requiring a YAML package."""
+    compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+    shared = compose.split("\nx-benchmark:", 1)[1].split("\nservices:", 1)[0]
+    environment = shared.split("  environment:\n", 1)[1]
+    values = {}
+    for name, value in re.findall(
+        r"^    ([A-Z][A-Z0-9_]*):[ \t]*(.*)$", environment, re.MULTILINE
+    ):
+        tokens = shlex.split(value, comments=True)
+        assert len(tokens) == 1, (
+            f"Expected one literal Compose environment value: {name}"
+        )
+        values[name] = tokens[0]
+    return values
 
 
 def test_container_is_pinned_and_uses_only_the_explicit_formal_cli() -> None:
@@ -40,8 +58,18 @@ def test_compose_persists_results_and_keeps_input_assets_read_only() -> None:
     compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
     assert "  benchmark:" in compose
     assert 'command: ["--help"]' in compose
-    assert "${RESULTS_DIR:-./results/docker}:/results" in compose
-    assert "${ASSETS_DIR:-./assets}:/assets:ro" in compose
+    assert "${LLMDM_CONTAINER_USER:?" in compose
+    assert "user:" in compose
+    assert "${RESULTS_DIR:-./results/docker}" in compose
+    assert "${ASSETS_DIR:-./assets}" in compose
+    assert "target: /results" in compose
+    assert "target: /assets" in compose
+    assert "read_only: true" in compose
+    assert compose.count("create_host_path: false") == 2
+    assert compose.count("<<: *benchmark") == 2
+    environment = _compose_environment()
+    for name, value in {"HOME": "/tmp", "USER": "runner", "LOGNAME": "runner"}.items():
+        assert environment[name] == value
     assert "  smoke:" in compose
     assert 'entrypoint: ["python", "/app/scripts/container_smoke.py"]' in compose
     assert "publication:" not in compose
@@ -54,11 +82,13 @@ def test_wrappers_forward_arguments_to_benchmark_without_implicit_training() -> 
     shell = (ROOT / "scripts/reproduce_docker.sh").read_text(encoding="utf-8")
     powershell = (ROOT / "scripts/reproduce_docker.ps1").read_text(encoding="utf-8")
     assert '--project-directory "$project_dir"' in shell
-    assert 'run --rm benchmark "$@"' in shell
     assert "set -- --help" in shell
-    assert "--project-directory $projectDirectory" in powershell
-    assert "run --rm benchmark @cliArguments" in powershell
+    assert '"--project-directory", $projectDirectory' in powershell
     assert '@("--help")' in powershell
+    for script in (shell, powershell):
+        assert "--smoke" in script
+        assert "--build" in script
+        assert "benchmark" in script
     assert "publication" not in shell + powershell
 
 
@@ -70,7 +100,7 @@ def test_ci_checks_installed_entrypoints_and_actual_container_runtime() -> None:
     assert "docker/build-push-action@v6" in workflow
     assert "load: ${{ github.event_name == 'pull_request' }}" in workflow
     assert "Check the unified default CLI without training" in workflow
-    assert "/app/scripts/container_smoke.py --results-root /results" in workflow
+    assert "sh scripts/reproduce_docker.sh --smoke" in workflow
     assert "docker run --rm" in workflow
     for entrypoint in (
         "llm-design-bench",
@@ -82,6 +112,8 @@ def test_ci_checks_installed_entrypoints_and_actual_container_runtime() -> None:
     assert "pip install dist/*.whl" in ci
     assert 'cd "$RUNNER_TEMP"' in ci
     assert "-I -m llm_design_bench methods" in ci
+    assert "runs-on: windows-latest" in ci
+    assert "python -m pytest --noconftest tests/test_docker_wrappers.py -q" in ci
     for removed in (
         "llm-design-bench-publication",
         "llm-design-bench-offline",
@@ -92,28 +124,29 @@ def test_ci_checks_installed_entrypoints_and_actual_container_runtime() -> None:
 
 def test_ci_smoke_results_are_owned_by_the_artifact_uploader() -> None:
     script = _ci_smoke_script()
-
-    # Docker otherwise creates a missing bind source as root before switching UID.
-    create_output = 'mkdir -p "$RUNNER_TEMP/container-smoke"'
-    assert script.index(create_output) < script.index("docker run --rm")
-    assert '--user "$(id -u):$(id -g)"' in script
-    assert "--env HOME=/tmp" in script
-    assert '--volume "$RUNNER_TEMP/container-smoke:/results"' in script
-    assert "--entrypoint python" in script
-    assert "/app/scripts/container_smoke.py --results-root /results" in script
+    workflow = (ROOT / ".github/workflows/container.yml").read_text(encoding="utf-8")
+    # Do not create a separate Docker path that bypasses local Compose safeguards.
+    assert "sh scripts/reproduce_docker.sh --smoke" in script
+    assert "docker run" not in script
+    assert "LLM_DESIGN_BENCH_IMAGE:" in workflow
+    assert "RESULTS_DIR: ${{ runner.temp }}/container-smoke" in workflow
+    assert "ASSETS_DIR: ${{ runner.temp }}/container-assets" in workflow
+    assert (
+        'LLMDM_CONTAINER_USER="$(id -u):$(id -g)" docker compose config --quiet'
+        in workflow
+    )
+    assert "path: ${{ runner.temp }}/container-smoke" in workflow
+    assert "path.stat().st_uid == os.getuid()" in workflow
+    assert 'with path.open("rb") as stream:' in workflow
+    assert "while stream.read(1024 * 1024):" in workflow
 
 
 @pytest.mark.parametrize("provide_username", [False, True])
-def test_ci_smoke_identity_supports_torch_without_a_passwd_entry(
+def test_compose_identity_supports_torch_without_a_passwd_entry(
     tmp_path, provide_username
 ) -> None:
-    # Read the actual Docker environment options, not a duplicate test config.
-    tokens = shlex.split(_ci_smoke_script().replace("\\\n", ""), comments=True)
-    container_env = dict(
-        tokens[index + 1].split("=", 1)
-        for index, token in enumerate(tokens)
-        if token == "--env"
-    )
+    # Both local and CI runs inherit this actual shared Compose environment.
+    container_env = _compose_environment()
     env = os.environ.copy()
     for name in ("LOGNAME", "USER", "LNAME", "USERNAME"):
         env.pop(name, None)

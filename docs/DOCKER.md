@@ -1,117 +1,154 @@
 # Docker: the same frozen LLM-DM workflow
 
-The container uses `llm-design-bench`, the same formal CLI as a native installation.
-It does not select experimental budgets, freeze a real campaign automatically, or
-download data. There are two Compose services: `benchmark` and `smoke`.
+The container runs `llm-design-bench`, the same formal CLI as a native installation.
+It does not choose budgets, start a real campaign implicitly or download data.
+Compose has two services: `benchmark` and `smoke`.
 
-The image pins Python 3.11.15 and uv 0.11.8, installs the frozen `uv.lock`, and sets
-common BLAS thread counts to one. The provided container workflow is CPU-only;
-it does not establish CUDA or cross-platform numerical parity.
+The image pins Python 3.11.15 and uv 0.11.8, installs `uv.lock`, and uses one
+thread for common BLAS libraries. This is a CPU/Linux-container workflow, not
+evidence of CUDA or cross-platform numerical parity. The ownership defaults below
+target a **local Docker daemon**; remote daemons and user-namespace mappings need
+explicit operator configuration.
 
-## Build and inspect without training
+## Recommended: use the wrappers
 
-```bash
-docker compose run --build --rm benchmark
-docker compose run --rm benchmark methods
-```
-
-The first command builds the current checkout and prints help. The second lists
-the 27 non-SPADE formal methods. No data or oracle is loaded by these commands.
-`llm-design-bench-llmdm` is a native alias for the same application, not another
-Docker service or experiment protocol.
-
-The shell/PowerShell wrappers only forward arguments to `benchmark`; with no
-arguments they print help:
+From the project checkout on Linux/macOS:
 
 ```bash
-./scripts/reproduce_docker.sh methods
+./scripts/reproduce_docker.sh --build methods
+./scripts/reproduce_docker.sh --build --smoke
 ```
+
+On Windows with Docker Desktop set to Linux containers:
 
 ```powershell
-.\scripts\reproduce_docker.ps1 methods
+.\scripts\reproduce_docker.ps1 --build methods
+.\scripts\reproduce_docker.ps1 --build --smoke
 ```
 
-## Small engineering smoke check
+`methods` only lists the 27 non-SPADE formal methods; it does not load data or
+train. `--smoke` selects the invented-data engineering check described below.
+Leading `--build` and `--smoke` can appear in either order. Without `--build`, the
+wrapper uses the selected image; with no arguments it prints CLI help.
 
-```bash
-docker compose run --build --rm smoke
-```
+Both wrappers locate the project from their own script path, prepare the mount
+directories, and pass absolute paths to Compose. They read the following settings
+from the **process environment**, not by parsing a project `.env` file:
 
-`scripts/container_smoke.py` creates invented logs and a fake oracle in a fresh
-directory. It exercises the real prepare/freeze/run CLI and:
+| Variable | Wrapper default / behavior |
+| --- | --- |
+| `RESULTS_DIR` | `results/docker`, writable host output |
+| `ASSETS_DIR` | `assets`, mounted read-only |
+| `LLMDM_CONTAINER_USER` | Shell/POSIX PowerShell: caller's numeric UID:GID; Windows PowerShell: `1000:1000` for Docker Desktop Linux containers |
 
-- gives all 27 methods tiny engineering-test budgets for pilot seed 0;
-- checks K=128 candidate outputs and saved attempt artifacts;
-- runs only Best Logged's formal seed 38 and resumes it without another oracle
-  call or a new attempt;
-- verifies that the formal shard remains incomplete: seven missing seeds,
+Relative directory overrides are resolved against the **project root**, not the
+caller's working directory. Missing directories are created by the host caller;
+the wrappers do not change permissions or ownership of existing files.
+
+An explicit `LLMDM_CONTAINER_USER=uid:gid` overrides the defaults. For a rootless
+daemon, `0:0` may be the appropriate explicit choice when container root maps to
+your host account. The wrappers do not detect rootless mode or other UID mappings.
+Do not use `0:0` blindly with a rootful daemon: it can create root-owned outputs.
+
+Both services set `HOME=/tmp`, `USER=runner`, and `LOGNAME=runner`. These let Python/
+PyTorch resolve a username and writable cache location even when the numeric UID
+has no passwd entry; they do not change the actual configured UID/GID.
+
+## What the smoke check proves
+
+`scripts/container_smoke.py` creates invented logs and a fake oracle in a new
+directory and exercises the real prepare/freeze/run CLI:
+
+- all 27 methods use tiny engineering-test budgets for pilot seed 0;
+- K=128 candidates and per-attempt artifacts are checked;
+- only Best Logged's formal seed 38 is run and resumed without a new oracle call
+  or attempt;
+- the formal shard must remain incomplete: seven missing seeds and
   `rank_eligible=false`.
 
-Output is under
+By default, output is under
 `results/docker/container-smoke/invented-smoke-*/run/`, including
-`smoke_verification.json`. No real checkpoint, dataset, old result or approved
-budget is read or changed. A successful smoke check is not a full-budget pilot,
-a 27-method formal result, or evidence of real-data optimization quality.
+`smoke_verification.json`. No real checkpoint, archived result or approved
+experimental budget is read or changed. This is not a full-budget pilot, a
+27-method formal result or proof of real-data optimization quality.
 
-## Supply external inputs explicitly
+Actual Compose/container execution is checked separately in Linux container CI.
+Windows wrapper argument/directory tests are not a Docker Desktop execution test;
+the current local development host has no Docker runtime. Unit tests alone do not
+establish container, GPU or scientific-result reproduction.
 
-Compose maps these host directories:
+## Supply inputs and run an approved campaign
 
-| Host setting | Default | Container mount |
-| --- | --- | --- |
-| `ASSETS_DIR` | `./assets` | `/assets`, read-only |
-| `RESULTS_DIR` | `./results/docker` | `/results`, writable and durable |
+`ASSETS_DIR` is mounted at `/assets` read-only; `RESULTS_DIR` is mounted at
+`/results` writable. Place a trusted `data-recipes` checkout and approved methods
+file under assets. A verified existing bundle/plan can also be supplied there.
+The image and wrappers do not clone/update the checkout or fetch checkpoints.
+Record its revision and trust its pickle/checkpoint files before loading them.
 
-Create those directories and place a trusted `data-recipes` checkout under
-`assets/data-recipes`, or set `ASSETS_DIR` to your own parent directory. An existing
-verified bundle/plan can also be placed under assets. Neither the image nor
-Compose automatically clones or updates the upstream checkout. Record the exact
-revision and trust its pickle/checkpoint files before use.
-
-After the code merge and budget approval, the following examples use container
-paths. Replace the checkpoint placeholder with every real checkpoint required
-by the oracle; repeat the option as necessary.
+**After the code merge and budget approval**, use explicit CLI arguments. The
+examples below use container paths; replace the checkpoint placeholder and repeat
+`--oracle-checkpoint` for every checkpoint the oracle uses:
 
 ```bash
-docker compose run --rm benchmark prepare \
+./scripts/reproduce_docker.sh prepare \
   --data-recipes-root /assets/data-recipes \
   --oracle-checkpoint /assets/data-recipes/path/to/trusted/checkpoint.pt \
   --output /results/shared-data
 
-docker compose run --rm benchmark freeze \
+./scripts/reproduce_docker.sh freeze \
   --data-recipes-root /assets/data-recipes \
   --data-bundle /results/shared-data \
   --methods-file /assets/approved-methods.json \
   --experiment-id merged-llmdm-v1 --output /results/plan.json
-```
 
-The methods-file schema and approval policy are in
-[Reproducing Results](REPRODUCING.md). There is no implicit full-experiment budget
-preset. Preparation/freezing do not query the oracle. Output paths must be new;
-do not overwrite an existing campaign.
-
-## Run the approved pilot and formal campaign
-
-```bash
-docker compose run --rm benchmark run \
+./scripts/reproduce_docker.sh run \
   --data-recipes-root /assets/data-recipes \
   --data-bundle /results/shared-data --plan /results/plan.json \
   --phase pilot --setting multi_scale --device cpu \
   --results-dir /results/pilot
 
-docker compose run --rm benchmark run \
+./scripts/reproduce_docker.sh run \
   --data-recipes-root /assets/data-recipes \
   --data-bundle /results/shared-data --plan /results/plan.json \
   --phase formal --setting multi_scale --device cpu \
   --pilot-results /results/pilot --results-dir /results/formal
 ```
 
-The runtime requires matching verified pilots. Use `fixed_1b` or `both` only
-with the corresponding pilot coverage. Selection, explicit resume and
-infrastructure-retry rules are identical to the native CLI. A changed image
-source/configuration cannot silently inherit old pilots or successful rows.
+PowerShell accepts the same CLI arguments through `reproduce_docker.ps1`; use
+PowerShell line continuation or put them on one line. The methods-file schema is
+in [Reproducing Results](REPRODUCING.md). Preparation/freezing do not query the
+oracle. There is no implicit real-experiment budget preset.
 
-To derive reports into a separate directory:
+Formal runs require matching verified pilots. `fixed_1b` or `both` need their
+corresponding pilot coverage. Resume and explicit infrastructure-retry rules are
+the same as the native CLI; changing code/configuration requires a new plan and
+output directory. Native and container runs save the same manifests, candidate/
+evaluation NPZs, environment records, checksums and failure evidence.
+
+## Advanced: direct Compose calls
+
+Compose deliberately requires `LLMDM_CONTAINER_USER`; omitting it fails with a
+setup error, **not an unsafe root fallback**. Bind mounts use
+`create_host_path: false`, so you must also create both host directories first.
+Running a wrapper does not configure a later, separate shell's environment.
+
+For direct Compose on a local POSIX host, from the project root:
+
+```bash
+export LLMDM_CONTAINER_USER="$(id -u):$(id -g)"
+export RESULTS_DIR="$PWD/results/docker"
+export ASSETS_DIR="$PWD/assets"
+mkdir -p "$RESULTS_DIR" "$ASSETS_DIR"
+docker compose run --build --rm benchmark methods
+```
+
+Choose any rootless/namespace override explicitly before running. On Windows,
+prefer the PowerShell wrapper; for raw Compose, explicitly set the numeric user
+appropriate to Docker Desktop (`1000:1000` by default above), absolute host paths,
+and create those directories yourself.
+
+With that same explicit environment/directory setup, reports can be derived into
+a separate output directory without training:
 
 ```bash
 docker compose run --rm --entrypoint llm-design-bench-report benchmark \
@@ -119,26 +156,25 @@ docker compose run --rm --entrypoint llm-design-bench-report benchmark \
   --results-dir /results/report
 ```
 
-Native and container runs use the same per-attempt manifests, result JSON,
-candidate/evaluation NPZs, environment records and integrity/resume checks.
-Preserve the full results directory, including failed attempts, not just CSV
-summaries. The former raw-run verification/environment scripts and publication
-services are not part of this workflow.
+Keep the full run directory, including failed attempts, not just its CSV tables.
+The former publication services and raw-run verification scripts are not active
+parts of this workflow.
 
-## Images, reproducibility and historical results
+## Existing output and reproducibility limits
 
-For a reviewed image that has actually been published, set
-`LLM_DESIGN_BENCH_IMAGE` to its immutable commit tag or digest. Do not assume an
-unpublished integration image exists; build this checkout for local validation.
-The mutable `main` tag is not an experiment identity.
+This fix does **not** repair historical root-owned output. Neither wrapper runs
+`chown`/`chmod` or deletes existing results. If a directory is inaccessible, select
+a new writable `RESULTS_DIR`; recover valuable old output separately with an
+administrator's explicit assistance. Do not overwrite it or rerun a scientific
+campaign merely to resolve file permissions.
 
-A fixed image, seeds, threads and data manifest make runs auditable, but do not
-guarantee bitwise equality across hardware or numerical libraries. Record the
-image/release and inspect configuration, coverage, failures and numerical
-tolerances when independently reproducing results.
+Set `LLM_DESIGN_BENCH_IMAGE` to a published immutable image tag/digest, or build the
+reviewed checkout; do not assume an unpublished image exists. A fixed image,
+seeds, threads and data manifest
+make runs auditable, not necessarily bitwise-identical across hardware.
 
-Historical instructions under `reference_results/` refer to their original code,
-environment and old services. Those archives are unchanged and must be replayed
-from their recorded version, not relabeled as current 27-method results. Full
-real-data reproduction, budget approval, new plans/pilots and SPADE selection
-happen after code integration; they are not prerequisites for merging this work.
+Historical `reference_results/` instructions require their original code and
+environment. They are unchanged and must not be relabeled as new 27-method
+results. Budget approval, new plans/full-budget pilots, full scientific
+reproduction and the deferred SPADE selection remain post-merge experimental
+work, not prerequisites for merging this ownership fix.

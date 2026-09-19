@@ -2,14 +2,27 @@ name: llm-design-bench
 
 x-benchmark: &benchmark
   image: ${LLM_DESIGN_BENCH_IMAGE:-ghcr.io/kaiyue2003/llm-design-bench:main}
+  user: "${LLMDM_CONTAINER_USER:?Set LLMDM_CONTAINER_USER to UID:GID or use scripts/reproduce_docker}"
   build:
     context: .
     args:
       VCS_REF: ${VCS_REF:-local}
   volumes:
-    - ${RESULTS_DIR:-./results/docker}:/results
-    - ${ASSETS_DIR:-./assets}:/assets:ro
+    - type: bind
+      source: ${RESULTS_DIR:-./results/docker}
+      target: /results
+      bind:
+        create_host_path: false
+    - type: bind
+      source: ${ASSETS_DIR:-./assets}
+      target: /assets
+      read_only: true
+      bind:
+        create_host_path: false
   environment:
+    HOME: /tmp
+    USER: runner
+    LOGNAME: runner
     PYTHONHASHSEED: "0"
     OMP_NUM_THREADS: "1"
     MKL_NUM_THREADS: "1"

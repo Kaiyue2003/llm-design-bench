@@ -33,6 +33,18 @@ jobs:
           llm-design-bench-llmdm --help
           llm-design-bench-report --help
 
+  windows-wrappers:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install standalone wrapper test dependencies
+        run: python -m pip install pytest
+      - name: Test PowerShell wrappers without Docker or scientific dependencies
+        run: python -m pytest --noconftest tests/test_docker_wrappers.py -q
+
   package:
     runs-on: ubuntu-latest
     steps:
