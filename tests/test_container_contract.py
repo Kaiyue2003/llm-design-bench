@@ -1,8 +1,23 @@
-"""Static packaging checks; executing a Linux container is a separate CI job."""
+"""Packaging and identity checks; actual Linux containers run in separate CI."""
 
+import os
+import shlex
+import subprocess
+import sys
+import textwrap
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _ci_smoke_script() -> str:
+    workflow = (ROOT / ".github/workflows/container.yml").read_text(encoding="utf-8")
+    smoke_step = workflow.split(
+        "      - name: Exercise all 27 methods on invented data and verify resume\n", 1
+    )[1].split("      - name:", 1)[0]
+    return smoke_step.split("        run: |\n", 1)[1]
 
 
 def test_container_is_pinned_and_uses_only_the_explicit_formal_cli() -> None:
@@ -76,11 +91,7 @@ def test_ci_checks_installed_entrypoints_and_actual_container_runtime() -> None:
 
 
 def test_ci_smoke_results_are_owned_by_the_artifact_uploader() -> None:
-    workflow = (ROOT / ".github/workflows/container.yml").read_text(encoding="utf-8")
-    smoke_step = workflow.split(
-        "      - name: Exercise all 27 methods on invented data and verify resume\n", 1
-    )[1].split("      - name:", 1)[0]
-    script = smoke_step.split("        run: |\n", 1)[1]
+    script = _ci_smoke_script()
 
     # Docker otherwise creates a missing bind source as root before switching UID.
     create_output = 'mkdir -p "$RUNNER_TEMP/container-smoke"'
@@ -90,3 +101,74 @@ def test_ci_smoke_results_are_owned_by_the_artifact_uploader() -> None:
     assert '--volume "$RUNNER_TEMP/container-smoke:/results"' in script
     assert "--entrypoint python" in script
     assert "/app/scripts/container_smoke.py --results-root /results" in script
+
+
+@pytest.mark.parametrize("provide_username", [False, True])
+def test_ci_smoke_identity_supports_torch_without_a_passwd_entry(
+    tmp_path, provide_username
+) -> None:
+    # Read the actual Docker environment options, not a duplicate test config.
+    tokens = shlex.split(_ci_smoke_script().replace("\\\n", ""), comments=True)
+    container_env = dict(
+        tokens[index + 1].split("=", 1)
+        for index, token in enumerate(tokens)
+        if token == "--env"
+    )
+    env = os.environ.copy()
+    for name in ("LOGNAME", "USER", "LNAME", "USERNAME"):
+        env.pop(name, None)
+    env.update(container_env)
+    if not provide_username:
+        for name in ("LOGNAME", "USER", "LNAME", "USERNAME"):
+            env.pop(name, None)
+    # Use a writable host equivalent of /tmp, including on Windows.
+    for name in ("HOME", "TMPDIR", "TMP", "TEMP"):
+        env[name] = str(tmp_path)
+    env["TORCHINDUCTOR_CACHE_DIR"] = str(tmp_path / "inductor")
+    env["OMP_NUM_THREADS"] = "1"
+    env["MKL_NUM_THREADS"] = "1"
+
+    probe = textwrap.dedent(
+        """
+        import getpass
+        import os
+        import sys
+        import types
+        from unittest.mock import patch
+
+        def missing_user(uid):
+            raise KeyError(f"getpwuid(): uid not found: {uid}")
+
+        passwd = types.ModuleType("pwd")
+        passwd.getpwuid = missing_user
+        with patch.dict(sys.modules, {"pwd": passwd}), patch.object(
+            os, "getuid", lambda: 1001, create=True
+        ):
+            assert getpass.getuser() == "runner"
+            import torch
+
+            parameter = torch.tensor([1.0], requires_grad=True)
+            optimizer = torch.optim.Adam([parameter], lr=0.01)
+            optimizer.zero_grad()
+            parameter.square().sum().backward()
+            optimizer.step()
+            assert 0.0 < parameter.item() < 1.0
+            print("username resolved; Adam step passed")
+        """
+    )
+    # An interrupted torch import must not contaminate the pytest process.
+    completed = subprocess.run(
+        [sys.executable, "-I", "-c", probe],
+        env=env,
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    if provide_username:
+        assert completed.returncode == 0, completed.stdout + completed.stderr
+        assert "username resolved; Adam step passed" in completed.stdout
+    else:
+        assert completed.returncode != 0
+        assert "getpwuid(): uid not found: 1001" in completed.stderr

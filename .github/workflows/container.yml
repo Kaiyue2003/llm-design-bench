@@ -58,10 +58,13 @@ jobs:
           IMAGE_REF: ${{ fromJSON(steps.metadata.outputs.json).tags[0] }}
         run: |
           # Keep private result directories/files owned by the artifact uploader.
+          # Numeric UIDs need an explicit username for Python/PyTorch cache lookup.
           mkdir -p "$RUNNER_TEMP/container-smoke"
           docker run --rm \
             --user "$(id -u):$(id -g)" \
             --env HOME=/tmp \
+            --env USER=runner \
+            --env LOGNAME=runner \
             --volume "$RUNNER_TEMP/container-smoke:/results" \
             --entrypoint python \
             "$IMAGE_REF" \
